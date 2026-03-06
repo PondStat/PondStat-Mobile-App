@@ -63,7 +63,6 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen> {
       return const Scaffold(body: Center(child: Text("Not Authenticated")));
     }
 
-    // [FIXED] Use FirestoreHelper
     return StreamBuilder<DocumentSnapshot>(
       stream: FirestoreHelper.usersCollection.doc(user.uid).snapshots(),
       builder: (context, snapshot) {
@@ -115,32 +114,15 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen> {
 
         if (assignedPond != null) {
           if (role == 'leader') {
-             // Check for team members logic
-             return StreamBuilder<QuerySnapshot>(
-               stream: FirestoreHelper.usersCollection
-                   .where('assignedPond', isEqualTo: assignedPond)
-                   .where('role', isEqualTo: 'member')
-                   .snapshots(),
-               builder: (context, memberSnapshot) {
-                 if (memberSnapshot.connectionState == ConnectionState.waiting) {
-                   return const Scaffold(body: LoadingOverlay());
-                 }
-
-                 final memberCount = memberSnapshot.data?.docs.length ?? 0;
-
-                 if (memberCount == 0) {
-                   return const LeaderDashboard();
-                 }
-
-                 return MonitoringPage(
-                    pondLetter: assignedPond,
-                    leaderName: currentLeaderName,
-                    isLeader: true,
-                  );
-               },
-             );
+             // Let the leader go directly to their pond dashboard, 
+             // regardless of whether they have 0 or 5 team members.
+             return MonitoringPage(
+                pondLetter: assignedPond,
+                leaderName: currentLeaderName,
+                isLeader: true,
+              );
           } else {
-            // [FIXED] Changed FutureBuilder to StreamBuilder to prevent re-fetching loops
+            // For members, find out who their leader is to display on the dashboard
             return StreamBuilder<QuerySnapshot>(
               stream: FirestoreHelper.usersCollection
                   .where('assignedPond', isEqualTo: assignedPond)
