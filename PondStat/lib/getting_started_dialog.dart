@@ -116,10 +116,16 @@ class GettingStartedDialog extends StatelessWidget {
                   children: const [
                     Icon(Icons.help_outline, color: primaryBlue),
                     SizedBox(width: 8),
-                    Text(
-                      'Getting Started with PondStat',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
+                    Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Getting Started with PondStat',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    )
                   ],
                 ),
               ),
