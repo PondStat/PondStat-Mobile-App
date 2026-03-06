@@ -261,6 +261,8 @@ class _MonitoringPageState extends State<MonitoringPage>
                   if (_tabController.index == 1) type = 'weekly';
                   if (_tabController.index == 2) type = 'biweekly';
 
+                  // FIRE AND FORGET!
+                  // We removed the .then() block. Now it triggers the save in the background.
                   _saveDataToFirestore(
                     label: label,
                     unit: unit,
@@ -268,20 +270,20 @@ class _MonitoringPageState extends State<MonitoringPage>
                     averageValue: avg,
                     type: type,
                     pointValues: pointValues,
-                  ).then((_) {
-                    if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Saved $label: $avg $unit")),
-                      );
-                    }
-                  }).catchError((error) {
+                  ).catchError((error) {
+                    // Only show error if the background save genuinely fails later
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text("Failed to save: $error")),
                       );
                     }
                   });
+
+                  // CLOSE DIALOG IMMEDIATELY! (Even if offline)
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Saved $label: $avg $unit")),
+                  );
                 },
                 child: const Text("Save"),
               )
@@ -359,48 +361,48 @@ class _MonitoringPageState extends State<MonitoringPage>
             ),
             ElevatedButton(
               onPressed: () async {
-                try {
-                  final batch = FirebaseFirestore.instance.batch();
+                final batch = FirebaseFirestore.instance.batch();
 
-                  for (var doc in docs) {
-                    final controllersMap = groupControllers[doc.id];
-                    if (controllersMap == null) continue;
+                for (var doc in docs) {
+                  final controllersMap = groupControllers[doc.id];
+                  if (controllersMap == null) continue;
 
-                    double sum = 0;
-                    int count = 0;
-                    Map<String, double> newPointValues = {};
+                  double sum = 0;
+                  int count = 0;
+                  Map<String, double> newPointValues = {};
 
-                    for (var p in points) {
-                      final text = controllersMap[p]?.text;
-                      if (text != null && text.isNotEmpty) {
-                        final val = double.tryParse(text);
-                        if (val != null) {
-                          sum += val;
-                          count++;
-                          newPointValues[p] = val;
-                        }
+                  for (var p in points) {
+                    final text = controllersMap[p]?.text;
+                    if (text != null && text.isNotEmpty) {
+                      final val = double.tryParse(text);
+                      if (val != null) {
+                        sum += val;
+                        count++;
+                        newPointValues[p] = val;
                       }
                     }
-
-                    if (count > 0) {
-                      double newAvg = sum / count;
-                      newAvg = double.parse(newAvg.toStringAsFixed(2));
-
-                      batch.update(doc.reference, {
-                        'pointValues': newPointValues,
-                        'value': newAvg,
-                      });
-                    }
                   }
-                  
+
+                  if (count > 0) {
+                    double newAvg = sum / count;
+                    newAvg = double.parse(newAvg.toStringAsFixed(2));
+
+                    batch.update(doc.reference, {
+                      'pointValues': newPointValues,
+                      'value': newAvg,
+                    });
+                  }
+                }
+                
+                // POP IMMEDIATELY! Do not wait for the batch to commit to the server.
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Points updated & Average recalculated")),
+                );
+
+                try {
+                  // Fire and forget the commit.
                   await batch.commit();
-
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Points updated & Average recalculated")),
-                    );
-                  }
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -502,7 +504,7 @@ class _MonitoringPageState extends State<MonitoringPage>
             children: [
               Icon(
                 hasPendingWrites ? Icons.cloud_upload_outlined : Icons.cloud_done_outlined,
-                color: hasPendingWrites ? Colors.orange[300] : Colors.white70,
+                color: hasPendingWrites ? Colors.orange[300] : Colors.lightGreenAccent,
                 size: 20,
               ),
               if (hasPendingWrites) ...[
@@ -836,7 +838,7 @@ class _MonitoringPageState extends State<MonitoringPage>
           .where('pond', isEqualTo: widget.pondLetter)
           .where('type', isEqualTo: type)
           .where('dateKey', isEqualTo: dateKey)
-          .orderBy('timestamp', descending: true) 
+          .orderBy('recordedAt', descending: true) 
           .snapshots(includeMetadataChanges: true),
       builder: (context, snapshot) {
         if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
@@ -845,9 +847,8 @@ class _MonitoringPageState extends State<MonitoringPage>
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) return Center(child: Text("No $type data for this date."));
 
-        // REMOVED GROUPING LOGIC HERE - Now returns one card per parameter recorded
         return ListView.builder(
-          padding: const EdgeInsets.only(top: 8, bottom: 80), // Added bottom padding for FAB
+          padding: const EdgeInsets.only(top: 8, bottom: 80), 
           itemCount: docs.length,
           itemBuilder: (context, index) {
             final doc = docs[index];
@@ -883,6 +884,7 @@ class _MonitoringPageState extends State<MonitoringPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(time, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 8),
                     Text(title, style: const TextStyle(fontSize: 14)),
                     Text(content, style: const TextStyle(fontSize: 14)),
                   ],
@@ -924,12 +926,12 @@ class _MonitoringPageState extends State<MonitoringPage>
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(context); // Close dialog immediately
               final batch = FirebaseFirestore.instance.batch();
               for (var doc in docs) {
                 batch.delete(doc.reference); 
               }
-              batch.commit();
+              batch.commit(); // Fire and forget!
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Entry deleted")),
               );

@@ -78,11 +78,9 @@ class _TeamMgmtState extends State<TeamMgmt> {
       _searchResults = _allUsers.where((doc) {
         final data = doc.data() as Map<String, dynamic>;
         final name = (data['fullName'] ?? '').toString().toLowerCase();
-        final studentNum =
-            (data['studentNumber'] ?? '').toString().toLowerCase();
         final currentPond = data['assignedPond'];
 
-        bool matchesSearch = name.contains(query) || studentNum.contains(query);
+        bool matchesSearch = name.contains(query);
         bool notInTeam = currentPond != widget.selectedPanel;
 
         return matchesSearch && notInTeam;
@@ -403,9 +401,7 @@ class _TeamMgmtState extends State<TeamMgmt> {
                 fontWeight: FontWeight.bold, fontSize: 14),
           ),
           subtitle: Text(
-            isAssignedOther
-                ? "${data['studentNumber']} • in ${data['assignedPond']}"
-                : data['studentNumber'] ?? '',
+            "In ${data['assignedPond']}",
             style: TextStyle(
               color: isAssignedOther ? Colors.orange : Colors.grey[600],
               fontSize: 12,
