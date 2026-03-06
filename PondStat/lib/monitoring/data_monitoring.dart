@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../main.dart';
 import '../profile_bottom_sheet.dart';
-import '../firestore_helper.dart';
+import '../firebase/firestore_helper.dart';
 import 'monitoring_parameters.dart';
 import 'measurement_card.dart';
 import 'monitoring_calendar.dart';

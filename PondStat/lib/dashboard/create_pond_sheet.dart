@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../firestore_helper.dart';
+import '../firebase/firestore_helper.dart';
 
 class CreatePondSheet extends StatefulWidget {
   const CreatePondSheet({super.key});

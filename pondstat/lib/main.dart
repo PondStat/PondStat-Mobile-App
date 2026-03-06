@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'firebase_options.dart';
+import 'firebase/firebase_options.dart';
 import 'loading_overlay.dart';
 import 'dashboard/default_dashboard.dart';
 import 'welcome_page.dart';

@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'firestore_helper.dart';
+import 'firebase/firestore_helper.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../firestore_helper.dart';
+import '../firebase/firestore_helper.dart';
 
 class MonitoringCalendar extends StatelessWidget {
   final String pondId;
