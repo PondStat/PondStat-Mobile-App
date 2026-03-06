@@ -15,10 +15,18 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    );
+    // Safely enable offline persistence. 
+    // This allows the app to cache data and queue edits while offline.
+    try {
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+      print("✅ Offline persistence enabled");
+    } catch (e) {
+      print("⚠️ Could not enable offline persistence (might be multiple tabs open): $e");
+    }
+
     print("✅ Firebase connected successfully!");
   } catch (e) {
     print("❌ Firebase connection failed: $e");
@@ -41,7 +49,6 @@ class MyApp extends StatelessWidget {
         primaryColor: const Color(0xFF1A73E8),
         scaffoldBackgroundColor: Colors.white,
 
-        // Input Field Styling
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.grey[200],
@@ -52,7 +59,6 @@ class MyApp extends StatelessWidget {
           hintStyle: TextStyle(color: Colors.grey[600]),
         ),
 
-        // Elevated Button Styling
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF1A73E8),
@@ -64,7 +70,6 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // Text Button Styling
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
             backgroundColor: Colors.transparent,
@@ -75,7 +80,6 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // Text Theme
         textTheme: Theme.of(context).textTheme.apply(
               bodyColor: Colors.black,
               displayColor: Colors.black,

@@ -122,6 +122,19 @@ class _LeaderDashboardState extends State<LeaderDashboard> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () {
+            // Check if there is a screen to go back to (e.g., they opened this from the profile sheet)
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              // Safety Fallback: If this is the root screen because they haven't chosen a pond yet,
+              // "going back" will safely sign them out instead of crashing or doing nothing.
+              FirebaseAuth.instance.signOut();
+            }
+          },
+        ),
         title: const Text('Leader Dashboard'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,

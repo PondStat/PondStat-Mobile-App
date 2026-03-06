@@ -61,8 +61,6 @@ class _MonitoringPageState extends State<MonitoringPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     
-    // [FIXED] Initialize _selectedDay to UTC normalized date
-    // This ensures data added immediately (before tapping calendar) matches the keys used for dots.
     final now = DateTime.now();
     _focusedDay = now;
     _selectedDay = DateTime.utc(now.year, now.month, now.day);
@@ -109,7 +107,8 @@ class _MonitoringPageState extends State<MonitoringPage>
 
     final String dateKey = "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
 
-    // [FIXED] Use FirestoreHelper
+    // Firestore will automatically save this locally if offline, 
+    // and push to the cloud when internet returns.
     await FirestoreHelper.measurementsCollection.add({
       'pond': widget.pondLetter,
       'dateKey': dateKey,
@@ -438,16 +437,12 @@ class _MonitoringPageState extends State<MonitoringPage>
       default: return const Text("Select a tab to add data.");
     }
 
-    // [FIXED] Calculate aspect ratio dynamically for better responsiveness
-    // Assumes 2 columns. 
-    // width = (Screen Width - Padding (32) - Spacing(10)) / 2
-    // Height approx 70-80px per card is good for touch targets
     double screenWidth = MediaQuery.of(context).size.width;
     int crossAxisCount = 2;
     double padding = 32.0;
     double spacing = 10.0;
     double itemWidth = (screenWidth - padding - spacing) / crossAxisCount;
-    double itemHeight = 75.0; // Fixed sensible height for the card
+    double itemHeight = 75.0; 
     double childAspectRatio = itemWidth / itemHeight;
 
     return GridView.builder(
@@ -457,7 +452,7 @@ class _MonitoringPageState extends State<MonitoringPage>
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: spacing,
         mainAxisSpacing: spacing,
-        childAspectRatio: childAspectRatio, // Use calculated ratio
+        childAspectRatio: childAspectRatio, 
       ),
       itemCount: parameters.length,
       itemBuilder: (context, i) {
@@ -478,13 +473,50 @@ class _MonitoringPageState extends State<MonitoringPage>
                         param['label'] as String,
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
-                        maxLines: 2, // Allow text to wrap if needed
+                        maxLines: 2, 
                       ),
                     ),
                   ],
                 ),
               ),
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Visual widget for sync status in the header
+  Widget _buildSyncStatus() {
+    // Listen to metadata changes to know when data is queued locally vs saved online
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirestoreHelper.measurementsCollection
+          .limit(1)
+          .snapshots(includeMetadataChanges: true),
+      builder: (context, snapshot) {
+        bool hasPendingWrites = false;
+        
+        if (snapshot.hasData) {
+          hasPendingWrites = snapshot.data!.metadata.hasPendingWrites;
+        }
+
+        return Tooltip(
+          message: hasPendingWrites ? "Saving locally (Offline)" : "Synced to Cloud",
+          child: Row(
+            children: [
+              Icon(
+                hasPendingWrites ? Icons.cloud_upload_outlined : Icons.cloud_done_outlined,
+                color: hasPendingWrites ? Colors.orange[300] : Colors.white70,
+                size: 20,
+              ),
+              if (hasPendingWrites) ...[
+                const SizedBox(width: 4),
+                Text(
+                  "Offline mode",
+                  style: TextStyle(color: Colors.orange[300], fontSize: 10),
+                )
+              ]
+            ],
           ),
         );
       },
@@ -530,8 +562,8 @@ class _MonitoringPageState extends State<MonitoringPage>
                       
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
+                        children: [
+                          const Text(
                             "PondStat",
                             style: TextStyle(
                               color: Colors.white,
@@ -539,13 +571,8 @@ class _MonitoringPageState extends State<MonitoringPage>
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Text(
-                            "Pond Parameters",
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
+                          // Injecting our magical cloud sync icon right here
+                          _buildSyncStatus(), 
                         ],
                       ),
                       const Spacer(),
@@ -599,10 +626,9 @@ class _MonitoringPageState extends State<MonitoringPage>
                               child: Column(
                                 children: [
                                   StreamBuilder<QuerySnapshot>(
-                                    // [FIXED] Use FirestoreHelper
                                     stream: FirestoreHelper.measurementsCollection
                                         .where('pond', isEqualTo: widget.pondLetter)
-                                        .snapshots(),
+                                        .snapshots(includeMetadataChanges: true), // Request cache awareness
                                     builder: (context, snapshot) {
                                       Map<DateTime, Set<String>> eventsMap = {};
                                       
@@ -614,7 +640,6 @@ class _MonitoringPageState extends State<MonitoringPage>
 
                                           if (timestamp != null && type != null) {
                                             final date = timestamp.toDate();
-                                            // Ensure UTC normalization for the calendar markers
                                             final normalizedDate = DateTime.utc(
                                                 date.year, date.month, date.day);
                                             
@@ -700,7 +725,7 @@ class _MonitoringPageState extends State<MonitoringPage>
                                       );
                                     },
                                   ),
-                                                                    const Divider(),
+                                  const Divider(),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
                                     child: Row(
@@ -729,14 +754,14 @@ class _MonitoringPageState extends State<MonitoringPage>
                             child: TabBar(
                               controller: _tabController,
                               indicator: BoxDecoration(
-                                color: const Color(0xFF0077C2), // customBlue
+                                color: const Color(0xFF0077C2), 
                                 borderRadius: BorderRadius.circular(50), 
                               ),
                               indicatorSize: TabBarIndicatorSize.tab, 
                               labelColor: Colors.white,
                               unselectedLabelColor: Colors.grey,
                               dividerColor: Colors.transparent,
-                              labelPadding: EdgeInsets.zero, // Remove default padding to center custom rows
+                              labelPadding: EdgeInsets.zero, 
                               tabs: [
                                 Tab(
                                   child: Row(
@@ -812,13 +837,12 @@ class _MonitoringPageState extends State<MonitoringPage>
     final String dateKey = "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
 
     return StreamBuilder<QuerySnapshot>(
-      // [FIXED] Use FirestoreHelper
       stream: FirestoreHelper.measurementsCollection
           .where('pond', isEqualTo: widget.pondLetter)
           .where('type', isEqualTo: type)
           .where('dateKey', isEqualTo: dateKey)
-          .orderBy('recordedAt', descending: true)
-          .snapshots(),
+          .orderBy('timestamp', descending: true) // Changed to use standard timestamp vs serverTimestamp for offline safety
+          .snapshots(includeMetadataChanges: true), // Enable metadata updates!
       builder: (context, snapshot) {
         if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
@@ -918,7 +942,7 @@ class _MonitoringPageState extends State<MonitoringPage>
               Navigator.pop(context);
               final batch = FirebaseFirestore.instance.batch();
               for (var doc in docs) {
-                batch.delete(doc.reference);
+                batch.delete(doc.reference); // Safely queues deletion offline
               }
               batch.commit();
               ScaffoldMessenger.of(context).showSnackBar(
@@ -931,6 +955,7 @@ class _MonitoringPageState extends State<MonitoringPage>
       ),
     );
   }
+
   Widget _buildStatusDot(Color color) {
     return Container(
       width: 6,
