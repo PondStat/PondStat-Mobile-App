@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'login_page.dart';
-import 'signup_page.dart';
 import 'firestore_helper.dart';
 
 class WelcomePage extends StatefulWidget {
@@ -77,128 +76,63 @@ class _WelcomePageState extends State<WelcomePage>
     Navigator.of(context, rootNavigator: true).pop();
   }
 
-  Future<void> _signIn(String email, String password) async {
+  Future<void> _signInWithGoogle() async {
     _showLoading();
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+      // 1. ADD YOUR CLIENT ID HERE
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: '624574025589-5390binsi9sh8plk6ii0h929dtq63dvu.apps.googleusercontent.com', 
+      );
+      
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        if (mounted) _hideLoading();
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
-      if (mounted) {
-        _hideLoading();
-        Navigator.pop(context);
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _hideLoading();
-        String errorMessage = e.message ?? "Login failed";
-        if (e.code == 'network-request-failed') {
-          errorMessage = "Network error. Check internet connection.";
-        } else if (e.code == 'user-not-found') {
-          errorMessage = "User not found. Please sign up first.";
-        } else if (e.code == 'wrong-password') {
-          errorMessage = "Incorrect password.";
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      final user = userCredential.user;
+
+      if (user != null) {
+        final userDoc = await FirestoreHelper.usersCollection.doc(user.uid).get();
+
+        if (!userDoc.exists) {
+          await FirestoreHelper.usersCollection.doc(user.uid).set({
+            'fullName': user.displayName ?? 'New User',
+            'email': user.email,
+            'role': 'member',
+            'assignedPond': null,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
         }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _signUp(String fullName, String email, String password) async {
-    _showLoading();
-    UserCredential? userCredential;
-
-    try {
-      userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-
-      final uid = userCredential.user?.uid;
-
-      if (uid != null) {
-        await userCredential.user?.updateDisplayName(fullName);
-
-        await FirestoreHelper.usersCollection.doc(uid).set({
-          'fullName': fullName,
-          'email': email,
-          'role': 'member',
-          'assignedPond': null,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
       }
 
       if (mounted) {
         _hideLoading();
-        Navigator.pop(context);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created! Please Log In.')),
-        );
-
-        _navigateToLogin();
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _hideLoading();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message ?? "Sign-up failed"),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     } catch (e) {
-      try {
-        await userCredential?.user?.delete();
-      } catch (_) {}
-
       if (mounted) {
         _hideLoading();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error creating profile: $e"),
+            content: Text("Sign-In failed: $e"),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
-  }
-
-  void _navigateToLogin() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => LoginPage(
-          onSignIn: _signIn,
-          onToggle: () {
-            Navigator.pop(context);
-            _navigateToSignUp();
-          },
-        ),
-      ),
-    );
-  }
-
-  void _navigateToSignUp() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SignUpPage(
-          onSignUp: _signUp,
-          onToggle: () {
-            Navigator.pop(context);
-            _navigateToLogin();
-          },
-        ),
-      ),
-    );
   }
 
   @override
@@ -319,72 +253,41 @@ class _WelcomePageState extends State<WelcomePage>
                     ),
                   ),
 
-                  const SizedBox(height: 30.0),
+                  const SizedBox(height: 40.0),
 
                   SlideTransition(
                     position: _slideAnimation,
                     child: FadeTransition(
                       opacity: _fadeAnimation,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Column(
                           children: [
-                            // Login Button
+                            // Google Sign-In Button
                             SizedBox(
                               width: double.infinity,
-                              height: 48.0,
-                              child: ElevatedButton(
-                                onPressed: _navigateToLogin,
+                              height: 54.0,
+                              child: ElevatedButton.icon(
+                                onPressed: _signInWithGoogle,
+                                icon: const Icon(Icons.login, size: 22),
+                                label: const Text(
+                                  'Continue with Google',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: primaryColor,
-                                  elevation: 2,
-                                  padding: EdgeInsets.zero,
+                                  elevation: 3,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24.0),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Log In',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.0,
+                                    borderRadius: BorderRadius.circular(28.0),
                                   ),
                                 ),
                               ),
                             ),
-
-                            const SizedBox(height: 16.0),
-
-                            // Sign Up Button
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48.0,
-                              child: OutlinedButton(
-                                onPressed: _navigateToSignUp,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.zero,
-                                  side: const BorderSide(
-                                    color: Colors.white,
-                                    width: 1.5,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24.0),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Sign Up',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.0,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 30.0),
+                            const SizedBox(height: 40.0),
                           ],
                         ),
                       ),

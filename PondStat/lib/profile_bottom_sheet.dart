@@ -37,7 +37,6 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet> {
     if (user == null) return;
 
     final firestore = FirebaseFirestore.instance;
-    // [FIXED] Use FirestoreHelper
     final userRef = FirestoreHelper.usersCollection.doc(user.uid);
 
     try {
@@ -48,7 +47,6 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet> {
         final String? currentPond = userDoc.data()?['assignedPond'];
 
         if (currentPond != null) {
-          // [FIXED] Use FirestoreHelper
           final teamMembersSnapshot = await FirestoreHelper.usersCollection
               .where('assignedPond', isEqualTo: currentPond)
               .where('role', isEqualTo: 'member')
@@ -396,8 +394,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _studentNumController = TextEditingController();
-  final TextEditingController _currentPasswordController = TextEditingController();
-  final TextEditingController _newPasswordController = TextEditingController();
 
   bool _isLoading = false;
   
@@ -417,7 +413,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _initialName = user.displayName ?? '';
 
       try {
-        // [FIXED] Use FirestoreHelper
         final doc = await FirestoreHelper.usersCollection.doc(user.uid).get();
         if (doc.exists && doc.data() != null) {
           final data = doc.data()!;
@@ -442,48 +437,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
     
-    final currentPassword = _currentPasswordController.text.trim();
-    if (currentPassword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Current password is required to save changes')),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     try {
-      final String? email = user.email; 
-      if (email == null) throw Exception("User email not found");
-
-      AuthCredential credential = EmailAuthProvider.credential(
-        email: email, 
-        password: currentPassword,
-      );
-
-      await user.reauthenticateWithCredential(credential);
-
       bool nameChanged = _nameController.text.trim() != _initialName;
       bool studentNumChanged = _studentNumController.text.trim() != _initialStudentNum;
-      bool passwordChanged = _newPasswordController.text.isNotEmpty;
-
-      if (passwordChanged) {
-        await user.updatePassword(_newPasswordController.text.trim());
-      }
-
-      if (studentNumChanged) {
-         final newEmail = "${_studentNumController.text.trim()}@pondstat.edu";
-         try {
-           await user.verifyBeforeUpdateEmail(newEmail);
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Verification email sent to new address. Please verify to update login.')),
-           );
-         } catch (e) {
-           throw Exception("Could not update email: $e");
-         }
-      }
 
       if (nameChanged) {
         await user.updateDisplayName(_nameController.text.trim());
@@ -494,7 +454,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (studentNumChanged) firestoreUpdates['studentNumber'] = _studentNumController.text.trim();
 
       if (firestoreUpdates.isNotEmpty) {
-        // [FIXED] Use FirestoreHelper
         await FirestoreHelper.usersCollection.doc(user.uid).update(firestoreUpdates);
       }
 
@@ -505,12 +464,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         Navigator.pop(context); // Go back
       }
 
-    } on FirebaseAuthException catch (e) {
-      String msg = e.message ?? "An error occurred";
-      if (e.code == 'wrong-password') msg = "Incorrect current password";
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-      }
     } catch (e) {
        if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
@@ -557,39 +510,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   labelText: "Student Number",
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.badge_outlined),
-                  helperText: "Note: Changing this requires email verification for new login.",
                 ),
                 validator: (val) => val == null || val.isEmpty ? "Required" : null,
               ),
-              const SizedBox(height: 30),
-
-              const Text("Security", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 10),
-
-              TextFormField(
-                controller: _newPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: "New Password (Optional)",
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock_open),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _currentPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: "Current Password (Required to Save)",
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
-                  filled: true,
-                  fillColor: Color(0xFFFFF3E0),
-                ),
-                validator: (val) => val == null || val.isEmpty ? "Required to verify identity" : null,
-              ),
-
+              
               const SizedBox(height: 30),
 
               SizedBox(
