@@ -6,18 +6,18 @@ import 'package:intl/intl.dart';
 import 'main.dart';
 import 'default_dashboard.dart'; 
 import 'profile_bottom_sheet.dart'; 
-import 'firestore_helper.dart'; // Import Helper
+import 'firestore_helper.dart'; 
 
 class MonitoringPage extends StatefulWidget {
-  final String pondLetter;
-  final String leaderName;
-  final bool isLeader; 
+  final String pondId;
+  final String pondName;
+  final String userRole; // e.g., 'owner', 'editor', 'viewer'
 
   const MonitoringPage({
     super.key,
-    required this.pondLetter,
-    required this.leaderName,
-    required this.isLeader,
+    required this.pondId,
+    required this.pondName,
+    required this.userRole,
   });
 
   @override
@@ -56,6 +56,8 @@ class _MonitoringPageState extends State<MonitoringPage>
     {'label': 'Ca-Mg Ratio', 'icon': Icons.ac_unit_outlined, 'unit': 'ratio', 'keyboardType': TextInputType.text},
   ];
 
+  bool get canEdit => widget.userRole == 'owner' || widget.userRole == 'editor';
+
   @override
   void initState() {
     super.initState();
@@ -79,8 +81,8 @@ class _MonitoringPageState extends State<MonitoringPage>
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return ProfileBottomSheet(
-          isTeamLeader: widget.isLeader,
-          assignedPond: widget.pondLetter,
+          isTeamLeader: widget.userRole == 'owner',
+          assignedPond: null, // Legacy, keeping as null
           onRoleChanged: (isLeader) {
             Navigator.pop(context);
             Navigator.pushAndRemoveUntil(
@@ -108,7 +110,7 @@ class _MonitoringPageState extends State<MonitoringPage>
     final String dateKey = "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
 
     await FirestoreHelper.measurementsCollection.add({
-      'pond': widget.pondLetter,
+      'pondId': widget.pondId, // UPDATED: Now saves using the unique document ID
       'dateKey': dateKey,
       'timestamp': Timestamp.fromDate(_selectedDay!),
       'recordedAt': FieldValue.serverTimestamp(),
@@ -124,6 +126,13 @@ class _MonitoringPageState extends State<MonitoringPage>
   }
 
   void _showAddDataOverlay() {
+    if (!canEdit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You need Editor or Owner permissions to add data.')),
+      );
+      return;
+    }
+
     if (_selectedDay == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a day on the calendar first.')),
@@ -261,8 +270,6 @@ class _MonitoringPageState extends State<MonitoringPage>
                   if (_tabController.index == 1) type = 'weekly';
                   if (_tabController.index == 2) type = 'biweekly';
 
-                  // FIRE AND FORGET!
-                  // We removed the .then() block. Now it triggers the save in the background.
                   _saveDataToFirestore(
                     label: label,
                     unit: unit,
@@ -271,7 +278,6 @@ class _MonitoringPageState extends State<MonitoringPage>
                     type: type,
                     pointValues: pointValues,
                   ).catchError((error) {
-                    // Only show error if the background save genuinely fails later
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text("Failed to save: $error")),
@@ -279,7 +285,6 @@ class _MonitoringPageState extends State<MonitoringPage>
                     }
                   });
 
-                  // CLOSE DIALOG IMMEDIATELY! (Even if offline)
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("Saved $label: $avg $unit")),
@@ -295,6 +300,13 @@ class _MonitoringPageState extends State<MonitoringPage>
   }
 
   void _showEditDataDialog(List<QueryDocumentSnapshot> docs) {
+    if (!canEdit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You need Editor or Owner permissions to edit data.')),
+      );
+      return;
+    }
+
     final Map<String, Map<String, TextEditingController>> groupControllers = {};
     final List<String> points = const ['A', 'B', 'C', 'D'];
 
@@ -394,14 +406,12 @@ class _MonitoringPageState extends State<MonitoringPage>
                   }
                 }
                 
-                // POP IMMEDIATELY! Do not wait for the batch to commit to the server.
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Points updated & Average recalculated")),
                 );
 
                 try {
-                  // Fire and forget the commit.
                   await batch.commit();
                 } catch (e) {
                   if (mounted) {
@@ -548,6 +558,11 @@ class _MonitoringPageState extends State<MonitoringPage>
                   padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
                   child: Row(
                     children: [
+                      // Added back button to return to Dashboard
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -599,7 +614,7 @@ class _MonitoringPageState extends State<MonitoringPage>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Pond ${widget.pondLetter} - ${widget.leaderName}'s Team",
+                          widget.pondName, // UPDATED: Displays the custom Pond Name
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                         ),
                       ],
@@ -624,7 +639,8 @@ class _MonitoringPageState extends State<MonitoringPage>
                                 children: [
                                   StreamBuilder<QuerySnapshot>(
                                     stream: FirestoreHelper.measurementsCollection
-                                        .where('pond', isEqualTo: widget.pondLetter)
+                                        // UPDATED: Querying by pondId
+                                        .where('pondId', isEqualTo: widget.pondId)
                                         .snapshots(includeMetadataChanges: true), 
                                     builder: (context, snapshot) {
                                       Map<DateTime, Set<String>> eventsMap = {};
@@ -817,12 +833,13 @@ class _MonitoringPageState extends State<MonitoringPage>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      // Hide the floating action button if the user is a viewer
+      floatingActionButton: canEdit ? FloatingActionButton(
         backgroundColor: customBlue,
         shape: const CircleBorder(),
         onPressed: _showAddDataOverlay,
         child: const Icon(Icons.add, color: Colors.white, size: 30),
-      ),
+      ) : null,
     );
   }
 
@@ -835,7 +852,8 @@ class _MonitoringPageState extends State<MonitoringPage>
 
     return StreamBuilder<QuerySnapshot>(
       stream: FirestoreHelper.measurementsCollection
-          .where('pond', isEqualTo: widget.pondLetter)
+          // UPDATED: Querying by pondId
+          .where('pondId', isEqualTo: widget.pondId)
           .where('type', isEqualTo: type)
           .where('dateKey', isEqualTo: dateKey)
           .orderBy('recordedAt', descending: true) 
@@ -892,17 +910,19 @@ class _MonitoringPageState extends State<MonitoringPage>
               ),
               Column(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.blue),
-                    onPressed: () {
-                      _showEditDataDialog(groupDocs); 
-                    },
-                  ),
-                  if (widget.isLeader)
+                  // Only allow editors or owners to edit/delete
+                  if (canEdit) ...[
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () {
+                        _showEditDataDialog(groupDocs); 
+                      },
+                    ),
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _confirmGroupDelete(groupDocs),
                     ),
+                  ]
                 ],
               ),
             ],
