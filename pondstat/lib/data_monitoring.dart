@@ -107,8 +107,6 @@ class _MonitoringPageState extends State<MonitoringPage>
 
     final String dateKey = "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
 
-    // Firestore will automatically save this locally if offline, 
-    // and push to the cloud when internet returns.
     await FirestoreHelper.measurementsCollection.add({
       'pond': widget.pondLetter,
       'dateKey': dateKey,
@@ -486,9 +484,7 @@ class _MonitoringPageState extends State<MonitoringPage>
     );
   }
 
-  // Visual widget for sync status in the header
   Widget _buildSyncStatus() {
-    // Listen to metadata changes to know when data is queued locally vs saved online
     return StreamBuilder<QuerySnapshot>(
       stream: FirestoreHelper.measurementsCollection
           .limit(1)
@@ -571,7 +567,6 @@ class _MonitoringPageState extends State<MonitoringPage>
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          // Injecting our magical cloud sync icon right here
                           _buildSyncStatus(), 
                         ],
                       ),
@@ -628,7 +623,7 @@ class _MonitoringPageState extends State<MonitoringPage>
                                   StreamBuilder<QuerySnapshot>(
                                     stream: FirestoreHelper.measurementsCollection
                                         .where('pond', isEqualTo: widget.pondLetter)
-                                        .snapshots(includeMetadataChanges: true), // Request cache awareness
+                                        .snapshots(includeMetadataChanges: true), 
                                     builder: (context, snapshot) {
                                       Map<DateTime, Set<String>> eventsMap = {};
                                       
@@ -841,8 +836,8 @@ class _MonitoringPageState extends State<MonitoringPage>
           .where('pond', isEqualTo: widget.pondLetter)
           .where('type', isEqualTo: type)
           .where('dateKey', isEqualTo: dateKey)
-          .orderBy('timestamp', descending: true) // Changed to use standard timestamp vs serverTimestamp for offline safety
-          .snapshots(includeMetadataChanges: true), // Enable metadata updates!
+          .orderBy('timestamp', descending: true) 
+          .snapshots(includeMetadataChanges: true),
       builder: (context, snapshot) {
         if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
@@ -850,39 +845,29 @@ class _MonitoringPageState extends State<MonitoringPage>
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) return Center(child: Text("No $type data for this date."));
 
-        final Map<String, List<QueryDocumentSnapshot>> groupedData = {};
-        for (var doc in docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          final time = data['timeString'] ?? 'Unknown Time';
-          if (!groupedData.containsKey(time)) {
-            groupedData[time] = [];
-          }
-          groupedData[time]!.add(doc);
-        }
+        // REMOVED GROUPING LOGIC HERE - Now returns one card per parameter recorded
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 8, bottom: 80), // Added bottom padding for FAB
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            final time = data['timeString'] ?? 'Unknown Time';
+            final parameter = data['parameter'] ?? 'Unknown Parameter';
+            final value = data['value']?.toString() ?? '0';
+            final unit = data['unit'] ?? '';
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.only(top: 8),
-          child: Column(
-            children: groupedData.entries.map((entry) {
-              final time = entry.key;
-              final groupDocs = entry.value;
+            final title = "$parameter";
+            final content = "$value $unit\n(Avg across recorded points)";
 
-              String content = groupDocs.map((doc) {
-                final d = doc.data() as Map<String, dynamic>;
-                return "${d['parameter']}: ${d['value']}${d['unit']}";
-              }).join('\n'); 
-              
-              content += "\n(Avg across Points A, B, C, D)";
-
-              return _infoCard(time, content, groupDocs);
-            }).toList(),
-          ),
+            return _infoCard(time, title, content, [doc]);
+          },
         );
       },
     );
   }
 
-  Widget _infoCard(String title, String content, List<QueryDocumentSnapshot> groupDocs) {
+  Widget _infoCard(String time, String title, String content, List<QueryDocumentSnapshot> groupDocs) {
     return SizedBox(
       width: double.infinity,
       child: Card(
@@ -897,8 +882,8 @@ class _MonitoringPageState extends State<MonitoringPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 8),
+                    Text(time, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(title, style: const TextStyle(fontSize: 14)),
                     Text(content, style: const TextStyle(fontSize: 14)),
                   ],
                 ),
@@ -930,7 +915,7 @@ class _MonitoringPageState extends State<MonitoringPage>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Data"),
-        content: const Text("Delete all measurements for this time entry?"),
+        content: const Text("Are you sure you want to delete this measurement?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -942,7 +927,7 @@ class _MonitoringPageState extends State<MonitoringPage>
               Navigator.pop(context);
               final batch = FirebaseFirestore.instance.batch();
               for (var doc in docs) {
-                batch.delete(doc.reference); // Safely queues deletion offline
+                batch.delete(doc.reference); 
               }
               batch.commit();
               ScaffoldMessenger.of(context).showSnackBar(
