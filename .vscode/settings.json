@@ -1,3 +1,4 @@
 {
-    "cmake.ignoreCMakeListsMissing": true
+    "cmake.sourceDirectory": "C:/Users/Chak/Documents/SUBJECTS/Komsai - Third Year/First Semester/CMSC 128 (LEC) - Software Engineering/PondStat-Mobile-App/PondStat/linux",
+    "java.configuration.updateBuildConfiguration": "automatic"
 }

@@ -1,4 +1,4 @@
-package com.example.pondstat
+package com.cmsc128.pondstat
 
 import io.flutter.embedding.android.FlutterActivity
 
