@@ -29,4 +29,13 @@ class FirestoreHelper {
         .doc('data')
         .collection('ponds');
   }
+
+  static CollectionReference<Map<String, dynamic>> get userLogsCollection {
+    return FirebaseFirestore.instance
+        .collection('artifacts')
+        .doc(appId)
+        .collection('public')
+        .doc('data')
+        .collection('user_logs');
+  }
 }

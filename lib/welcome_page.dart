@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'firebase/firestore_helper.dart';
 import 'utility/helpers.dart';
+import 'firebase/user_log_helper.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -107,7 +108,14 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
           });
         }
 
+        await UserLogHelper.logAction(
+          action: 'login',
+          entityType: 'auth',
+        );
+
         if (mounted) {
+          setState(() => _isLoading = false);
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(

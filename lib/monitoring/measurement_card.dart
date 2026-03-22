@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utility/helpers.dart';
+import '../firebase/user_log_helper.dart';
 
 class MeasurementCard extends StatelessWidget {
   final String time;
@@ -10,6 +11,13 @@ class MeasurementCard extends StatelessWidget {
   final List<QueryDocumentSnapshot> groupDocs;
   final VoidCallback onEdit;
 
+  final String? pondId;
+  final String? pondName;
+  final String? category;
+  final String? dateKey;
+  final double? averageValue;
+  final Map<String, double>? pointValues;
+
   const MeasurementCard({
     super.key,
     required this.time,
@@ -18,7 +26,13 @@ class MeasurementCard extends StatelessWidget {
     required this.canEdit,
     required this.groupDocs,
     required this.onEdit,
-  });
+    this.pondId,
+    this.pondName,
+    this.category,
+    this.dateKey,
+    this.averageValue,
+    this.pointValues,
+    });
 
   void _confirmGroupDelete(BuildContext context) {
     showDialog(
@@ -46,14 +60,37 @@ class MeasurementCard extends StatelessWidget {
               foregroundColor: Colors.red,
               elevation: 0,
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              final batch = FirebaseFirestore.instance.batch();
-              for (var doc in groupDocs) {
-                batch.delete(doc.reference);
+
+              try {
+                final batch = FirebaseFirestore.instance.batch();
+                for (var doc in groupDocs) {
+                  batch.delete(doc.reference);
+                }
+                await batch.commit();
+
+                await UserLogHelper.logAction(
+                  action: 'delete_measurement',
+                  entityType: 'measurement',
+                  pondId: pondId,
+                  pondName: pondName,
+                  category: category,
+                  parameter: title,
+                  dateKey: dateKey,
+                  timeString: time,
+                  averageValue: averageValue,
+                  pointValues: pointValues,
+                );
+
+                SnackbarHelper.show(context, "Entry deleted successfully");
+              } catch (e) {
+                SnackbarHelper.show(
+                  context,
+                  "Failed to delete entry",
+                  backgroundColor: Colors.redAccent,
+                );
               }
-              batch.commit();
-              SnackbarHelper.show(context, "Entry deleted successfully");
             },
             child: const Text("Delete"),
           ),

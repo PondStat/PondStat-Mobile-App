@@ -9,6 +9,7 @@ import 'record_data_sheet.dart';
 import 'measurement_card.dart';
 import 'monitoring_calendar.dart';
 import '../pond_background.dart';
+import '../firebase/user_log_helper.dart';
 
 class MonitoringPage extends StatefulWidget {
   final String pondId;
@@ -91,7 +92,7 @@ class _MonitoringPageState extends State<MonitoringPage>
     final String dateKey =
         "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
 
-    await FirestoreHelper.measurementsCollection.add({
+    final docRef = await FirestoreHelper.measurementsCollection.add({
       'pondId': widget.pondId,
       'dateKey': dateKey,
       'timestamp': Timestamp.fromDate(_selectedDay!),
@@ -105,6 +106,25 @@ class _MonitoringPageState extends State<MonitoringPage>
       'timeString': timeString,
       'pointValues': pointValues,
     });
+
+    await UserLogHelper.logAction(
+      action: 'create_measurement',
+      entityType: 'measurement',
+      pondId: widget.pondId,
+      pondName: widget.pondName,
+      category: type,
+      parameter: label,
+      unit: unit,
+      dateKey: dateKey,
+      timeString: timeString,
+      averageValue: averageValue,
+      pointValues: pointValues,
+      extra: {
+        'measurementId': docRef.id,
+        'recordedBy': user.uid,
+        'recorderName': user.displayName ?? 'Unknown',
+      },
+    );
   }
 
   void _showAddDataOverlay() {
@@ -219,17 +239,28 @@ class _MonitoringPageState extends State<MonitoringPage>
               ),
               onPressed: () async {
                 final batch = FirebaseFirestore.instance.batch();
+                final List<Map<String, dynamic>> editLogs = [];
 
                 for (var doc in docs) {
+                  final data = doc.data() as Map<String, dynamic>;
                   final controllersMap = groupControllers[doc.id];
                   if (controllersMap == null) continue;
+
+                  final oldPointValuesDynamic =
+                      data['pointValues'] as Map<String, dynamic>? ?? {};
+                  final Map<String, double> oldPointValues = {
+                    for (final entry in oldPointValuesDynamic.entries)
+                      entry.key: (entry.value as num).toDouble(),
+                  };
+                  final double? oldAverageValue =
+                      data['value'] != null ? (data['value'] as num).toDouble() : null;
 
                   double sum = 0;
                   int count = 0;
                   Map<String, double> newPointValues = {};
 
                   for (var p in points) {
-                    final text = controllersMap[p]?.text;
+                    final text = controllersMap[p]?.text.trim();
                     if (text != null && text.isNotEmpty) {
                       final val = double.tryParse(text);
                       if (val != null) {
@@ -241,19 +272,57 @@ class _MonitoringPageState extends State<MonitoringPage>
                   }
 
                   if (count > 0) {
-                    double newAvg =
+                    final double newAvg =
                         double.parse((sum / count).toStringAsFixed(2));
+
                     batch.update(doc.reference, {
                       'pointValues': newPointValues,
                       'value': newAvg,
                     });
+
+                    editLogs.add({
+                      'measurementId': doc.id,
+                      'parameter': data['parameter'] ?? 'Unknown Parameter',
+                      'unit': data['unit'] ?? '',
+                      'timeString': data['timeString'] ?? 'Unknown Time',
+                      'dateKey': data['dateKey'] ?? '',
+                      'type': data['type'] ?? '',
+                      'oldAverageValue': oldAverageValue,
+                      'oldPointValues': oldPointValues,
+                      'newAverageValue': newAvg,
+                      'newPointValues': newPointValues,
+                    });
                   }
                 }
 
-                Navigator.pop(context);
-                SnackbarHelper.show(context, "Measurements updated");
                 try {
                   await batch.commit();
+
+                  for (final log in editLogs) {
+                    await UserLogHelper.logAction(
+                      action: 'edit_measurement',
+                      entityType: 'measurement',
+                      pondId: widget.pondId,
+                      pondName: widget.pondName,
+                      category: log['type'],
+                      parameter: log['parameter'],
+                      unit: log['unit'],
+                      dateKey: log['dateKey'],
+                      timeString: log['timeString'],
+                      averageValue: log['newAverageValue'],
+                      pointValues: Map<String, double>.from(log['newPointValues']),
+                      extra: {
+                        'measurementId': log['measurementId'],
+                        'oldAverageValue': log['oldAverageValue'],
+                        'oldPointValues': log['oldPointValues'],
+                      },
+                    );
+                  }
+
+                  if (mounted) {
+                    Navigator.pop(context);
+                    SnackbarHelper.show(context, "Measurements updated");
+                  }
                 } catch (e) {
                   if (mounted) {
                     SnackbarHelper.show(context, "Error: $e");
@@ -624,6 +693,20 @@ class _MonitoringPageState extends State<MonitoringPage>
                 canEdit: canEdit,
                 groupDocs: [docs[index]],
                 onEdit: () => _showEditDataDialog([docs[index]]),
+                pondId: widget.pondId,
+                pondName: widget.pondName,
+                category: type,
+                dateKey: data['dateKey'] ?? dateKey,
+                averageValue: data['value'] != null
+                    ? (data['value'] as num).toDouble()
+                    : null,
+                pointValues: data['pointValues'] != null
+                    ? Map<String, double>.from(
+                        (data['pointValues'] as Map<String, dynamic>).map(
+                          (key, value) => MapEntry(key, (value as num).toDouble()),
+                        ),
+                      )
+                    : null,
               );
             },
           ),

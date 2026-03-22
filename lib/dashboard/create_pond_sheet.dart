@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firestore_helper.dart';
+import '../firebase/user_log_helper.dart';
 import '../utility/helpers.dart';
 
 class CreatePondSheet extends StatefulWidget {
@@ -32,7 +33,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
     super.dispose();
   }
 
-  void _createNewPond() {
+  Future<void> _createNewPond() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -53,8 +54,8 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
       // Fire-and-forget: Create document ref and set data without awaiting.
       // Firestore instantly caches this locally (updating UI) and syncs to server in background.
       final newPondRef = FirestoreHelper.pondsCollection.doc();
-      
-      newPondRef.set({
+
+      await newPondRef.set({
         'name': pondName,
         'species': species.isNotEmpty ? species : 'Unspecified',
         'stockingQuantity': quantity,
@@ -64,18 +65,38 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
         'ownerId': user.uid,
         'memberIds': [user.uid],
         'roles': {user.uid: 'owner'},
-      }).catchError((error) {
-        debugPrint("Background sync error: $error");
       });
+
+      await UserLogHelper.logAction(
+        action: 'create_pond',
+        entityType: 'pond',
+        pondId: newPondRef.id,
+        pondName: pondName,
+        extra: {
+          'species': species.isNotEmpty ? species : 'Unspecified',
+          'stockingQuantity': quantity,
+          'targetCulturePeriodDays': culturePeriod,
+          'pondAreaSqm': pondArea,
+          'ownerId': user.uid,
+        },
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
-        SnackbarHelper.show(context, 'Pond setup complete!', backgroundColor: Colors.green);
+        SnackbarHelper.show(
+          context,
+          'Pond setup complete!',
+          backgroundColor: Colors.green,
+        );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        SnackbarHelper.show(context, 'Failed to create pond: $e', backgroundColor: Colors.redAccent);
+        SnackbarHelper.show(
+          context,
+          'Failed to create pond: $e',
+          backgroundColor: Colors.redAccent,
+        );
       }
     }
   }
