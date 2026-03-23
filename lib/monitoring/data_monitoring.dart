@@ -36,8 +36,7 @@ class _MonitoringPageState extends State<MonitoringPage>
 
   bool _isFabVisible = true;
 
-  bool get canEdit =>
-      widget.userRole == 'owner' || widget.userRole == 'editor';
+  bool get canEdit => widget.userRole == 'owner' || widget.userRole == 'editor';
   final Color customBlue = const Color(0xFF0077C2);
 
   @override
@@ -91,6 +90,12 @@ class _MonitoringPageState extends State<MonitoringPage>
     final String dateKey =
         "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
 
+    final double variability = _calculateVariability(pointValues);
+    final double variabilityPercent = _calculateVariabilityPercent(
+      variability,
+      averageValue,
+    );
+
     await FirestoreHelper.measurementsCollection.add({
       'pondId': widget.pondId,
       'dateKey': dateKey,
@@ -104,17 +109,25 @@ class _MonitoringPageState extends State<MonitoringPage>
       'unit': unit,
       'timeString': timeString,
       'pointValues': pointValues,
+      'variability': variability,
+      'variabilityPercent': variabilityPercent,
     });
   }
 
   void _showAddDataOverlay() {
     if (!canEdit) {
-      SnackbarHelper.show(context, 'You need Editor or Owner permissions to add data.');
+      SnackbarHelper.show(
+        context,
+        'You need Editor or Owner permissions to add data.',
+      );
       return;
     }
 
     if (_selectedDay == null) {
-      SnackbarHelper.show(context, 'Please select a day on the calendar first.');
+      SnackbarHelper.show(
+        context,
+        'Please select a day on the calendar first.',
+      );
       return;
     }
 
@@ -145,7 +158,7 @@ class _MonitoringPageState extends State<MonitoringPage>
       final pointValues = data['pointValues'] as Map<String, dynamic>? ?? {};
       groupControllers[doc.id] = {
         for (var p in points)
-          p: TextEditingController(text: pointValues[p]?.toString() ?? '')
+          p: TextEditingController(text: pointValues[p]?.toString() ?? ''),
       };
     }
 
@@ -185,15 +198,16 @@ class _MonitoringPageState extends State<MonitoringPage>
                                 ),
                                 child: TextField(
                                   controller: groupControllers[doc.id]![p],
-                                  keyboardType: const TextInputType
-                                      .numberWithOptions(decimal: true),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
                                   textAlign: TextAlign.center,
                                   decoration: InputDecoration(
                                     labelText: p,
                                     isDense: true,
                                     border: OutlineInputBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
                                 ),
@@ -241,11 +255,20 @@ class _MonitoringPageState extends State<MonitoringPage>
                   }
 
                   if (count > 0) {
-                    double newAvg =
-                        double.parse((sum / count).toStringAsFixed(2));
+                    double newAvg = double.parse(
+                      (sum / count).toStringAsFixed(2),
+                    );
+                    final double newVariability = _calculateVariability(
+                      newPointValues,
+                    );
+                    final double newVariabilityPercent =
+                        _calculateVariabilityPercent(newVariability, newAvg);
+
                     batch.update(doc.reference, {
                       'pointValues': newPointValues,
                       'value': newAvg,
+                      'variability': newVariability,
+                      'variabilityPercent': newVariabilityPercent,
                     });
                   }
                 }
@@ -290,16 +313,30 @@ class _MonitoringPageState extends State<MonitoringPage>
               const SizedBox(width: 4),
               Text(
                 "Saving offline",
-                style: TextStyle(
-                  color: Colors.orange[800],
-                  fontSize: 10,
-                ),
-              )
-            ]
+                style: TextStyle(color: Colors.orange[800], fontSize: 10),
+              ),
+            ],
           ],
         );
       },
     );
+  }
+
+  double _calculateVariability(Map<String, dynamic> pointValues) {
+    final numbers = pointValues.values
+        .whereType<num>()
+        .map((v) => v.toDouble())
+        .toList();
+    if (numbers.isEmpty) return 0.0;
+
+    final minValue = numbers.reduce((a, b) => a < b ? a : b);
+    final maxValue = numbers.reduce((a, b) => a > b ? a : b);
+    return double.parse((maxValue - minValue).toStringAsFixed(2));
+  }
+
+  double _calculateVariabilityPercent(double variability, double averageValue) {
+    if (averageValue.abs() < 0.0001) return 0.0;
+    return double.parse((variability / averageValue * 100).toStringAsFixed(2));
   }
 
   @override
@@ -560,10 +597,7 @@ class _MonitoringPageState extends State<MonitoringPage>
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: dotColor,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
         Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -616,11 +650,38 @@ class _MonitoringPageState extends State<MonitoringPage>
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
+
+              final String valueText =
+                  "${data['value'] ?? '0'} ${data['unit'] ?? ''}".trim();
+              double variability = 0.0;
+              double variabilityPercent = 0.0;
+              if (data['variability'] != null) {
+                variability = (data['variability'] as num).toDouble();
+              } else if (data['pointValues'] != null) {
+                final pointValues = Map<String, dynamic>.from(
+                  data['pointValues'] as Map<String, dynamic>,
+                );
+                variability = _calculateVariability(pointValues);
+              }
+              if (data['variabilityPercent'] != null) {
+                variabilityPercent = (data['variabilityPercent'] as num)
+                    .toDouble();
+              } else if (valueText.isNotEmpty) {
+                final avg =
+                    double.tryParse(data['value']?.toString() ?? '') ?? 0;
+                variabilityPercent = _calculateVariabilityPercent(
+                  variability,
+                  avg,
+                );
+              }
+
+              final content =
+                  "$valueText\n(Avg across recorded points)\nVariability: ${variability.toStringAsFixed(2)} ${data['unit'] ?? ''} (${variabilityPercent.toStringAsFixed(2)}%)";
+
               return MeasurementCard(
                 time: data['timeString'] ?? 'Unknown Time',
                 title: data['parameter'] ?? 'Unknown Parameter',
-                content:
-                    "${data['value'] ?? '0'} ${data['unit'] ?? ''}\n(Avg across recorded points)",
+                content: content,
                 canEdit: canEdit,
                 groupDocs: [docs[index]],
                 onEdit: () => _showEditDataDialog([docs[index]]),
@@ -637,8 +698,10 @@ class _MonitoringPageState extends State<MonitoringPage>
       padding: const EdgeInsets.all(16),
       itemCount: 3,
       itemBuilder: (context, index) => FadeTransition(
-        opacity:
-            Tween<double>(begin: 0.4, end: 1.0).animate(_shimmerController),
+        opacity: Tween<double>(
+          begin: 0.4,
+          end: 1.0,
+        ).animate(_shimmerController),
         child: Container(
           height: 100,
           margin: const EdgeInsets.only(bottom: 12),
@@ -698,10 +761,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Container(
-      color: Colors.white.withOpacity(0.9),
-      child: _tabBar,
-    );
+    return Container(color: Colors.white.withOpacity(0.9), child: _tabBar);
   }
 
   @override
