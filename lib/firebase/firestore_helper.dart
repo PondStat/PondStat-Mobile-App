@@ -38,4 +38,12 @@ class FirestoreHelper {
         .doc('data')
         .collection('custom_parameters');
   }
+  static CollectionReference<Map<String, dynamic>> get measurementHistoryCollection {
+    return FirebaseFirestore.instance
+        .collection('artifacts')
+        .doc(appId)
+        .collection('public')
+        .doc('data')
+        .collection('measurement_history');
+  }
 }

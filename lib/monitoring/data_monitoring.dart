@@ -77,36 +77,99 @@ class _MonitoringPageState extends State<MonitoringPage>
     );
   }
 
-  Future<void> _saveDataToFirestore({
-    required String label,
-    required String unit,
-    required String timeString,
-    required double averageValue,
-    required String type,
-    required Map<String, double> pointValues,
-  }) async {
+  Future<void> deleteMeasurement(DocumentSnapshot doc) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || _selectedDay == null) return;
+    final data = doc.data() as Map<String, dynamic>;
 
-    final String dateKey =
-        "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
+    final batch = FirebaseFirestore.instance.batch();
 
-    await FirestoreHelper.measurementsCollection.add({
+    // DELETE measurement
+    batch.delete(doc.reference);
+
+    // HISTORY LOG
+    final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
+
+    batch.set(historyRef, {
       'pondId': widget.pondId,
-      'dateKey': dateKey,
-      'timestamp': Timestamp.fromDate(_selectedDay!),
-      'recordedAt': FieldValue.serverTimestamp(),
-      'recordedBy': user.uid,
-      'recorderName': user.displayName ?? 'Unknown',
-      'type': type,
-      'parameter': label,
-      'value': averageValue,
-      'unit': unit,
-      'timeString': timeString,
-      'pointValues': pointValues,
+      'measurementId': doc.id,
+      'parameter': data['parameter'],
+      'action': 'delete',
+      'editedAt': FieldValue.serverTimestamp(),
+      'editedBy': user?.uid,
+      'editorName': user?.displayName ?? 'Unknown',
+      'before': data,
+      'after': null,
     });
+
+    await batch.commit();
   }
 
+  Future<void> _saveDataToFirestore({
+  required String label,
+  required String unit,
+  required String timeString,
+  required double averageValue,
+  required String type,
+  required Map<String, double> pointValues,
+}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null || _selectedDay == null) return;
+
+  final String dateKey =
+      "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
+
+  final batch = FirebaseFirestore.instance.batch();
+
+  // Create measurement doc reference
+  final measurementRef =
+      FirestoreHelper.measurementsCollection.doc();
+
+  // 1. SAVE MEASUREMENT
+  batch.set(measurementRef, {
+    'pondId': widget.pondId,
+    'dateKey': dateKey,
+    'timestamp': Timestamp.fromDate(_selectedDay!),
+    'recordedAt': FieldValue.serverTimestamp(),
+    'recordedBy': user.uid,
+    'recorderName': user.displayName ?? 'Unknown',
+    'type': type,
+    'parameter': label,
+    'value': averageValue,
+    'unit': unit,
+    'timeString': timeString,
+    'pointValues': pointValues,
+  });
+
+  // 2. HISTORY LOG (CREATE)
+  final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
+
+  batch.set(historyRef, {
+    'pondId': widget.pondId,
+    'measurementId': measurementRef.id,
+    'parameter': label,
+    'action': 'create',
+    'editedAt': FieldValue.serverTimestamp(),
+    'editedBy': user.uid,
+    'editorName': user.displayName ?? 'Unknown',
+    'before': null,
+    'after': {
+      'value': averageValue,
+      'pointValues': pointValues,
+    },
+  });
+
+  // 3. COMMIT
+  try {
+    await batch.commit();
+    if (mounted) {
+      SnackbarHelper.show(context, "Data recorded");
+    }
+  } catch (e) {
+    if (mounted) {
+      SnackbarHelper.show(context, "Error: $e");
+    }
+  }
+}
 void _showEditHistory(BuildContext context) {
   showModalBottomSheet(
     context: context,
@@ -217,6 +280,74 @@ void _showEditHistory(BuildContext context) {
             onPressed: () => Navigator.pop(context),
             child: const Text("Cancel"),
           ),
+          TextButton(
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Confirm Delete"),
+                  content: const Text("Delete this measurement?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("Cancel"),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Delete"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm != true) return;
+
+              final user = FirebaseAuth.instance.currentUser;
+              final batch = FirebaseFirestore.instance.batch();
+
+              for (var doc in docs) {
+                final data = doc.data() as Map<String, dynamic>;
+
+                // Log delete
+                final historyRef = FirestoreHelper.measurementHistoryCollection
+                    .doc();
+                batch.set(historyRef, {
+                  'pondId': widget.pondId,
+                  'measurementId': doc.id,
+                  'parameter': data['parameter'],
+                  'editedAt': FieldValue.serverTimestamp(),
+                  'editedBy': user?.uid,
+                  'editorName': user?.displayName ?? 'Unknown',
+                  'type': 'delete',
+                  'before': {
+                    'value': data['value'],
+                    'pointValues': data['pointValues'] ?? {},
+                  },
+                  'after': null,
+                });
+
+                // Delete measurement
+                batch.delete(doc.reference);
+              }
+
+              Navigator.pop(context);
+
+              try {
+                await batch.commit();
+                if (mounted) {
+                  SnackbarHelper.show(context, "Measurements deleted");
+                }
+              } catch (e) {
+                if (mounted) {
+                  SnackbarHelper.show(context, "Error: $e");
+                }
+              }
+            },
+            child: const Text(
+              "Delete",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: customBlue,
@@ -264,8 +395,7 @@ void _showEditHistory(BuildContext context) {
                   });
 
                   // HISTORY LOG
-                  final historyRef = FirebaseFirestore.instance
-                      .collection('measurement_history')
+                  final historyRef = FirestoreHelper.measurementHistoryCollection
                       .doc();
 
                   batch.set(historyRef, {
@@ -275,7 +405,7 @@ void _showEditHistory(BuildContext context) {
                     'editedAt': FieldValue.serverTimestamp(),
                     'editedBy': user?.uid,
                     'editorName': user?.displayName ?? 'Unknown',
-                    'type': 'update',
+                    'action': 'update',
                     'before': {
                       'value': oldValue,
                       'pointValues': oldPoints,
@@ -727,23 +857,40 @@ void _showEditHistory(BuildContext context) {
   }
 }
 
-class EditHistorySheet extends StatelessWidget {
+class EditHistorySheet extends StatefulWidget {
   final String pondId;
 
   const EditHistorySheet({super.key, required this.pondId});
 
   @override
+  State<EditHistorySheet> createState() => _EditHistorySheetState();
+}
+
+class _EditHistorySheetState extends State<EditHistorySheet> {
+  String selectedFilter = 'all';
+
+  @override
   Widget build(BuildContext context) {
+    Query<Map<String, dynamic>> query =
+        FirestoreHelper.measurementHistoryCollection
+            .where('pondId', isEqualTo: widget.pondId);
+
+    // Apply filter
+    if (selectedFilter != 'all') {
+      query = query.where('action', isEqualTo: selectedFilter);
+    }
+
+    query = query.orderBy('editedAt', descending: true).limit(30);
+
     return SafeArea(
       child: SizedBox.expand(
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-          ),
+          color: Colors.white,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // HEADER
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -760,16 +907,28 @@ class EditHistorySheet extends StatelessWidget {
                   ),
                 ],
               ),
+
               const SizedBox(height: 12),
 
+              // FILTER CHIPS
+              Row(
+                children: [
+                  _buildFilterChip("All", "all"),
+                  const SizedBox(width: 8),
+                  _buildFilterChip("Added", "create"),
+                  const SizedBox(width: 8),
+                  _buildFilterChip("Edited", "update"),
+                  const SizedBox(width: 8),
+                  _buildFilterChip("Deleted", "delete"),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // LIST
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance
-                      .collection('measurement_history')
-                      .where('pondId', isEqualTo: pondId)
-                      .orderBy('editedAt', descending: true)
-                      .limit(30)
-                      .snapshots(),
+                  stream: query.snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -794,6 +953,20 @@ class EditHistorySheet extends StatelessWidget {
 
                         final before = data['before'] ?? {};
                         final after = data['after'] ?? {};
+                        String action = data['action'] ?? 'unknown';
+
+                        if (action == 'unknown') {
+                          if (data['before'] == null && data['after'] != null) {
+                            action = 'create';
+                          } else if (data['before'] != null && data['after'] == null) {
+                            action = 'delete';
+                          } else {
+                            action = 'update';
+                          }
+}
+
+                        final ts = data['editedAt'] as Timestamp?;
+                        final date = ts?.toDate();
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -802,10 +975,30 @@ class EditHistorySheet extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  data['parameter'] ?? 'Unknown',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                // PARAMETER + ACTION
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      data['parameter'] ?? 'Unknown',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      action.toUpperCase(),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: action == 'delete'
+                                            ? Colors.red
+                                            : action == 'create'
+                                                ? Colors.green
+                                                : Colors.blue,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+
                                 const SizedBox(height: 4),
 
                                 Text(
@@ -813,23 +1006,26 @@ class EditHistorySheet extends StatelessWidget {
                                   style: const TextStyle(fontSize: 12),
                                 ),
 
-                                // Compute timestamp outside the Text widget
                                 Text(
-                                  data['editedAt'] != null
-                                      ? (data['editedAt'] as Timestamp).toDate().toString()
-                                      : '',
+                                  date != null ? date.toLocal().toString() : '',
                                   style: const TextStyle(fontSize: 11, color: Colors.grey),
                                 ),
 
-                                const SizedBox(height: 4),
-                                Text(
-                                  "Before: ${before['value'] ?? '-'}",
-                                  style: const TextStyle(color: Colors.red),
-                                ),
-                                Text(
-                                  "After: ${after['value'] ?? '-'}",
-                                  style: const TextStyle(color: Colors.green),
-                                ),
+                                const SizedBox(height: 6),
+
+                                if (action != 'create')
+                                  Text(
+                                    "Before: ${before['value'] ?? '-'}",
+                                    style:
+                                        const TextStyle(color: Colors.red),
+                                  ),
+
+                                if (action != 'delete')
+                                  Text(
+                                    "After: ${after['value'] ?? '-'}",
+                                    style:
+                                        const TextStyle(color: Colors.green),
+                                  ),
                               ],
                             ),
                           ),
@@ -843,6 +1039,18 @@ class EditHistorySheet extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selectedFilter == value,
+      onSelected: (_) {
+        setState(() {
+          selectedFilter = value;
+        });
+      },
     );
   }
 }
