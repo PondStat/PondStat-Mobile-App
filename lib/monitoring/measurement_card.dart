@@ -46,15 +46,26 @@ class MeasurementCard extends StatelessWidget {
               foregroundColor: Colors.red,
               elevation: 0,
             ),
-            onPressed: () {
-              Navigator.pop(context);
-              final batch = FirebaseFirestore.instance.batch();
-              for (var doc in groupDocs) {
-                batch.delete(doc.reference);
+            // lib/monitoring/measurement_card.dart
+          onPressed: () async { // 1. Added async
+            Navigator.pop(context);
+            final batch = FirebaseFirestore.instance.batch();
+            for (var doc in groupDocs) {
+              batch.delete(doc.reference);
+            }
+            
+            try {
+              await batch.commit(); // 2. Added await
+              if (context.mounted) {
+                SnackbarHelper.show(context, "Entry deleted successfully");
               }
-              batch.commit();
-              SnackbarHelper.show(context, "Entry deleted successfully");
-            },
+            } catch (e) {
+              // 3. Added error handling
+              if (context.mounted) {
+                SnackbarHelper.show(context, "Failed to delete: $e", backgroundColor: Colors.red);
+              }
+            }
+          },
             child: const Text("Delete"),
           ),
         ],
