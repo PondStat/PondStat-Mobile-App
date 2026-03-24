@@ -318,7 +318,7 @@ void _showEditHistory(BuildContext context) {
                   'editedAt': FieldValue.serverTimestamp(),
                   'editedBy': user?.uid,
                   'editorName': user?.displayName ?? 'Unknown',
-                  'type': 'delete',
+                  'action': 'delete',
                   'before': {
                     'value': data['value'],
                     'pointValues': data['pointValues'] ?? {},
