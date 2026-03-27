@@ -5,11 +5,7 @@ class PondStatusColors extends ThemeExtension<PondStatusColors> {
   final Color? warning;
   final Color? critical;
 
-  const PondStatusColors({
-    this.healthy,
-    this.warning,
-    this.critical,
-  });
+  const PondStatusColors({this.healthy, this.warning, this.critical});
 
   @override
   ThemeExtension<PondStatusColors> copyWith({
@@ -75,17 +71,11 @@ class AppTheme {
   );
 
   static ThemeData get lightTheme {
-    return _buildTheme(
-      colorScheme: _lightColorScheme,
-      isDark: false,
-    );
+    return _buildTheme(colorScheme: _lightColorScheme, isDark: false);
   }
 
   static ThemeData get darkTheme {
-    return _buildTheme(
-      colorScheme: _darkColorScheme,
-      isDark: true,
-    );
+    return _buildTheme(colorScheme: _darkColorScheme, isDark: true);
   }
 
   static ThemeData _buildTheme({
@@ -147,16 +137,11 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
-          borderSide: BorderSide(
-            color: colorScheme.primary,
-            width: 2,
-          ),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
-          borderSide: BorderSide(
-            color: colorScheme.error,
-          ),
+          borderSide: BorderSide(color: colorScheme.error),
         ),
         hintStyle: TextStyle(
           color: isDark ? Colors.white38 : Colors.grey.shade400,
@@ -172,32 +157,21 @@ class AppTheme {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           elevation: 2,
-          padding: const EdgeInsets.symmetric(
-            vertical: 16.0,
-            horizontal: 24.0,
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 8,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
           ),
-          textStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -227,9 +201,7 @@ class AppTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return IconThemeData(
-              color: colorScheme.primary,
-            );
+            return IconThemeData(color: colorScheme.primary);
           }
           return IconThemeData(
             color: isDark ? Colors.white54 : Colors.grey.shade600,
@@ -237,14 +209,14 @@ class AppTheme {
         }),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.grey.shade900,
+        backgroundColor: isDark
+            ? const Color(0xFF1E293B)
+            : Colors.grey.shade900,
         contentTextStyle: TextStyle(
           color: isDark ? Colors.white : Colors.grey.shade50,
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: DividerThemeData(
         color: isDark ? Colors.white12 : Colors.grey.shade200,
@@ -253,13 +225,13 @@ class AppTheme {
       ),
       textTheme: isDark
           ? ThemeData.dark().textTheme.apply(
-                bodyColor: colorScheme.onSurface,
-                displayColor: colorScheme.onSurface,
-              )
+              bodyColor: colorScheme.onSurface,
+              displayColor: colorScheme.onSurface,
+            )
           : ThemeData.light().textTheme.apply(
-                bodyColor: colorScheme.onSurface,
-                displayColor: colorScheme.onSurface,
-              ),
+              bodyColor: colorScheme.onSurface,
+              displayColor: colorScheme.onSurface,
+            ),
     );
   }
 }

@@ -4,16 +4,14 @@ import 'package:flutter/material.dart';
 class LoadingOverlay extends StatefulWidget {
   final bool isExiting;
 
-  const LoadingOverlay({
-    super.key,
-    this.isExiting = false,
-  });
+  const LoadingOverlay({super.key, this.isExiting = false});
 
   @override
   State<LoadingOverlay> createState() => _LoadingOverlayState();
 }
 
-class _LoadingOverlayState extends State<LoadingOverlay> with SingleTickerProviderStateMixin {
+class _LoadingOverlayState extends State<LoadingOverlay>
+    with SingleTickerProviderStateMixin {
   late AnimationController _rippleController;
   Timer? _statusTimer;
   int _messageIndex = 0;
@@ -73,7 +71,10 @@ class _LoadingOverlayState extends State<LoadingOverlay> with SingleTickerProvid
     final Color primaryColor = const Color(0xFF0077C2);
     final Size screenSize = MediaQuery.sizeOf(context);
 
-    final double safeAnimationSize = (screenSize.height * 0.35).clamp(200.0, 350.0);
+    final double safeAnimationSize = (screenSize.height * 0.35).clamp(
+      200.0,
+      350.0,
+    );
 
     return AnimatedOpacity(
       opacity: widget.isExiting ? 0.0 : 1.0,
@@ -94,7 +95,8 @@ class _LoadingOverlayState extends State<LoadingOverlay> with SingleTickerProvid
                       child: AnimatedBuilder(
                         animation: _rippleController,
                         builder: (context, child) {
-                          final double pulseScale = 1.0 + (0.05 * _rippleController.value);
+                          final double pulseScale =
+                              1.0 + (0.05 * _rippleController.value);
 
                           return Stack(
                             alignment: Alignment.center,
@@ -146,18 +148,19 @@ class _LoadingOverlayState extends State<LoadingOverlay> with SingleTickerProvid
                     const SizedBox(height: 8),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 500),
-                      transitionBuilder: (Widget child, Animation<double> animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0.0, 0.2),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
-                          ),
-                        );
-                      },
+                      transitionBuilder:
+                          (Widget child, Animation<double> animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.0, 0.2),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
                       child: Text(
                         _loadingMessages[_messageIndex],
                         key: ValueKey<int>(_messageIndex),

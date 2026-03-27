@@ -23,9 +23,9 @@ class ParameterItem {
 }
 
 class MonitoringParameters {
-  static const Color physicalColor = Colors.blue;
-  static const Color chemicalColor = Colors.deepOrange;
-  static const Color biologicalColor = Colors.green;
+  static const Color physicalColor = Color(0xFF0EA5E9);
+  static const Color chemicalColor = Color(0xFFF43F5E);
+  static const Color biologicalColor = Color(0xFF10B981);
 
   static const List<ParameterItem> daily = [
     ParameterItem(
@@ -68,8 +68,9 @@ class MonitoringParameters {
       maxVal: 50,
       hint: 'e.g., 15',
     ),
+
     ParameterItem(
-      label: 'Feeding Time',
+      label: 'Feed Amount',
       icon: Icons.local_dining_outlined,
       color: biologicalColor,
       unit: 'kg',
@@ -89,6 +90,7 @@ class MonitoringParameters {
       minVal: 0,
       hint: 'e.g., 10000',
     ),
+
     ParameterItem(
       label: 'Phytoplankton',
       icon: Icons.eco_outlined,
@@ -96,6 +98,7 @@ class MonitoringParameters {
       unit: 'cells/ml',
       keyboardType: TextInputType.number,
       minVal: 0,
+      hint: 'e.g., 5000',
     ),
     ParameterItem(
       label: 'Zooplankton',
@@ -104,6 +107,7 @@ class MonitoringParameters {
       unit: 'ind/L',
       keyboardType: TextInputType.number,
       minVal: 0,
+      hint: 'e.g., 250',
     ),
     ParameterItem(
       label: 'Avg Body Weight',
@@ -138,6 +142,7 @@ class MonitoringParameters {
       maxVal: 10,
       hint: 'e.g., 0.2',
     ),
+
     ParameterItem(
       label: 'Nitrate',
       icon: Icons.water_drop_outlined,
@@ -146,6 +151,7 @@ class MonitoringParameters {
       keyboardType: TextInputType.numberWithOptions(decimal: true),
       minVal: 0,
       maxVal: 100,
+      hint: 'e.g., 5.0',
     ),
     ParameterItem(
       label: 'Nitrite',
@@ -155,6 +161,7 @@ class MonitoringParameters {
       keyboardType: TextInputType.numberWithOptions(decimal: true),
       minVal: 0,
       maxVal: 20,
+      hint: 'e.g., 0.5',
     ),
     ParameterItem(
       label: 'Alkalinity',
@@ -164,6 +171,7 @@ class MonitoringParameters {
       keyboardType: TextInputType.numberWithOptions(decimal: true),
       minVal: 0,
       maxVal: 500,
+      hint: 'e.g., 120',
     ),
     ParameterItem(
       label: 'Phosphate',
@@ -173,13 +181,15 @@ class MonitoringParameters {
       keyboardType: TextInputType.numberWithOptions(decimal: true),
       minVal: 0,
       maxVal: 10,
+      hint: 'e.g., 1.5',
     ),
     ParameterItem(
       label: 'Ca-Mg Ratio',
       icon: Icons.join_inner_outlined,
       color: chemicalColor,
       unit: 'ratio',
-      keyboardType: TextInputType.text,
+
+      keyboardType: TextInputType.datetime,
       hint: 'e.g., 1:3',
     ),
   ];

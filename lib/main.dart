@@ -21,7 +21,9 @@ void main() async {
       );
       print("✅ Offline persistence enabled");
     } catch (e) {
-      print("⚠️ Could not enable offline persistence (might be multiple tabs open): $e");
+      print(
+        "⚠️ Could not enable offline persistence (might be multiple tabs open): $e",
+      );
     }
 
     print("✅ Firebase connected successfully!");
@@ -41,9 +43,7 @@ class MyApp extends StatelessWidget {
       title: 'PondStat',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme.copyWith(
-        textTheme: GoogleFonts.interTextTheme(
-          AppTheme.lightTheme.textTheme,
-        ),
+        textTheme: GoogleFonts.interTextTheme(AppTheme.lightTheme.textTheme),
         appBarTheme: AppBarTheme(
           titleTextStyle: GoogleFonts.poppins(
             color: Colors.black87,

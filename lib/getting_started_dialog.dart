@@ -38,15 +38,15 @@ class GettingStartedDialog extends StatelessWidget {
 
     final isDark = theme.brightness == Brightness.dark;
     final surfaceColor = theme.colorScheme.surface;
-    final textColor = theme.textTheme.bodyLarge?.color ??
+    final textColor =
+        theme.textTheme.bodyLarge?.color ??
         (isDark ? Colors.white : Colors.black87);
-    final subtitleColor = theme.textTheme.bodyMedium?.color ??
+    final subtitleColor =
+        theme.textTheme.bodyMedium?.color ??
         (isDark ? Colors.white70 : Colors.black54);
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: surfaceColor,
       elevation: 0,
       child: ConstrainedBox(
@@ -205,11 +205,7 @@ class GettingStartedDialog extends StatelessWidget {
             color: color.withOpacity(0.15),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 20,
-          ),
+          child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(width: 16),
         Expanded(

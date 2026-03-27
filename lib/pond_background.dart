@@ -8,7 +8,8 @@ class PondBackground extends StatefulWidget {
   State<PondBackground> createState() => _PondBackgroundState();
 }
 
-class _PondBackgroundState extends State<PondBackground> with SingleTickerProviderStateMixin {
+class _PondBackgroundState extends State<PondBackground>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -32,14 +33,8 @@ class _PondBackgroundState extends State<PondBackground> with SingleTickerProvid
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bgColors = isDark
-        ? const [
-            Color(0xFF0F172A),
-            Color(0xFF1E293B),
-          ]
-        : const [
-            Color(0xFFEAF4FF),
-            Color(0xFFF7F9FC),
-          ];
+        ? const [Color(0xFF0F172A), Color(0xFF1E293B)]
+        : const [Color(0xFFEAF4FF), Color(0xFFF7F9FC)];
 
     final blob1Color = isDark
         ? const Color(0xFF38BDF8).withOpacity(0.04)
@@ -114,9 +109,7 @@ class _PondBackgroundState extends State<PondBackground> with SingleTickerProvid
               child: Opacity(
                 opacity: dotOpacity,
                 child: CustomPaint(
-                  painter: _DotPatternPainter(
-                    color: dotColor,
-                  ),
+                  painter: _DotPatternPainter(color: dotColor),
                 ),
               ),
             ),
@@ -126,23 +119,14 @@ class _PondBackgroundState extends State<PondBackground> with SingleTickerProvid
     );
   }
 
-  Widget _buildBlob({
-    required double size,
-    required Color color,
-  }) {
+  Widget _buildBlob({required double size, required Color color}) {
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(size),
-        boxShadow: [
-          BoxShadow(
-            color: color,
-            blurRadius: 80,
-            spreadRadius: 10,
-          ),
-        ],
+        boxShadow: [BoxShadow(color: color, blurRadius: 80, spreadRadius: 10)],
       ),
     );
   }
@@ -151,9 +135,7 @@ class _PondBackgroundState extends State<PondBackground> with SingleTickerProvid
 class _DotPatternPainter extends CustomPainter {
   final Color color;
 
-  _DotPatternPainter({
-    required this.color,
-  });
+  _DotPatternPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -171,10 +153,7 @@ class _DotPatternPainter extends CustomPainter {
     for (int i = 0; i < cols; i++) {
       for (int j = 0; j < rows; j++) {
         canvas.drawCircle(
-          Offset(
-            startX + (i * spacing),
-            startY + (j * spacing),
-          ),
+          Offset(startX + (i * spacing), startY + (j * spacing)),
           radius,
           paint,
         );

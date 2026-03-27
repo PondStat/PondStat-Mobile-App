@@ -3,47 +3,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FirestoreHelper {
   static const String appId = 'pondstat-app-v1';
 
-  static CollectionReference<Map<String, dynamic>> get usersCollection {
-    return FirebaseFirestore.instance
-        .collection('artifacts')
-        .doc(appId)
-        .collection('public')
-        .doc('data')
-        .collection('users');
-  }
+  static final DocumentReference<Map<String, dynamic>> _baseRef =
+      FirebaseFirestore.instance
+          .collection('artifacts')
+          .doc(appId)
+          .collection('public')
+          .doc('data');
 
-  static CollectionReference<Map<String, dynamic>> get measurementsCollection {
-    return FirebaseFirestore.instance
-        .collection('artifacts')
-        .doc(appId)
-        .collection('public')
-        .doc('data')
-        .collection('measurements');
-  }
+  static final CollectionReference<Map<String, dynamic>> usersCollection =
+      _baseRef.collection('users');
 
-  static CollectionReference<Map<String, dynamic>> get pondsCollection {
-    return FirebaseFirestore.instance
-        .collection('artifacts')
-        .doc(appId)
-        .collection('public')
-        .doc('data')
-        .collection('ponds');
-  }
+  static final CollectionReference<Map<String, dynamic>>
+  measurementsCollection = _baseRef.collection('measurements');
 
-  static CollectionReference<Map<String, dynamic>> get customParametersCollection {
-    return FirebaseFirestore.instance
-        .collection('artifacts')
-        .doc(appId)
-        .collection('public')
-        .doc('data')
-        .collection('custom_parameters');
-  }
-  static CollectionReference<Map<String, dynamic>> get measurementHistoryCollection {
-    return FirebaseFirestore.instance
-        .collection('artifacts')
-        .doc(appId)
-        .collection('public')
-        .doc('data')
-        .collection('measurement_history');
-  }
+  static final CollectionReference<Map<String, dynamic>> pondsCollection =
+      _baseRef.collection('ponds');
+
+  static final CollectionReference<Map<String, dynamic>>
+  customParametersCollection = _baseRef.collection('custom_parameters');
+
+  static final CollectionReference<Map<String, dynamic>>
+  measurementHistoryCollection = _baseRef.collection('measurement_history');
 }

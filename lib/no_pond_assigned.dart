@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class NoPondAssignedWidget extends StatefulWidget {
   final Future<void> Function()? onRefresh;
 
-  const NoPondAssignedWidget({
-    super.key,
-    this.onRefresh,
-  });
+  const NoPondAssignedWidget({super.key, this.onRefresh});
 
   @override
   State<NoPondAssignedWidget> createState() => _NoPondAssignedWidgetState();
@@ -39,10 +36,7 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
       child: Center(
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24.0,
-            vertical: 32.0,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -101,9 +95,7 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.grey.shade200,
-                  ),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,22 +113,10 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                       spacing: 16.0,
                       runSpacing: 12.0,
                       children: [
-                        _buildRecordItem(
-                          primaryColor,
-                          'Daily records',
-                        ),
-                        _buildRecordItem(
-                          primaryColor,
-                          'Biweekly records',
-                        ),
-                        _buildRecordItem(
-                          primaryColor,
-                          'Weekly records',
-                        ),
-                        _buildRecordItem(
-                          primaryColor,
-                          'Team dashboard',
-                        ),
+                        _buildRecordItem(primaryColor, 'Daily records'),
+                        _buildRecordItem(primaryColor, 'Biweekly records'),
+                        _buildRecordItem(primaryColor, 'Weekly records'),
+                        _buildRecordItem(primaryColor, 'Team dashboard'),
                       ],
                     ),
                   ],
@@ -161,9 +141,7 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: primaryColor,
-                    side: BorderSide(
-                      color: primaryColor.withOpacity(0.5),
-                    ),
+                    side: BorderSide(color: primaryColor.withOpacity(0.5)),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 12,
@@ -193,13 +171,7 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          text,
-          style: TextStyle(
-            color: Colors.grey.shade700,
-            fontSize: 13,
-          ),
-        ),
+        Text(text, style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
       ],
     );
   }

@@ -15,7 +15,8 @@ class WelcomePage extends StatefulWidget {
   State<WelcomePage> createState() => _WelcomePageState();
 }
 
-class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin {
+class _WelcomePageState extends State<WelcomePage>
+    with TickerProviderStateMixin {
   late AnimationController _bubbleController;
   late AnimationController _textController;
 
@@ -25,8 +26,9 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
   bool _isLoading = false;
 
   final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: '624574025589-5390binsi9sh8plk6ii0h929dtq63dvu.apps.googleusercontent.com',
-      );
+    clientId:
+        '624574025589-5390binsi9sh8plk6ii0h929dtq63dvu.apps.googleusercontent.com',
+  );
 
   @override
   void initState() {
@@ -42,25 +44,15 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
       duration: const Duration(milliseconds: 1200),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _textController,
-        curve: Curves.easeOutQuart,
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _textController, curve: Curves.easeOutQuart),
+        );
 
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _textController,
-        curve: Curves.easeOut,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
 
     _textController.forward();
   }
@@ -76,7 +68,6 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
     setState(() => _isLoading = true);
 
     try {
-
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
@@ -84,18 +75,22 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
         return;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
       final user = userCredential.user;
 
       if (user != null) {
-        final userDoc = await FirestoreHelper.usersCollection.doc(user.uid).get();
+        final userDoc = await FirestoreHelper.usersCollection
+            .doc(user.uid)
+            .get();
 
         if (!userDoc.exists) {
           await FirestoreHelper.usersCollection.doc(user.uid).set({
@@ -112,9 +107,7 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
             context,
             MaterialPageRoute(
               builder: (context) => const Scaffold(
-                body: Center(
-                  child: Text("Dashboard Placeholder"),
-                ),
+                body: Center(child: Text("Dashboard Placeholder")),
               ),
             ),
           );
@@ -129,13 +122,16 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
         if (e is FirebaseAuthException) {
           switch (e.code) {
             case 'network-request-failed':
-              errorMessage = "No internet connection. Please check your network.";
+              errorMessage =
+                  "No internet connection. Please check your network.";
               break;
             case 'user-disabled':
-              errorMessage = "This account has been disabled. Please contact support.";
+              errorMessage =
+                  "This account has been disabled. Please contact support.";
               break;
             case 'account-exists-with-different-credential':
-              errorMessage = "An account already exists with a different credential.";
+              errorMessage =
+                  "An account already exists with a different credential.";
               break;
             case 'invalid-credential':
               errorMessage = "Invalid credentials. Please try again.";
@@ -147,7 +143,11 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
           }
         }
 
-        SnackbarHelper.show(context, errorMessage, backgroundColor: Colors.redAccent);
+        SnackbarHelper.show(
+          context,
+          errorMessage,
+          backgroundColor: Colors.redAccent,
+        );
       }
     }
   }
@@ -165,10 +165,7 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  primaryColor,
-                  primaryColor.withOpacity(0.8),
-                ],
+                colors: [primaryColor, primaryColor.withOpacity(0.8)],
               ),
             ),
           ),
@@ -179,11 +176,41 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
                 final t = _bubbleController.value;
                 return Stack(
                   children: [
-                    _buildBubble(t, screenSize.height * -0.05, screenSize.width * -0.1, screenSize.width * 0.45, 0),
-                    _buildBubble(t, screenSize.height * 0.1, screenSize.width * 0.75, screenSize.width * 0.25, 2),
-                    _buildBubble(t, screenSize.height * 0.5, screenSize.width * -0.1, screenSize.width * 0.35, 4),
-                    _buildBubble(t, screenSize.height * 0.6, screenSize.width * 0.5, screenSize.width * 0.2, 1.5),
-                    _buildBubble(t, screenSize.height * 0.25, screenSize.width * 0.25, screenSize.width * 0.15, 3.5),
+                    _buildBubble(
+                      t,
+                      screenSize.height * -0.05,
+                      screenSize.width * -0.1,
+                      screenSize.width * 0.45,
+                      0,
+                    ),
+                    _buildBubble(
+                      t,
+                      screenSize.height * 0.1,
+                      screenSize.width * 0.75,
+                      screenSize.width * 0.25,
+                      2,
+                    ),
+                    _buildBubble(
+                      t,
+                      screenSize.height * 0.5,
+                      screenSize.width * -0.1,
+                      screenSize.width * 0.35,
+                      4,
+                    ),
+                    _buildBubble(
+                      t,
+                      screenSize.height * 0.6,
+                      screenSize.width * 0.5,
+                      screenSize.width * 0.2,
+                      1.5,
+                    ),
+                    _buildBubble(
+                      t,
+                      screenSize.height * 0.25,
+                      screenSize.width * 0.25,
+                      screenSize.width * 0.15,
+                      3.5,
+                    ),
                   ],
                 );
               },
@@ -191,7 +218,10 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 20.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -275,7 +305,8 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: primaryColor,
-                                disabledBackgroundColor: Colors.white.withOpacity(0.8),
+                                disabledBackgroundColor: Colors.white
+                                    .withOpacity(0.8),
                                 elevation: 3,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(28.0),
@@ -291,7 +322,8 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
                                       ),
                                     )
                                   : Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         FaIcon(
                                           FontAwesomeIcons.google,
@@ -334,7 +366,13 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildBubble(double t, double top, double left, double size, double offset) {
+  Widget _buildBubble(
+    double t,
+    double top,
+    double left,
+    double size,
+    double offset,
+  ) {
     final x = 15 * math.cos(t * 2 * math.pi + offset);
     final y = 15 * math.sin(t * 2 * math.pi + offset);
 
