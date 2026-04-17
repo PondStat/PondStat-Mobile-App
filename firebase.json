@@ -1,1 +1,22 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"pondstat-7c430","configurations":{"android":"1:624574025589:android:0be1efe3c4bfc7c8de0d3c","ios":"1:624574025589:ios:82c3a68720140533de0d3c","macos":"1:624574025589:ios:82c3a68720140533de0d3c","web":"1:624574025589:web:3d63f7a5409ab901de0d3c","windows":"1:624574025589:web:521e4908fc3c1b4bde0d3c"}}},"android":{"default":{"projectId":"pondstat-7c430","appId":"1:624574025589:android:0be1efe3c4bfc7c8de0d3c","fileOutput":"android/app/google-services.json"}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "pondstat-7c430",
+          "configurations": {
+            "android": "1:624574025589:android:0be1efe3c4bfc7c8de0d3c",
+            "ios": "1:624574025589:ios:82c3a68720140533de0d3c"
+          }
+        }
+      },
+      "android": {
+        "default": {
+          "projectId": "pondstat-7c430",
+          "appId": "1:624574025589:android:0be1efe3c4bfc7c8de0d3c",
+          "fileOutput": "android/app/google-services.json"
+        }
+      }
+    }
+  }
+}

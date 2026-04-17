@@ -18,7 +18,7 @@ class SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.95)),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.95)),
       child: _tabBar,
     );
   }

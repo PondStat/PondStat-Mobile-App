@@ -57,9 +57,9 @@ class _LoadingOverlayState extends State<LoadingOverlay>
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withOpacity(opacity * 0.15),
+        color: Colors.white.withValues(alpha: opacity * 0.15),
         border: Border.all(
-          color: Colors.white.withOpacity(opacity * 0.5),
+          color: Colors.white.withValues(alpha: opacity * 0.5),
           width: 2,
         ),
       ),

@@ -240,7 +240,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       backgroundColor: backgroundLight,
       body: PopScope(
         canPop: false,
-        onPopInvoked: (didPop) async {
+        onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
           await _handleBackNavigation();
         },
@@ -265,7 +265,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -346,7 +346,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: primaryBlue.withOpacity(0.15),
+                                color: primaryBlue.withValues(alpha: 0.15),
                                 blurRadius: 24,
                                 offset: const Offset(0, 8),
                               ),
@@ -390,7 +390,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               border: Border.all(color: Colors.white, width: 3),
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryBlue.withOpacity(0.4),
+                                  color: primaryBlue.withValues(alpha: 0.4),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -460,7 +460,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                backgroundLight.withOpacity(0.0),
+                backgroundLight.withValues(alpha: 0.0),
                 backgroundLight,
                 backgroundLight,
               ],
@@ -477,7 +477,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   boxShadow: hasChanges
                       ? [
                           BoxShadow(
-                            color: primaryBlue.withOpacity(0.3),
+                            color: primaryBlue.withValues(alpha: 0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -546,13 +546,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
         boxShadow: [
           if (isFocused)
             BoxShadow(
-              color: primaryBlue.withOpacity(0.15),
+              color: primaryBlue.withValues(alpha: 0.15),
               blurRadius: 16,
               offset: const Offset(0, 6),
             )
           else
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),

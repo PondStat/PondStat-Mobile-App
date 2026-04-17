@@ -24,4 +24,18 @@ class FirestoreHelper {
 
   static final CollectionReference<Map<String, dynamic>>
   measurementHistoryCollection = _baseRef.collection('measurement_history');
+
+  static final CollectionReference<Map<String, dynamic>>
+  schedulesCollection = _baseRef.collection('schedules');
+
+  static final CollectionReference<Map<String, dynamic>>
+  expensesCollection = _baseRef.collection('expenses');
+
+  static Query<Map<String, dynamic>> getHistoricalMeasurements(String pondId, int days) {
+    final DateTime cutoff = DateTime.now().subtract(Duration(days: days));
+    return measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+        .orderBy('timestamp', descending: false);
+  }
 }

@@ -37,16 +37,16 @@ class _PondBackgroundState extends State<PondBackground>
         : const [Color(0xFFEAF4FF), Color(0xFFF7F9FC)];
 
     final blob1Color = isDark
-        ? const Color(0xFF38BDF8).withOpacity(0.04)
-        : const Color(0xFF0077C2).withOpacity(0.10);
+        ? const Color(0xFF38BDF8).withValues(alpha: 0.04)
+        : const Color(0xFF0077C2).withValues(alpha: 0.10);
 
     final blob2Color = isDark
-        ? const Color(0xFF818CF8).withOpacity(0.04)
-        : const Color(0xFF0099E5).withOpacity(0.08);
+        ? const Color(0xFF818CF8).withValues(alpha: 0.04)
+        : const Color(0xFF0099E5).withValues(alpha: 0.08);
 
     final blob3Color = isDark
-        ? const Color(0xFF0EA5E9).withOpacity(0.03)
-        : const Color(0xFF0077C2).withOpacity(0.07);
+        ? const Color(0xFF0EA5E9).withValues(alpha: 0.03)
+        : const Color(0xFF0077C2).withValues(alpha: 0.07);
 
     final dotColor = isDark ? Colors.white : Colors.black;
     final dotOpacity = isDark ? 0.05 : 0.035;

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../firebase/firestore_helper.dart';
 import '../utility/helpers.dart';
+import '../monitoring/job_schedule_sheet.dart';
 
 class ManageCollaboratorsPage extends StatefulWidget {
   final String pondId;
@@ -175,7 +176,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: confirmColor.withOpacity(0.1),
+                color: confirmColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.warning_amber_rounded, color: confirmColor),
@@ -207,7 +208,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: confirmColor.withOpacity(0.1),
+              backgroundColor: confirmColor.withValues(alpha: 0.1),
               foregroundColor: confirmColor,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -279,7 +280,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -332,7 +333,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
+                      color: Colors.black.withValues(alpha: 0.03),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -367,7 +368,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                               boxShadow: isFocused
                                   ? [
                                       BoxShadow(
-                                        color: primaryBlue.withOpacity(0.15),
+                                        color: primaryBlue.withValues(alpha: 0.15),
                                         blurRadius: 16,
                                         offset: const Offset(0, 6),
                                       ),
@@ -465,7 +466,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: primaryBlue.withOpacity(0.1),
+                        color: primaryBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -525,6 +526,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
 
                         return CollaboratorTile(
                           key: ValueKey(userId),
+                          pondId: widget.pondId,
                           userId: userId,
                           role: role,
                           isMe: isMe,
@@ -546,6 +548,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
 }
 
 class CollaboratorTile extends StatefulWidget {
+  final String pondId;
   final String userId;
   final String role;
   final bool isMe;
@@ -555,6 +558,7 @@ class CollaboratorTile extends StatefulWidget {
 
   const CollaboratorTile({
     super.key,
+    required this.pondId,
     required this.userId,
     required this.role,
     required this.isMe,
@@ -649,6 +653,20 @@ class _CollaboratorTileState extends State<CollaboratorTile>
     return pastelColors[hash % pastelColors.length];
   }
 
+  void _showJobScheduleSheet() {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => JobScheduleSheet(
+        pondId: widget.pondId,
+        userId: widget.userId,
+        userName: userData?['fullName'] ?? 'User',
+      ),
+    );
+  }
+
   void _showRoleSelector(BuildContext context) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
@@ -686,7 +704,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                 CircleAvatar(
                   backgroundColor: _getAvatarColor(
                     userData?['fullName'] ?? 'U',
-                  ).withOpacity(0.2),
+                  ).withValues(alpha: 0.2),
                   radius: 20,
                   child: Text(
                     StringUtils.getInitials(userData?['fullName'] ?? 'U'),
@@ -778,10 +796,10 @@ class _CollaboratorTileState extends State<CollaboratorTile>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.05) : Colors.transparent,
+          color: isSelected ? color.withValues(alpha: 0.05) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? color.withOpacity(0.3) : Colors.transparent,
+            color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
           ),
         ),
         child: Row(
@@ -789,7 +807,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 20),
@@ -897,7 +915,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -911,7 +929,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: avatarColor.withOpacity(0.3),
+                color: avatarColor.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -921,7 +939,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
             radius: 22,
             backgroundColor: widget.isMe
                 ? avatarColor
-                : avatarColor.withOpacity(0.2),
+                : avatarColor.withValues(alpha: 0.2),
             child: Text(
               initials,
               style: TextStyle(
@@ -973,40 +991,58 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                   ),
                 ),
               )
-            : InkWell(
-                onTap: () => _showRoleSelector(context),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.role == 'editor') ...[
+                    IconButton(
+                      icon: const Icon(Icons.calendar_month_rounded,
+                          color: Color(0xFF0A74DA), size: 20),
+                      onPressed: _showJobScheduleSheet,
+                      tooltip: 'Set Job Schedule',
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFF0A74DA).withValues(alpha: 0.1),
+                        padding: const EdgeInsets.all(8),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  InkWell(
+                    onTap: () => _showRoleSelector(context),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.role.toUpperCase(),
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.expand_more_rounded,
-                        size: 16,
-                        color: Colors.grey.shade600,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade200),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.role.toUpperCase(),
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.expand_more_rounded,
+                            size: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
       ),
     );
@@ -1048,7 +1084,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -1090,7 +1126,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withOpacity(0.1),
+                    backgroundColor: Colors.red.withValues(alpha: 0.1),
                     foregroundColor: Colors.red,
                     elevation: 0,
                     shape: RoundedRectangleBorder(

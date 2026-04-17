@@ -165,7 +165,7 @@ class _WelcomePageState extends State<WelcomePage>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [primaryColor, primaryColor.withOpacity(0.8)],
+                colors: [primaryColor, primaryColor.withValues(alpha: 0.8)],
               ),
             ),
           ),
@@ -230,7 +230,7 @@ class _WelcomePageState extends State<WelcomePage>
                       Container(
                         padding: const EdgeInsets.all(8.0),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -279,7 +279,7 @@ class _WelcomePageState extends State<WelcomePage>
                           Text(
                             'Real-time analytics for your aquaculture.\nTrack parameters, manage teams, and boost production.',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontSize: 15.0,
                               height: 1.4,
                             ),
@@ -306,7 +306,7 @@ class _WelcomePageState extends State<WelcomePage>
                                 backgroundColor: Colors.white,
                                 foregroundColor: primaryColor,
                                 disabledBackgroundColor: Colors.white
-                                    .withOpacity(0.8),
+                                    .withValues(alpha: 0.8),
                                 elevation: 3,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(28.0),
@@ -347,7 +347,7 @@ class _WelcomePageState extends State<WelcomePage>
                             "By continuing, you agree to our Terms of Service\nand Privacy Policy.",
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
+                              color: Colors.white.withValues(alpha: 0.7),
                               fontSize: 12,
                               height: 1.4,
                             ),
@@ -383,11 +383,11 @@ class _WelcomePageState extends State<WelcomePage>
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 15.0,
               spreadRadius: 2.0,
             ),

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firestore_helper.dart';
 import '../utility/helpers.dart';
+import '../widgets/primary_button.dart';
+import '../widgets/pondstat_text_field.dart';
 
 class CreatePondSheet extends StatefulWidget {
   const CreatePondSheet({super.key});
@@ -25,8 +26,8 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
 
   String? _selectedSpecies;
   final List<String> _speciesOptions = [
-    'Culture of shrimp',
-    'UPV SpiN tilapia',
+    'Shrimp',
+    'Tilapia',
   ];
 
   @override
@@ -95,77 +96,11 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
     }
   }
 
-  InputDecoration _buildInputDecoration(
-    BuildContext context, {
-    required String label,
-    required String hint,
-    required IconData icon,
-    String? suffixText,
-  }) {
-    final primaryColor = Theme.of(context).primaryColor;
-
-    return InputDecoration(
-      labelText: label,
-      hintText: hint,
-      suffixText: suffixText,
-      filled: true,
-      fillColor: Colors.grey.shade50,
-      labelStyle: TextStyle(
-        color: Colors.grey.shade700,
-        fontWeight: FontWeight.w500,
-      ),
-      hintStyle: TextStyle(color: Colors.grey.shade400),
-      suffixStyle: TextStyle(
-        color: Colors.grey.shade500,
-        fontWeight: FontWeight.w600,
-      ),
-      prefixIcon: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: primaryColor, size: 20),
-        ),
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: primaryColor, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.red.shade300, width: 1),
-      ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 16),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 20,
-              offset: Offset(0, -5),
-            ),
-          ],
-        ),
         padding: EdgeInsets.only(
           top: 12,
           left: 24,
@@ -193,59 +128,64 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                 _buildHeader(context),
                 const SizedBox(height: 32),
 
-                TextFormField(
+                PondStatTextField(
                   controller: _newPondNameController,
-                  enabled: !_isLoading,
-                  autofocus: true,
+                  label: 'Pond Name *',
+                  hint: 'e.g., North Farm',
+                  prefixIcon: Icons.label_outline_rounded,
                   textInputAction: TextInputAction.next,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                  decoration: _buildInputDecoration(
-                    context,
-                    label: 'Pond Name *',
-                    hint: 'e.g., North Farm',
-                    icon: Icons.label_outline_rounded,
-                  ),
-                  textCapitalization: TextCapitalization.words,
                   validator: (value) => value == null || value.trim().isEmpty
                       ? 'Enter a name'
                       : null,
                 ),
                 const SizedBox(height: 20),
 
-                DropdownButtonFormField<String>(
-                  value: _selectedSpecies,
-                  isExpanded: true,
-                  icon: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: Colors.grey.shade600,
-                  ),
-                  decoration: _buildInputDecoration(
-                    context,
-                    label: 'Target Species *',
-                    hint: 'Select species',
-                    icon: Icons.set_meal_outlined,
-                  ),
-                  items: _speciesOptions.map((String species) {
-                    return DropdownMenuItem<String>(
-                      value: species,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4, bottom: 8),
                       child: Text(
-                        species,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
+                        'TARGET SPECIES *',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 1.2,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    );
-                  }).toList(),
-                  onChanged: _isLoading
-                      ? null
-                      : (val) => setState(() => _selectedSpecies = val),
-                  validator: (value) =>
-                      value == null ? 'Select a species' : null,
+                    ),
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedSpecies,
+                      isExpanded: true,
+                      icon: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: Colors.grey.shade600,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Select species',
+                        prefixIcon: Icon(Icons.set_meal_outlined, size: 20),
+                      ),
+                      items: _speciesOptions.map((String species) {
+                        return DropdownMenuItem<String>(
+                          value: species,
+                          child: Text(
+                            species,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: _isLoading
+                          ? null
+                          : (val) => setState(() => _selectedSpecies = val),
+                      validator: (value) =>
+                          value == null ? 'Select a species' : null,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
 
@@ -253,21 +193,16 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: TextFormField(
+                      child: PondStatTextField(
                         controller: _stockingQuantityController,
-                        enabled: !_isLoading,
-                        textInputAction: TextInputAction.next,
+                        label: 'Quantity',
+                        hint: '50000',
+                        prefixIcon: Icons.numbers_rounded,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: _buildInputDecoration(
-                          context,
-                          label: 'Quantity',
-                          hint: '50000',
-                          icon: Icons.numbers_rounded,
-                          suffixText: 'pcs',
+                        textInputAction: TextInputAction.next,
+                        suffixIcon: const Padding(
+                          padding: EdgeInsets.only(right: 16, top: 18),
+                          child: Text('pcs', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                         ),
                         validator: (val) {
                           if (val == null || val.isEmpty) return 'Required';
@@ -278,21 +213,16 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: TextFormField(
+                      child: PondStatTextField(
                         controller: _culturePeriodController,
-                        enabled: !_isLoading,
-                        textInputAction: TextInputAction.next,
+                        label: 'Period',
+                        hint: '120',
+                        prefixIcon: Icons.calendar_month_rounded,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: _buildInputDecoration(
-                          context,
-                          label: 'Period',
-                          hint: '120',
-                          icon: Icons.calendar_month_rounded,
-                          suffixText: 'days',
+                        textInputAction: TextInputAction.next,
+                        suffixIcon: const Padding(
+                          padding: EdgeInsets.only(right: 16, top: 18),
+                          child: Text('days', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                         ),
                         validator: (val) {
                           if (val == null || val.isEmpty) return 'Required';
@@ -305,23 +235,16 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                 ),
                 const SizedBox(height: 20),
 
-                TextFormField(
+                PondStatTextField(
                   controller: _pondAreaController,
-                  enabled: !_isLoading,
+                  label: 'Pond Area',
+                  hint: '2500',
+                  prefixIcon: Icons.square_foot_rounded,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   textInputAction: TextInputAction.done,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                  ],
-                  decoration: _buildInputDecoration(
-                    context,
-                    label: 'Pond Area',
-                    hint: '2500',
-                    icon: Icons.square_foot_rounded,
-                    suffixText: 'sqm',
+                  suffixIcon: const Padding(
+                    padding: EdgeInsets.only(right: 16, top: 18),
+                    child: Text('sqm', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                   ),
                   validator: (val) {
                     if (val == null || val.isEmpty) return 'Required';
@@ -331,52 +254,11 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                 ),
                 const SizedBox(height: 36),
 
-                Container(
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context).primaryColor.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _createNewPond,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Create Pond',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Icon(Icons.arrow_forward_rounded, size: 20),
-                            ],
-                          ),
-                  ),
+                PrimaryButton(
+                  text: 'Create Pond',
+                  icon: Icons.arrow_forward_rounded,
+                  isLoading: _isLoading,
+                  onPressed: _createNewPond,
                 ),
               ],
             ),
@@ -392,19 +274,12 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).primaryColor.withOpacity(0.2),
-                Theme.of(context).primaryColor.withOpacity(0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(
             Icons.water_drop_rounded,
-            color: Theme.of(context).primaryColor,
+            color: Theme.of(context).colorScheme.primary,
             size: 28,
           ),
         ),

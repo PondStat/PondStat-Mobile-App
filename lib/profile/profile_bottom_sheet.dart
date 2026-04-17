@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../app_theme.dart';
 import '../utility/helpers.dart';
 import 'edit_profile_page.dart';
 import 'manage_collaborators_page.dart';
@@ -250,7 +249,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: avatarColor.withOpacity(0.3),
+                color: avatarColor.withValues(alpha: 0.3),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -259,11 +258,11 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: avatarColor.withOpacity(0.2), width: 2),
+              border: Border.all(color: avatarColor.withValues(alpha: 0.2), width: 2),
             ),
             child: CircleAvatar(
               radius: 32,
-              backgroundColor: avatarColor.withOpacity(0.15),
+              backgroundColor: avatarColor.withValues(alpha: 0.15),
               backgroundImage: user?.photoURL != null
                   ? NetworkImage(user!.photoURL!)
                   : null,
@@ -346,17 +345,17 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
 
         boxShadow: [
           BoxShadow(
-            color: roleColor.withOpacity(0.12),
+            color: roleColor.withValues(alpha: 0.12),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: roleColor.withOpacity(0.15), width: 1.5),
+        border: Border.all(color: roleColor.withValues(alpha: 0.15), width: 1.5),
       ),
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -366,14 +365,14 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  roleColor.withOpacity(0.15),
-                  roleColor.withOpacity(0.05),
+                  roleColor.withValues(alpha: 0.15),
+                  roleColor.withValues(alpha: 0.05),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               shape: BoxShape.circle,
-              border: Border.all(color: roleColor.withOpacity(0.2)),
+              border: Border.all(color: roleColor.withValues(alpha: 0.2)),
             ),
             child: Icon(roleIcon, color: roleColor, size: 24),
           ),
@@ -425,7 +424,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.logout_rounded, color: Colors.red),
@@ -460,7 +459,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.withOpacity(0.1),
+                backgroundColor: Colors.red.withValues(alpha: 0.1),
                 foregroundColor: Colors.red,
                 elevation: 0,
                 shape: RoundedRectangleBorder(

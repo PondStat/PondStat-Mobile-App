@@ -96,7 +96,7 @@ class MonitoringCalendar extends StatelessWidget {
                       ),
                       style: TextButton.styleFrom(
                         foregroundColor: primaryBlue,
-                        backgroundColor: primaryBlue.withOpacity(0.05),
+                        backgroundColor: primaryBlue.withValues(alpha: 0.05),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 8,
@@ -167,7 +167,7 @@ class MonitoringCalendar extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: primaryBlue.withOpacity(0.4),
+                          color: primaryBlue.withValues(alpha: 0.4),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -188,7 +188,7 @@ class MonitoringCalendar extends StatelessWidget {
                     margin: const EdgeInsets.all(4),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: primaryBlue.withOpacity(0.1),
+                      color: primaryBlue.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Text(

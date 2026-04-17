@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class ParameterItem {
   final String label;
+  final String unit;
   final IconData icon;
   final Color color;
-  final String unit;
   final TextInputType keyboardType;
   final double? minVal;
   final double? maxVal;
@@ -12,10 +12,10 @@ class ParameterItem {
 
   const ParameterItem({
     required this.label,
+    required this.unit,
     required this.icon,
     required this.color,
-    required this.unit,
-    required this.keyboardType,
+    this.keyboardType = const TextInputType.numberWithOptions(decimal: true),
     this.minVal,
     this.maxVal,
     this.hint = '',
@@ -23,200 +23,174 @@ class ParameterItem {
 }
 
 class MonitoringParameters {
-  static const Color physicalColor = Color(0xFF0EA5E9);
-  static const Color chemicalColor = Color(0xFFF43F5E);
-  static const Color biologicalColor = Color(0xFF10B981);
+  static List<ParameterItem> getDailyParameters(String species) {
+    double? phMin = 6.5;
+    double? phMax = 8.5;
+    double? tempMin = 25.0;
+    double? tempMax = 32.0;
+    double? salMin;
+    double? salMax;
 
-  static const List<ParameterItem> daily = [
-    ParameterItem(
-      label: 'Water Temp',
-      icon: Icons.thermostat_outlined,
-      color: physicalColor,
-      unit: '°C',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 15,
-      maxVal: 40,
-      hint: 'e.g., 28.5',
-    ),
-    ParameterItem(
-      label: 'Air Temp',
-      icon: Icons.air_outlined,
-      color: physicalColor,
-      unit: '°C',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 10,
-      maxVal: 50,
-      hint: 'e.g., 30.0',
-    ),
-    ParameterItem(
-      label: 'pH Level',
-      icon: Icons.science_outlined,
-      color: chemicalColor,
-      unit: '',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      maxVal: 14,
-      hint: 'e.g., 7.5',
-    ),
-    ParameterItem(
-      label: 'Salinity',
-      icon: Icons.waves_outlined,
-      color: physicalColor,
-      unit: 'ppt',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      maxVal: 50,
-      hint: 'e.g., 15',
-    ),
+    if (species.toLowerCase() == 'shrimp') {
+      phMin = 7.5;
+      phMax = 8.5;
+      tempMin = 28.0;
+      tempMax = 30.0;
+      salMin = 15.0;
+      salMax = 30.0;
+    } else if (species.toLowerCase() == 'tilapia') {
+      phMin = 6.5;
+      phMax = 9.0;
+      tempMin = 25.0;
+      tempMax = 32.0;
+      salMin = 30.0;
+      salMax = 35.0;
+    }
 
-    ParameterItem(
-      label: 'Feed Amount',
-      icon: Icons.local_dining_outlined,
-      color: biologicalColor,
+    return [
+      const ParameterItem(
+        label: 'Feeding',
+        unit: 'kg',
+        icon: Icons.set_meal_rounded,
+        color: Colors.brown,
+        hint: 'e.g., 2.5',
+      ),
+      ParameterItem(
+        label: 'pH Level',
+        unit: '',
+        icon: Icons.water_drop_rounded,
+        color: Colors.blue,
+        minVal: phMin,
+        maxVal: phMax,
+        hint: 'e.g., 7.2',
+      ),
+      ParameterItem(
+        label: 'Temperature',
+        unit: '°C',
+        icon: Icons.thermostat_rounded,
+        color: Colors.orange,
+        minVal: tempMin,
+        maxVal: tempMax,
+        hint: 'e.g., 28.5',
+      ),
+      ParameterItem(
+        label: 'Salinity',
+        unit: 'ppt',
+        icon: Icons.grain_rounded,
+        color: Colors.cyan,
+        minVal: salMin,
+        maxVal: salMax,
+        hint: 'e.g., 15',
+      ),
+    ];
+  }
+
+  static final List<ParameterItem> weeklyParameters = [
+    const ParameterItem(
+      label: 'Stock sampling',
       unit: 'kg',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      hint: 'Total feed given',
+      icon: Icons.scale_rounded,
+      color: Colors.lightGreen,
+      hint: 'e.g., 100',
     ),
-  ];
-
-  static const List<ParameterItem> weekly = [
-    ParameterItem(
-      label: 'Microbe Count',
-      icon: Icons.coronavirus_outlined,
-      color: biologicalColor,
-      unit: 'cells/ml',
-      keyboardType: TextInputType.number,
-      minVal: 0,
+    const ParameterItem(
+      label: 'Phytoplankton',
+      unit: 'cells/mL',
+      icon: Icons.biotech_rounded,
+      color: Colors.lightGreen,
       hint: 'e.g., 10000',
     ),
-
-    ParameterItem(
-      label: 'Phytoplankton',
-      icon: Icons.eco_outlined,
-      color: biologicalColor,
-      unit: 'cells/ml',
-      keyboardType: TextInputType.number,
-      minVal: 0,
-      hint: 'e.g., 5000',
-    ),
-    ParameterItem(
-      label: 'Zooplankton',
-      icon: Icons.bug_report_outlined,
-      color: biologicalColor,
-      unit: 'ind/L',
-      keyboardType: TextInputType.number,
-      minVal: 0,
-      hint: 'e.g., 250',
-    ),
-    ParameterItem(
-      label: 'Avg Body Weight',
-      icon: Icons.scale_outlined,
-      color: biologicalColor,
-      unit: 'g',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      maxVal: 2000,
-      hint: 'e.g., 15.2',
+    const ParameterItem(
+      label: 'Bacterial',
+      unit: 'CFU/mL',
+      icon: Icons.coronavirus_rounded,
+      color: Colors.red,
+      hint: 'e.g., 10^4',
     ),
   ];
 
-  static const List<ParameterItem> biweekly = [
-    ParameterItem(
-      label: 'Dissolved O2',
-      icon: Icons.bubble_chart_outlined,
-      color: chemicalColor,
+  static final List<ParameterItem> biweeklyParameters = [
+    const ParameterItem(
+      label: 'Dissolved Oxygen',
       unit: 'mg/L',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      maxVal: 20,
-      hint: 'e.g., 5.5',
+      icon: Icons.air_rounded,
+      color: Colors.cyan,
+      minVal: 5.0,
+      hint: 'e.g., 6.0',
     ),
-    ParameterItem(
+    const ParameterItem(
       label: 'Ammonia',
-      icon: Icons.warning_amber_outlined,
-      color: chemicalColor,
-      unit: 'ppm',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      maxVal: 10,
-      hint: 'e.g., 0.2',
+      unit: 'mg/L',
+      icon: Icons.science_rounded,
+      color: Colors.purple,
+      maxVal: 0.05,
+      hint: 'e.g., 0.02',
     ),
-
-    ParameterItem(
-      label: 'Nitrate',
-      icon: Icons.water_drop_outlined,
-      color: chemicalColor,
-      unit: 'ppm',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      maxVal: 100,
-      hint: 'e.g., 5.0',
-    ),
-    ParameterItem(
+    const ParameterItem(
       label: 'Nitrite',
-      icon: Icons.opacity_outlined,
-      color: chemicalColor,
-      unit: 'ppm',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      maxVal: 20,
-      hint: 'e.g., 0.5',
+      unit: 'mg/L',
+      icon: Icons.science_outlined,
+      color: Colors.indigo,
+      maxVal: 0.1,
+      hint: 'e.g., 0.05',
     ),
-    ParameterItem(
-      label: 'Alkalinity',
-      icon: Icons.balance_outlined,
-      color: chemicalColor,
-      unit: 'ppm',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      maxVal: 500,
+    const ParameterItem(
+      label: 'Nitrate',
+      unit: 'mg/L',
+      icon: Icons.biotech_rounded,
+      color: Colors.deepPurple,
+      hint: 'e.g., 10',
+    ),
+    const ParameterItem(
+      label: 'Calcium',
+      unit: 'mg/L',
+      icon: Icons.apps_rounded,
+      color: Colors.blueGrey,
+      hint: 'e.g., 40',
+    ),
+    const ParameterItem(
+      label: 'Magnesium',
+      unit: 'mg/L',
+      icon: Icons.apps_outage_rounded,
+      color: Colors.teal,
       hint: 'e.g., 120',
     ),
-    ParameterItem(
-      label: 'Phosphate',
-      icon: Icons.data_usage_outlined,
-      color: chemicalColor,
-      unit: 'ppm',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      minVal: 0,
-      maxVal: 10,
-      hint: 'e.g., 1.5',
+    const ParameterItem(
+      label: 'Total Alkalinity',
+      unit: 'mg/L',
+      icon: Icons.waves_rounded,
+      color: Colors.lightBlue,
+      minVal: 100.0,
+      hint: 'e.g., 120',
     ),
-    ParameterItem(
-      label: 'Ca-Mg Ratio',
-      icon: Icons.join_inner_outlined,
-      color: chemicalColor,
-      unit: 'ratio',
-
-      keyboardType: TextInputType.datetime,
-      hint: 'e.g., 1:3',
+    const ParameterItem(
+      label: 'Carbon dioxide',
+      unit: 'mg/L',
+      icon: Icons.co2_rounded,
+      color: Colors.grey,
+      hint: 'e.g., 15',
     ),
   ];
 
-  static List<ParameterItem> getParametersByIndex(int index) {
+  static List<ParameterItem> getParametersByIndex(int index, String species) {
     switch (index) {
       case 0:
-        return daily;
+        return getDailyParameters(species);
       case 1:
-        return weekly;
+        return weeklyParameters;
       case 2:
-        return biweekly;
+        return biweeklyParameters;
       default:
-        return [];
+        return getDailyParameters(species);
     }
   }
 
-  static String getTabTitle(int index) {
-    switch (index) {
-      case 0:
-        return "Daily Monitoring";
-      case 1:
-        return "Weekly Analysis";
-      case 2:
-        return "Biweekly Report";
-      default:
-        return "";
+  static ParameterItem? getParameterByLabel(String label, String species) {
+    final allParams = [...getDailyParameters(species), ...weeklyParameters, ...biweeklyParameters];
+    try {
+      return allParams.firstWhere((p) => p.label == label);
+    } catch (_) {
+      return null;
     }
   }
 }
