@@ -20,6 +20,7 @@ import 'widgets/measurement_list_view.dart';
 import 'widgets/expense_sheet.dart';
 import 'monitoring_calendar.dart';
 import 'expenses_tab.dart';
+import 'growth_tab.dart';
 
 class MonitoringPage extends StatefulWidget {
   final String pondId;
@@ -59,7 +60,7 @@ class _MonitoringPageState extends State<MonitoringPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _pageController = PageController();
 
     _tabController.addListener(() {
@@ -412,6 +413,7 @@ class _MonitoringPageState extends State<MonitoringPage>
                           Tab(child: _buildTabLabel("Daily", Colors.green.shade400)),
                           Tab(child: _buildTabLabel("Weekly", Colors.amber.shade400)),
                           Tab(child: _buildTabLabel("Biweekly", Colors.purple.shade400)),
+                          Tab(child: _buildTabLabel("Growth", Colors.indigo.shade400)),
                           Tab(child: _buildTabLabel("Trends", Colors.red.shade400)),
                           Tab(child: _buildTabLabel("Expenses", Colors.teal.shade400)),
                         ],
@@ -429,6 +431,7 @@ class _MonitoringPageState extends State<MonitoringPage>
                     _buildStreamTab('daily', dateKey),
                     _buildStreamTab('weekly', dateKey),
                     _buildStreamTab('biweekly', dateKey),
+                    GrowthTab(pondId: widget.pondId),
                     TrendsTab(pondId: widget.pondId, species: widget.species),
                     ExpensesTab(pondId: widget.pondId, canAdd: canEdit),
                   ],
@@ -536,7 +539,7 @@ class _MonitoringPageState extends State<MonitoringPage>
     final VoidCallback action;
     final Color fabColor;
 
-    if (_tabController.index == 3) {
+    if (_tabController.index == 4) {
       label = "Export Report";
       icon = Icons.ios_share_rounded;
       action = () {
@@ -544,11 +547,19 @@ class _MonitoringPageState extends State<MonitoringPage>
         SnackbarHelper.show(context, "Export functionality coming soon", backgroundColor: Colors.red.shade400);
       };
       fabColor = Colors.red.shade400;
-    } else if (_tabController.index == 4) {
+    } else if (_tabController.index == 5) {
       label = "Add Expense";
       icon = Icons.receipt_long_rounded;
       action = _showExpenseOverlay;
       fabColor = Colors.teal;
+    } else if (_tabController.index == 3) {
+      label = "Record Sampling";
+      icon = Icons.add_rounded;
+      action = () {
+        HapticFeedback.lightImpact();
+        SnackbarHelper.show(context, "Growth recording coming soon", backgroundColor: Colors.indigo.shade400);
+      };
+      fabColor = Colors.indigo.shade400;
     } else {
       label = "Record Data";
       icon = Icons.add_rounded;

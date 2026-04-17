@@ -90,8 +90,8 @@ class MonitoringParameters {
       label: 'Stock sampling',
       unit: 'kg',
       icon: Icons.scale_rounded,
-      color: Colors.green,
-      hint: 'e.g., 15.5',
+      color: Colors.lightGreen,
+      hint: 'e.g., 100',
     ),
     const ParameterItem(
       label: 'Phytoplankton',
