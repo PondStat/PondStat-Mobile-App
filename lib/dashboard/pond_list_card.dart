@@ -42,6 +42,7 @@ class _PondListCardState extends State<PondListCard> {
           pondId: widget.pondId,
           pondName: widget.pondName,
           userRole: widget.userRole,
+          species: widget.species,
         ),
       ),
     );
@@ -77,12 +78,12 @@ class _PondListCardState extends State<PondListCard> {
 
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
                 BoxShadow(
-                  color: const Color(0xFF0A74DA).withOpacity(0.02),
+                  color: const Color(0xFF0A74DA).withValues(alpha: 0.02),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -111,7 +112,7 @@ class _PondListCardState extends State<PondListCard> {
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF0A74DA).withOpacity(0.3),
+                                color: const Color(0xFF0A74DA).withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),

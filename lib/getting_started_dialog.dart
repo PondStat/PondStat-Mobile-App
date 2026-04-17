@@ -60,7 +60,7 @@ class GettingStartedDialog extends StatelessWidget {
             children: [
               Container(
                 width: double.infinity,
-                color: primaryColor.withOpacity(isDark ? 0.2 : 0.1),
+                color: primaryColor.withValues(alpha: isDark ? 0.2 : 0.1),
                 padding: const EdgeInsets.only(
                   top: 16,
                   bottom: 24,
@@ -76,7 +76,7 @@ class GettingStartedDialog extends StatelessWidget {
                       child: IconButton(
                         icon: Icon(
                           Icons.close,
-                          color: textColor.withOpacity(0.7),
+                          color: textColor.withValues(alpha: 0.7),
                         ),
                         onPressed: () => Navigator.of(context).pop(),
                         tooltip: 'Close tutorial',
@@ -202,7 +202,7 @@ class GettingStartedDialog extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 20),

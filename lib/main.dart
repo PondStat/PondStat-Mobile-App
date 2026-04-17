@@ -1,34 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:developer' as developer;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_theme.dart';
 import 'auth_wrapper.dart';
 import 'firebase/firebase_options.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notifications (Mobile only)
+  if (!kIsWeb) {
+    await NotificationService().initialize();
+  }
 
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    try {
-      FirebaseFirestore.instance.settings = const Settings(
-        persistenceEnabled: true,
-        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-      );
-      print("✅ Offline persistence enabled");
-    } catch (e) {
-      print(
-        "⚠️ Could not enable offline persistence (might be multiple tabs open): $e",
-      );
+    if (!kIsWeb) {
+      try {
+        FirebaseFirestore.instance.settings = const Settings(
+          persistenceEnabled: true,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+        developer.log("✅ Offline persistence enabled");
+      } catch (e) {
+        developer.log(
+          "⚠️ Could not enable offline persistence: $e",
+        );
+      }
     }
 
-    print("✅ Firebase connected successfully!");
+    developer.log("✅ Firebase connected successfully!");
   } catch (e) {
-    print("❌ Firebase connection failed: $e");
+    developer.log("❌ Firebase connection failed: $e");
   }
 
   runApp(const MyApp());

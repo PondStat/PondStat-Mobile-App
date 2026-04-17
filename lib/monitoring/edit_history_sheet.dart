@@ -24,10 +24,18 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
     final now = DateTime.now();
     final difference = now.difference(date);
 
-    if (difference.inSeconds < 60) return 'Just now';
-    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
-    if (difference.inHours < 24) return '${difference.inHours}h ago';
-    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    if (difference.inSeconds < 60) {
+      return 'Just now';
+    }
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    }
+    if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    }
+    if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    }
 
     const months = [
       'Jan',
@@ -178,12 +186,14 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                     String action = data['action'] ?? 'unknown';
 
                     if (action == 'unknown') {
-                      if (data['before'] == null && data['after'] != null)
+                      if (data['before'] == null && data['after'] != null) {
                         action = 'create';
-                      else if (data['before'] != null && data['after'] == null)
+                      } else if (data['before'] != null &&
+                          data['after'] == null) {
                         action = 'delete';
-                      else
+                      } else {
                         action = 'update';
+                      }
                     }
 
                     final ts = data['editedAt'] as Timestamp?;
@@ -209,7 +219,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
+                            color: Colors.black.withValues(alpha: 0.03),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
@@ -256,7 +266,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: actionColor.withOpacity(0.1),
+                                            color: actionColor.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),

@@ -45,10 +45,10 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                 height: 160,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.05),
+                  color: primaryColor.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: primaryColor.withOpacity(0.1),
+                    color: primaryColor.withValues(alpha: 0.1),
                     width: 2,
                   ),
                 ),
@@ -58,13 +58,13 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                     Icon(
                       Icons.water_drop_outlined,
                       size: 48,
-                      color: primaryColor.withOpacity(0.4),
+                      color: primaryColor.withValues(alpha: 0.4),
                     ),
                     const SizedBox(height: 12),
                     Icon(
                       Icons.search_rounded,
                       size: 32,
-                      color: primaryColor.withOpacity(0.3),
+                      color: primaryColor.withValues(alpha: 0.3),
                     ),
                   ],
                 ),
@@ -141,7 +141,7 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: primaryColor,
-                    side: BorderSide(color: primaryColor.withOpacity(0.5)),
+                    side: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 12,
@@ -166,7 +166,7 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
           width: 6,
           height: 6,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.6),
+            color: color.withValues(alpha: 0.6),
             shape: BoxShape.circle,
           ),
         ),
