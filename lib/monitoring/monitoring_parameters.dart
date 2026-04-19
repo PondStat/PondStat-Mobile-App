@@ -88,7 +88,7 @@ class MonitoringParameters {
   static final List<ParameterItem> weeklyParameters = [
     const ParameterItem(
       label: 'Stock sampling',
-      unit: 'kg',
+      unit: 'g',
       icon: Icons.scale_rounded,
       color: Colors.lightGreen,
       hint: 'e.g., 100',
