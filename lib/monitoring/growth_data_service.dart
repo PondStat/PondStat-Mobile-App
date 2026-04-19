@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../firebase/firestore_helper.dart';
+
 class GrowthMetrics {
   final DateTime date;
   final double abw;
@@ -16,44 +19,100 @@ class GrowthMetrics {
 
 class GrowthDataService {
   static Future<List<GrowthMetrics>> calculateGrowthMetrics(String pondId) async {
-    // Returning dummy data for UI/UX showcase as requested
-    final now = DateTime.now();
-    return [
-      GrowthMetrics(
-        date: now,
-        abw: 25.5,
-        adg: 0.45,
-        fcr: 1.2,
-        dfr: 2.5,
-      ),
-      GrowthMetrics(
-        date: now.subtract(const Duration(days: 7)),
-        abw: 22.3,
-        adg: 0.42,
-        fcr: 1.15,
-        dfr: 2.6,
-      ),
-      GrowthMetrics(
-        date: now.subtract(const Duration(days: 14)),
-        abw: 19.4,
-        adg: 0.40,
-        fcr: 1.1,
-        dfr: 2.8,
-      ),
-      GrowthMetrics(
-        date: now.subtract(const Duration(days: 21)),
-        abw: 16.6,
-        adg: 0.38,
-        fcr: 1.05,
-        dfr: 3.0,
-      ),
-      GrowthMetrics(
-        date: now.subtract(const Duration(days: 28)),
-        abw: 14.0,
-        adg: 0.35,
-        fcr: 1.0,
-        dfr: 3.2,
-      ),
-    ];
+    final pondDoc = await FirestoreHelper.pondsCollection.doc(pondId).get();
+    if (!pondDoc.exists) return [];
+
+    final pondData = pondDoc.data() ?? {};
+    final int fishCount = (pondData['stockingQuantity'] as num?)?.toInt() ?? 0;
+    if (fishCount <= 0) return [];
+
+    final measurementsSnapshot = await FirestoreHelper.measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .orderBy('timestamp', descending: false)
+        .get();
+
+    final allDocs = measurementsSnapshot.docs;
+
+    final stockSamplingDocs = allDocs.where((doc) {
+      final data = doc.data();
+      return data['type'] == 'weekly' && data['parameter'] == 'Stock sampling';
+    }).toList();
+
+    final feedingDocs = allDocs.where((doc) {
+      final data = doc.data();
+      return data['type'] == 'daily' && data['parameter'] == 'Feeding';
+    }).toList();
+
+    if (stockSamplingDocs.isEmpty) return [];
+
+    final List<GrowthMetrics> metrics = [];
+
+    for (int i = 0; i < stockSamplingDocs.length; i++) {
+      final currentData = stockSamplingDocs[i].data();
+
+      final Timestamp currentTimestamp = currentData['timestamp'] as Timestamp;
+      final DateTime currentDate = currentTimestamp.toDate();
+      final double currentAbw = (currentData['value'] as num?)?.toDouble() ?? 0.0;
+
+      double adg = 0.0;
+      double fcr = 0.0;
+      double dfr = 0.0;
+
+      if (i > 0) {
+        final previousData = stockSamplingDocs[i - 1].data();
+        final Timestamp previousTimestamp = previousData['timestamp'] as Timestamp;
+        final DateTime previousDate = previousTimestamp.toDate();
+        final double previousAbw =
+            (previousData['value'] as num?)?.toDouble() ?? 0.0;
+
+        final int daysBetween = currentDate.difference(previousDate).inDays;
+
+        if (daysBetween > 0) {
+          adg = (currentAbw - previousAbw) / daysBetween;
+
+          final intervalFeedDocs = feedingDocs.where((doc) {
+            final data = doc.data();
+            final Timestamp ts = data['timestamp'] as Timestamp;
+            final DateTime date = ts.toDate();
+            return !date.isBefore(previousDate) && !date.isAfter(currentDate);
+          }).toList();
+
+          final double totalFeedKg = intervalFeedDocs.fold(0.0, (sum, doc) {
+            final value = (doc.data()['value'] as num?)?.toDouble() ?? 0.0;
+            return sum + value;
+          });
+
+          final double averageDailyFeedKg = totalFeedKg / daysBetween;
+
+          final double previousBiomassKg = (previousAbw * fishCount) / 1000.0;
+          final double currentBiomassKg = (currentAbw * fishCount) / 1000.0;
+          final double biomassGainKg = currentBiomassKg - previousBiomassKg;
+
+          if (currentBiomassKg > 0) {
+            dfr = (averageDailyFeedKg / currentBiomassKg) * 100.0;
+          }
+
+          if (biomassGainKg > 0) {
+            fcr = totalFeedKg / biomassGainKg;
+          }
+        }
+      }
+
+      metrics.add(
+        GrowthMetrics(
+          date: currentDate,
+          abw: _round(currentAbw, 1),
+          adg: _round(adg, 2),
+          fcr: _round(fcr, 2),
+          dfr: _round(dfr, 2),
+        ),
+      );
+    }
+
+    return metrics.reversed.toList();
+  }
+
+  static double _round(double value, int places) {
+    return double.parse(value.toStringAsFixed(places));
   }
 }

@@ -169,7 +169,7 @@ class _GrowthTabState extends State<GrowthTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMiniMetric("ADG", "${m.adg.toStringAsFixed(2)}g", Colors.green),
+              _buildMiniMetric("ADG", "${m.adg.toStringAsFixed(2)}g/day", Colors.green),
               _buildMiniMetric("FCR", m.fcr.toStringAsFixed(2), Colors.orange),
               _buildMiniMetric("DFR", "${m.dfr.toStringAsFixed(2)}%", Colors.purple),
             ],
