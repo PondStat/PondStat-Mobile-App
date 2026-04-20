@@ -37,11 +37,7 @@ class EmptyStateCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(
-                icon,
-                size: 64,
-                color: Colors.grey.shade300,
-              ),
+              child: Icon(icon, size: 64, color: Colors.grey.shade300),
             ),
             const SizedBox(height: 32),
             Text(
@@ -83,7 +79,9 @@ class EmptyStateCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   side: BorderSide(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.2),
                     width: 2,
                   ),
                 ),

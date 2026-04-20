@@ -21,16 +21,16 @@ class NotificationService {
 
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
 
     const InitializationSettings initializationSettings =
         InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
 
     await _flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
@@ -40,7 +40,7 @@ class NotificationService {
     );
 
     _initialized = true;
-    
+
     // Request permissions on initialization (Mobile only)
     await requestPermission();
   }
@@ -71,23 +71,24 @@ class NotificationService {
 
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'pond_parameter_alerts',
-      'Pond Parameter Alerts',
-      channelDescription: 'Alerts when pond parameters are out of safe range',
-      importance: Importance.high,
-      priority: Priority.high,
-      ticker: 'ticker',
-      color: Color(0xFF0A74DA),
-      ledColor: Color(0xFFFFA726),
-    );
+          'pond_parameter_alerts',
+          'Pond Parameter Alerts',
+          channelDescription:
+              'Alerts when pond parameters are out of safe range',
+          importance: Importance.high,
+          priority: Priority.high,
+          ticker: 'ticker',
+          color: Color(0xFF0A74DA),
+          ledColor: Color(0xFFFFA726),
+        );
 
     const DarwinNotificationDetails iOSPlatformChannelSpecifics =
         DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-      interruptionLevel: InterruptionLevel.timeSensitive,
-    );
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: InterruptionLevel.timeSensitive,
+        );
 
     const NotificationDetails platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
@@ -109,24 +110,25 @@ class NotificationService {
     if (alerts.isEmpty) return;
 
     final String title = '🚨 PondStat Alert - $pondName';
-    final String body = alerts.take(2).join('\n') + 
+    final String body =
+        alerts.take(2).join('\n') +
         (alerts.length > 2 ? '\n+${alerts.length - 2} more issues' : '');
 
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'pond_health_summary',
-      'Pond Health Summary',
-      channelDescription: 'Daily summary of pond health status',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
+          'pond_health_summary',
+          'Pond Health Summary',
+          channelDescription: 'Daily summary of pond health status',
+          importance: Importance.high,
+          priority: Priority.high,
+        );
 
     const DarwinNotificationDetails iOSPlatformChannelSpecifics =
         DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        );
 
     const NotificationDetails platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,

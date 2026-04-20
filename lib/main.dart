@@ -30,9 +30,7 @@ void main() async {
         );
         developer.log("✅ Offline persistence enabled");
       } catch (e) {
-        developer.log(
-          "⚠️ Could not enable offline persistence: $e",
-        );
+        developer.log("⚠️ Could not enable offline persistence: $e");
       }
     }
 

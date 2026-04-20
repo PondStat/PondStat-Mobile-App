@@ -48,10 +48,11 @@ class _MeasurementListViewState extends State<MeasurementListView> {
           .snapshots(includeMetadataChanges: true),
       builder: (context, snapshot) {
         // Only show loader if we have NO data yet AND we are waiting
-        if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
+        if (!snapshot.hasData &&
+            snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         if (snapshot.hasError) {
           return Center(
             child: Text(
@@ -74,8 +75,8 @@ class _MeasurementListViewState extends State<MeasurementListView> {
         final filterOptions = uniqueParams.toList()..sort();
 
         // 2. Filter the documents
-        final filteredDocs = _selectedFilter == null 
-            ? docs 
+        final filteredDocs = _selectedFilter == null
+            ? docs
             : docs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 return data['parameter'] == _selectedFilter;
@@ -93,11 +94,13 @@ class _MeasurementListViewState extends State<MeasurementListView> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   children: [
                     _buildFilterChip('All', null),
-                    ...filterOptions.map((param) => _buildFilterChip(param, param)),
+                    ...filterOptions.map(
+                      (param) => _buildFilterChip(param, param),
+                    ),
                   ],
                 ),
               ),
-            
+
             // List View
             Expanded(
               child: RefreshIndicator(
@@ -113,7 +116,8 @@ class _MeasurementListViewState extends State<MeasurementListView> {
                   ),
                   itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
-                    final data = filteredDocs[index].data() as Map<String, dynamic>;
+                    final data =
+                        filteredDocs[index].data() as Map<String, dynamic>;
                     return MeasurementCard(
                       time: data['timeString'] ?? 'Unknown Time',
                       title: data['parameter'] ?? 'Unknown Parameter',
@@ -151,11 +155,11 @@ class _MeasurementListViewState extends State<MeasurementListView> {
           if (selected) {
             setState(() => _selectedFilter = filterValue);
           } else if (_selectedFilter == filterValue) {
-             // Prevent unselecting the current chip if it's the only one selected
-             // (always keep something selected, usually 'All')
-             if (filterValue != null) {
-                setState(() => _selectedFilter = null);
-             }
+            // Prevent unselecting the current chip if it's the only one selected
+            // (always keep something selected, usually 'All')
+            if (filterValue != null) {
+              setState(() => _selectedFilter = null);
+            }
           }
         },
         selectedColor: widget.primaryBlue,

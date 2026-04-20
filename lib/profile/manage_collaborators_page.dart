@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../firebase/firestore_helper.dart';
 import '../utility/helpers.dart';
-import '../monitoring/job_schedule_sheet.dart';
+import '../monitoring/unified_schedule_sheet.dart';
 
 class ManageCollaboratorsPage extends StatefulWidget {
   final String pondId;
@@ -368,7 +368,9 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                               boxShadow: isFocused
                                   ? [
                                       BoxShadow(
-                                        color: primaryBlue.withValues(alpha: 0.15),
+                                        color: primaryBlue.withValues(
+                                          alpha: 0.15,
+                                        ),
                                         blurRadius: 16,
                                         offset: const Offset(0, 6),
                                       ),
@@ -482,6 +484,39 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                         color: textDark,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => UnifiedScheduleSheet(
+                            pondId: widget.pondId,
+                            pondName: widget.pondName,
+                            canEdit: true,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.event_note_rounded, size: 16),
+                      label: const Text(
+                        "Schedule",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: primaryBlue,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
                   ],
@@ -653,20 +688,6 @@ class _CollaboratorTileState extends State<CollaboratorTile>
     return pastelColors[hash % pastelColors.length];
   }
 
-  void _showJobScheduleSheet() {
-    HapticFeedback.lightImpact();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => JobScheduleSheet(
-        pondId: widget.pondId,
-        userId: widget.userId,
-        userName: userData?['fullName'] ?? 'User',
-      ),
-    );
-  }
-
   void _showRoleSelector(BuildContext context) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
@@ -796,10 +817,14 @@ class _CollaboratorTileState extends State<CollaboratorTile>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.05) : Colors.transparent,
+          color: isSelected
+              ? color.withValues(alpha: 0.05)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
+            color: isSelected
+                ? color.withValues(alpha: 0.3)
+                : Colors.transparent,
           ),
         ),
         child: Row(
@@ -966,48 +991,35 @@ class _CollaboratorTileState extends State<CollaboratorTile>
             fontWeight: FontWeight.w600,
           ),
         ),
-        trailing: widget.isMe
-            ? Tooltip(
-                message: 'You cannot change your own role',
-                triggerMode: TooltipTriggerMode.tap,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Text(
-                    widget.role.toUpperCase(),
-                    style: TextStyle(
-                      color: Colors.green.shade700,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.role == 'editor') ...[
-                    IconButton(
-                      icon: const Icon(Icons.calendar_month_rounded,
-                          color: Color(0xFF0A74DA), size: 20),
-                      onPressed: _showJobScheduleSheet,
-                      tooltip: 'Set Job Schedule',
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFF0A74DA).withValues(alpha: 0.1),
-                        padding: const EdgeInsets.all(8),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            widget.isMe
+                ? Tooltip(
+                    message: 'You cannot change your own role',
+                    triggerMode: TooltipTriggerMode.tap,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Text(
+                        widget.role.toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                  ],
-                  InkWell(
+                  )
+                : InkWell(
                     onTap: () => _showRoleSelector(context),
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
@@ -1042,8 +1054,8 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                       ),
                     ),
                   ),
-                ],
-              ),
+          ],
+        ),
       ),
     );
 

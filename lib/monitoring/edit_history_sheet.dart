@@ -266,7 +266,9 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: actionColor.withValues(alpha: 0.1),
+                                            color: actionColor.withValues(
+                                              alpha: 0.1,
+                                            ),
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),

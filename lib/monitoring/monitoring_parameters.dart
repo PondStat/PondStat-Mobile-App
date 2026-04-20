@@ -9,6 +9,7 @@ class ParameterItem {
   final double? minVal;
   final double? maxVal;
   final String hint;
+  final bool isSinglePoint;
 
   const ParameterItem({
     required this.label,
@@ -19,6 +20,7 @@ class ParameterItem {
     this.minVal,
     this.maxVal,
     this.hint = '',
+    this.isSinglePoint = false,
   });
 }
 
@@ -30,6 +32,8 @@ class MonitoringParameters {
     double? tempMax = 32.0;
     double? salMin;
     double? salMax;
+    double? transMin;
+    double? transMax;
 
     if (species.toLowerCase() == 'shrimp') {
       phMin = 7.5;
@@ -38,6 +42,8 @@ class MonitoringParameters {
       tempMax = 30.0;
       salMin = 15.0;
       salMax = 30.0;
+      transMin = 25.0;
+      transMax = 40.0;
     } else if (species.toLowerCase() == 'tilapia') {
       phMin = 6.5;
       phMax = 9.0;
@@ -45,15 +51,34 @@ class MonitoringParameters {
       tempMax = 32.0;
       salMin = 30.0;
       salMax = 35.0;
+      transMin = 20.0;
+      transMax = 60.0;
     }
 
     return [
       const ParameterItem(
-        label: 'Feeding',
+        label: 'Feeding rate',
+        unit: '%',
+        icon: Icons.percent_rounded,
+        color: Colors.brown,
+        hint: 'e.g., 5',
+        isSinglePoint: true,
+      ),
+      const ParameterItem(
+        label: 'Total feed consumed',
         unit: 'kg',
         icon: Icons.set_meal_rounded,
         color: Colors.brown,
-        hint: 'e.g., 2.5',
+        hint: 'e.g., 10',
+        isSinglePoint: true,
+      ),
+      const ParameterItem(
+        label: 'Total weight gained',
+        unit: 'kg',
+        icon: Icons.monitor_weight_rounded,
+        color: Colors.brown,
+        hint: 'e.g., 2',
+        isSinglePoint: true,
       ),
       ParameterItem(
         label: 'pH Level',
@@ -82,16 +107,35 @@ class MonitoringParameters {
         maxVal: salMax,
         hint: 'e.g., 15',
       ),
+      ParameterItem(
+        label: 'Transparency',
+        unit: 'cm',
+        icon: Icons.visibility_rounded,
+        color: Colors.amber,
+        minVal: transMin,
+        maxVal: transMax,
+        hint: 'e.g., 30',
+      ),
     ];
   }
 
   static final List<ParameterItem> weeklyParameters = [
     const ParameterItem(
-      label: 'Stock sampling',
+      label: 'Total weight of fish sampled',
       unit: 'g',
       icon: Icons.scale_rounded,
       color: Colors.lightGreen,
-      hint: 'e.g., 100',
+      hint: 'e.g., 500',
+      isSinglePoint: true,
+    ),
+    const ParameterItem(
+      label: 'Number of fish sampled',
+      unit: 'pcs',
+      icon: Icons.numbers_rounded,
+      color: Colors.blueGrey,
+      hint: 'e.g., 50',
+      isSinglePoint: true,
+      keyboardType: TextInputType.number,
     ),
     const ParameterItem(
       label: 'Phytoplankton',
@@ -186,7 +230,11 @@ class MonitoringParameters {
   }
 
   static ParameterItem? getParameterByLabel(String label, String species) {
-    final allParams = [...getDailyParameters(species), ...weeklyParameters, ...biweeklyParameters];
+    final allParams = [
+      ...getDailyParameters(species),
+      ...weeklyParameters,
+      ...biweeklyParameters,
+    ];
     try {
       return allParams.firstWhere((p) => p.label == label);
     } catch (_) {

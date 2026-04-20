@@ -18,7 +18,9 @@ class GrowthMetrics {
 }
 
 class GrowthDataService {
-  static Future<List<GrowthMetrics>> calculateGrowthMetrics(String pondId) async {
+  static Future<List<GrowthMetrics>> calculateGrowthMetrics(
+    String pondId,
+  ) async {
     final pondDoc = await FirestoreHelper.pondsCollection.doc(pondId).get();
     if (!pondDoc.exists) return [];
 
@@ -33,67 +35,135 @@ class GrowthDataService {
 
     final allDocs = measurementsSnapshot.docs;
 
-    final stockSamplingDocs = allDocs.where((doc) {
+    final weightDocs = allDocs.where((doc) {
       final data = doc.data();
-      return data['type'] == 'weekly' && data['parameter'] == 'Stock sampling';
+      return data['type'] == 'weekly' &&
+          data['parameter'] == 'Total weight of fish sampled';
     }).toList();
 
-    final feedingDocs = allDocs.where((doc) {
+    final countDocs = allDocs.where((doc) {
       final data = doc.data();
-      return data['type'] == 'daily' && data['parameter'] == 'Feeding';
+      return data['type'] == 'weekly' &&
+          data['parameter'] == 'Number of fish sampled';
     }).toList();
 
-    if (stockSamplingDocs.isEmpty) return [];
+    final feedingRateDocs = allDocs.where((doc) {
+      final data = doc.data();
+      return data['type'] == 'daily' && data['parameter'] == 'Feeding rate';
+    }).toList();
+
+    final feedConsumedDocs = allDocs.where((doc) {
+      final data = doc.data();
+      return data['type'] == 'daily' && data['parameter'] == 'Total feed consumed';
+    }).toList();
+
+    final weightGainedDocs = allDocs.where((doc) {
+      final data = doc.data();
+      return data['type'] == 'daily' && data['parameter'] == 'Total weight gained';
+    }).toList();
+
+    if (weightDocs.isEmpty || countDocs.isEmpty) return [];
+
+    // Pair weights and counts by date
+    final Map<String, double> dailyWeights = {};
+    final Map<String, double> dailyCounts = {};
+    final Set<String> allDates = {};
+
+    for (var doc in weightDocs) {
+      final data = doc.data();
+      final date = (data['timestamp'] as Timestamp).toDate();
+      final dateKey = "${date.year}-${date.month}-${date.day}";
+      dailyWeights[dateKey] = (data['value'] as num).toDouble();
+      allDates.add(dateKey);
+    }
+
+    for (var doc in countDocs) {
+      final data = doc.data();
+      final date = (data['timestamp'] as Timestamp).toDate();
+      final dateKey = "${date.year}-${date.month}-${date.day}";
+      dailyCounts[dateKey] = (data['value'] as num).toDouble();
+      allDates.add(dateKey);
+    }
+
+    final List<Map<String, dynamic>> pairedSamplings = [];
+    for (var dateKey in allDates) {
+      if (dailyWeights.containsKey(dateKey) && dailyCounts.containsKey(dateKey)) {
+        final weight = dailyWeights[dateKey]!;
+        final count = dailyCounts[dateKey]!;
+        if (count > 0) {
+          final parts = dateKey.split('-');
+          final date = DateTime(
+            int.parse(parts[0]),
+            int.parse(parts[1]),
+            int.parse(parts[2]),
+          );
+          pairedSamplings.add({
+            'date': date,
+            'abw': weight / count,
+          });
+        }
+      }
+    }
+
+    pairedSamplings.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
+
+    if (pairedSamplings.isEmpty) return [];
 
     final List<GrowthMetrics> metrics = [];
 
-    for (int i = 0; i < stockSamplingDocs.length; i++) {
-      final currentData = stockSamplingDocs[i].data();
-
-      final Timestamp currentTimestamp = currentData['timestamp'] as Timestamp;
-      final DateTime currentDate = currentTimestamp.toDate();
-      final double currentAbw = (currentData['value'] as num?)?.toDouble() ?? 0.0;
+    for (int i = 0; i < pairedSamplings.length; i++) {
+      final currentSampling = pairedSamplings[i];
+      final DateTime currentDate = currentSampling['date'] as DateTime;
+      final double currentAbw = currentSampling['abw'] as double;
 
       double adg = 0.0;
       double fcr = 0.0;
       double dfr = 0.0;
 
       if (i > 0) {
-        final previousData = stockSamplingDocs[i - 1].data();
-        final Timestamp previousTimestamp = previousData['timestamp'] as Timestamp;
-        final DateTime previousDate = previousTimestamp.toDate();
-        final double previousAbw =
-            (previousData['value'] as num?)?.toDouble() ?? 0.0;
+        final previousSampling = pairedSamplings[i - 1];
+        final DateTime previousDate = previousSampling['date'] as DateTime;
+        final double previousAbw = previousSampling['abw'] as double;
 
         final int daysBetween = currentDate.difference(previousDate).inDays;
 
         if (daysBetween > 0) {
           adg = (currentAbw - previousAbw) / daysBetween;
 
-          final intervalFeedDocs = feedingDocs.where((doc) {
-            final data = doc.data();
-            final Timestamp ts = data['timestamp'] as Timestamp;
-            final DateTime date = ts.toDate();
-            return !date.isBefore(previousDate) && !date.isAfter(currentDate);
+          // Get the feeding rate for the CURRENT sampling date for DFR
+          final currentFeedingRateDoc = feedingRateDocs.where((doc) {
+            final date = (doc.data()['timestamp'] as Timestamp).toDate();
+            return date.year == currentDate.year &&
+                date.month == currentDate.month &&
+                date.day == currentDate.day;
           }).toList();
 
-          final double totalFeedKg = intervalFeedDocs.fold(0.0, (sum, doc) {
-            final value = (doc.data()['value'] as num?)?.toDouble() ?? 0.0;
-            return sum + value;
-          });
-
-          final double averageDailyFeedKg = totalFeedKg / daysBetween;
-
-          final double previousBiomassKg = (previousAbw * fishCount) / 1000.0;
-          final double currentBiomassKg = (currentAbw * fishCount) / 1000.0;
-          final double biomassGainKg = currentBiomassKg - previousBiomassKg;
-
-          if (currentBiomassKg > 0) {
-            dfr = (averageDailyFeedKg / currentBiomassKg) * 100.0;
+          if (currentFeedingRateDoc.isNotEmpty) {
+            final feedingRate = (currentFeedingRateDoc.first.data()['value'] as num).toDouble();
+            dfr = currentAbw * fishCount * feedingRate / 100.0;
           }
 
-          if (biomassGainKg > 0) {
-            fcr = totalFeedKg / biomassGainKg;
+          // Calculate total feed and weight gained between samplings for FCR
+          final start = DateTime(previousDate.year, previousDate.month, previousDate.day);
+          final end = DateTime(currentDate.year, currentDate.month, currentDate.day);
+
+          final periodFeedDocs = feedConsumedDocs.where((doc) {
+            final date = (doc.data()['timestamp'] as Timestamp).toDate();
+            final d = DateTime(date.year, date.month, date.day);
+            return !d.isBefore(start) && !d.isAfter(end);
+          }).toList();
+
+          final periodWeightGainedDocs = weightGainedDocs.where((doc) {
+            final date = (doc.data()['timestamp'] as Timestamp).toDate();
+            final d = DateTime(date.year, date.month, date.day);
+            return !d.isBefore(start) && !d.isAfter(end);
+          }).toList();
+
+          final double totalFeed = periodFeedDocs.fold(0.0, (acc, doc) => acc + (doc.data()['value'] as num).toDouble());
+          final double totalWeightGained = periodWeightGainedDocs.fold(0.0, (acc, doc) => acc + (doc.data()['value'] as num).toDouble());
+
+          if (totalWeightGained > 0) {
+            fcr = totalFeed / totalWeightGained;
           }
         }
       }
@@ -110,6 +180,10 @@ class GrowthDataService {
     }
 
     return metrics.reversed.toList();
+  }
+
+  static double _round(double value, int places) {
+    return double.parse(value.toStringAsFixed(places));
   }
 
   static double _round(double value, int places) {

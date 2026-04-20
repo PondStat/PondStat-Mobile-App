@@ -112,7 +112,9 @@ class _PondListCardState extends State<PondListCard> {
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF0A74DA).withValues(alpha: 0.3),
+                                color: const Color(
+                                  0xFF0A74DA,
+                                ).withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),

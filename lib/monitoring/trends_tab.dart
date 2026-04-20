@@ -8,11 +8,7 @@ class TrendsTab extends StatefulWidget {
   final String pondId;
   final String species;
 
-  const TrendsTab({
-    super.key,
-    required this.pondId,
-    required this.species,
-  });
+  const TrendsTab({super.key, required this.pondId, required this.species});
 
   @override
   State<TrendsTab> createState() => _TrendsTabState();
@@ -28,9 +24,13 @@ class _TrendsTabState extends State<TrendsTab> {
         _buildPeriodSelector(),
         Expanded(
           child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirestoreHelper.getHistoricalMeasurements(widget.pondId, _selectedDays).snapshots(),
+            stream: FirestoreHelper.getHistoricalMeasurements(
+              widget.pondId,
+              _selectedDays,
+            ).snapshots(),
             builder: (context, snapshot) {
-              if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
+              if (!snapshot.hasData &&
+                  snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
@@ -43,13 +43,22 @@ class _TrendsTabState extends State<TrendsTab> {
                 return _buildEmptyState();
               }
 
-              final statsList = TrendsDataService.processMeasurements(docs, widget.species);
+              final statsList = TrendsDataService.processMeasurements(
+                docs,
+                widget.species,
+              );
 
               return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 itemCount: statsList.length,
                 itemBuilder: (context, index) {
-                  return ParameterChartCard(stats: statsList[index], species: widget.species);
+                  return ParameterChartCard(
+                    stats: statsList[index],
+                    species: widget.species,
+                  );
                 },
               );
             },

@@ -305,7 +305,8 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData &&
+              snapshot.connectionState == ConnectionState.waiting) {
             return _buildSkeletonLoader();
           }
 
@@ -524,7 +525,8 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     return EmptyStateCard(
       icon: Icons.water_drop_outlined,
       title: "No Ponds Yet",
-      description: "Start tracking your aquaculture farm parameters by creating your first pond.",
+      description:
+          "Start tracking your aquaculture farm parameters by creating your first pond.",
       buttonText: "Create First Pond",
       onButtonPressed: () => _showCreatePondSheet(context),
     );
