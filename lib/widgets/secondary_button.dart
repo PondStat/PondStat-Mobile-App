@@ -22,14 +22,14 @@ class SecondaryButton extends StatelessWidget {
     final theme = Theme.of(context);
     final buttonColor = color ?? theme.colorScheme.primary;
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return SizedBox(
       width: double.infinity,
       child: TextButton(
         style: TextButton.styleFrom(
           foregroundColor: buttonColor,
-          backgroundColor: isDark 
-              ? buttonColor.withValues(alpha: 0.1) 
+          backgroundColor: isDark
+              ? buttonColor.withValues(alpha: 0.1)
               : buttonColor.withValues(alpha: 0.08),
           disabledForegroundColor: Colors.grey.shade500,
           disabledBackgroundColor: Colors.grey.shade200,
@@ -37,8 +37,8 @@ class SecondaryButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: isDark 
-                  ? buttonColor.withValues(alpha: 0.2) 
+              color: isDark
+                  ? buttonColor.withValues(alpha: 0.2)
                   : buttonColor.withValues(alpha: 0.15),
               width: 1.5,
             ),

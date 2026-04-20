@@ -49,6 +49,9 @@ class _MonitoringPageState extends State<MonitoringPage>
   DateTime? _selectedDay;
   bool _isFabVisible = true;
 
+  Map<String, dynamic>? _mySchedule;
+  bool _isLoadingSchedule = true;
+
   final MonitoringRepository _repository = MonitoringRepository();
   final SafetyService _safetyService = SafetyService();
 
@@ -66,7 +69,7 @@ class _MonitoringPageState extends State<MonitoringPage>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         HapticFeedback.lightImpact();
-        if (_pageController.hasClients && 
+        if (_pageController.hasClients &&
             _pageController.page?.round() != _tabController.index) {
           _pageController.animateToPage(
             _tabController.index,
@@ -81,6 +84,31 @@ class _MonitoringPageState extends State<MonitoringPage>
     final now = DateTime.now();
     _focusedDay = now;
     _selectedDay = DateTime.utc(now.year, now.month, now.day);
+
+    _loadMySchedule();
+  }
+
+  Future<void> _loadMySchedule() async {
+    if (!canEdit) {
+      if (mounted) setState(() => _isLoadingSchedule = false);
+      return;
+    }
+    try {
+      final scheduleData = await _repository.getJobSchedule(
+        widget.pondId,
+        _repository.currentUser!.uid,
+      );
+      if (mounted) {
+        setState(() {
+          if (scheduleData != null && scheduleData['schedule'] != null) {
+            _mySchedule = scheduleData['schedule'] as Map<String, dynamic>;
+          }
+          _isLoadingSchedule = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingSchedule = false);
+    }
   }
 
   @override
@@ -171,7 +199,10 @@ class _MonitoringPageState extends State<MonitoringPage>
         selectedDay: _selectedDay!,
       );
 
-      final parameterItem = MonitoringParameters.getParameterByLabel(label, widget.species);
+      final parameterItem = MonitoringParameters.getParameterByLabel(
+        label,
+        widget.species,
+      );
       if (parameterItem != null) {
         await _safetyService.checkAndNotify(
           parameter: parameterItem,
@@ -180,9 +211,17 @@ class _MonitoringPageState extends State<MonitoringPage>
         );
       }
 
-      if (mounted) SnackbarHelper.show(context, "Data recorded", backgroundColor: Colors.green);
+      if (mounted) {
+        SnackbarHelper.show(
+          context,
+          "Data recorded",
+          backgroundColor: Colors.green,
+        );
+      }
     } catch (e) {
-      if (mounted) SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+      if (mounted) {
+        SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+      }
     }
   }
 
@@ -206,21 +245,51 @@ class _MonitoringPageState extends State<MonitoringPage>
       builder: (context) => AlertDialog(
         scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Edit Measurements', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Edit Measurements',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: docs.map((doc) => _buildEditFieldGroup(doc, groupControllers[doc.id]!, points)).toList(),
+          children: docs
+              .map(
+                (doc) => _buildEditFieldGroup(
+                  doc,
+                  groupControllers[doc.id]!,
+                  points,
+                ),
+              )
+              .toList(),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            ),
+          ),
           TextButton(
             onPressed: () => _handleBatchDelete(docs),
-            child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: const Text(
+              "Delete",
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
             onPressed: () => _handleBatchUpdate(docs, groupControllers, points),
-            child: const Text("Update", style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              "Update",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -276,11 +345,18 @@ class _MonitoringPageState extends State<MonitoringPage>
         final data = doc.data() as Map<String, dynamic>;
         final points = updatedValues[doc.id];
         if (points == null) continue;
-        
+
         final avg = points.values.reduce((a, b) => a + b) / points.length;
-        final paramItem = MonitoringParameters.getParameterByLabel(data['parameter'], widget.species);
+        final paramItem = MonitoringParameters.getParameterByLabel(
+          data['parameter'],
+          widget.species,
+        );
         if (paramItem != null) {
-          await _safetyService.checkAndNotify(parameter: paramItem, value: avg, pondName: widget.pondName);
+          await _safetyService.checkAndNotify(
+            parameter: paramItem,
+            value: avg,
+            pondName: widget.pondName,
+          );
         }
       }
 
@@ -295,34 +371,195 @@ class _MonitoringPageState extends State<MonitoringPage>
 
   // --- Helper Builders ---
 
-  Widget _buildEditFieldGroup(DocumentSnapshot doc, Map<String, TextEditingController> controllers, List<String> points) {
+  Widget _buildEditFieldGroup(
+    DocumentSnapshot doc,
+    Map<String, TextEditingController> controllers,
+    List<String> points,
+  ) {
     final data = doc.data() as Map<String, dynamic>;
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("${data['parameter']} (${data['unit'] ?? ''})", style: TextStyle(fontWeight: FontWeight.bold, color: primaryBlue, fontSize: 16)),
+          Text(
+            "${data['parameter']} (${data['unit'] ?? ''})",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: primaryBlue,
+              fontSize: 16,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
-            children: points.map((p) => Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: TextField(
-                  controller: controllers[p],
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                  decoration: InputDecoration(
-                    labelText: p,
-                    isDense: true,
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+            children: points
+                .map(
+                  (p) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: TextField(
+                        controller: controllers[p],
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        decoration: InputDecoration(
+                          labelText: p,
+                          isDense: true,
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade200),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJobBanner() {
+    if (_isLoadingSchedule || _mySchedule == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Determine current day of week
+    final now = DateTime.now();
+    final dayNames = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    final currentDayName = dayNames[now.weekday - 1];
+
+    final todaySchedule = _mySchedule![currentDayName] as Map<String, dynamic>?;
+    if (todaySchedule == null) return const SizedBox.shrink();
+
+    final morning = todaySchedule['morning'] == true;
+    final afternoon = todaySchedule['afternoon'] == true;
+
+    if (!morning && !afternoon) return const SizedBox.shrink();
+
+    List<String> shifts = [];
+    if (morning) shifts.add("Morning");
+    if (afternoon) shifts.add("Afternoon");
+
+    // Determine Jobs based on frequencies
+    List<String> jobs = ["Tank Monitoring", "Daily Parameters"];
+    if (now.weekday == DateTime.wednesday) {
+      jobs.add("Biweekly Parameters");
+    } else if (now.weekday == DateTime.saturday) {
+      jobs.add("Biweekly Parameters");
+      jobs.add("Weekly Parameters");
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.amber.shade50, Colors.orange.shade50],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.amber.shade200, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber.shade900.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.assignment_turned_in_rounded,
+                  color: Colors.amber.shade800,
+                  size: 20,
                 ),
               ),
-            )).toList(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Your Tasks Today",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1E293B),
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      "${shifts.join(' & ')} Shift",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.amber.shade800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: jobs
+                .map(
+                  (job) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber.shade100),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      job,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -337,8 +574,17 @@ class _MonitoringPageState extends State<MonitoringPage>
         title: const Text("Confirm Delete"),
         content: const Text("Delete this measurement?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              "Delete",
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );
@@ -346,7 +592,9 @@ class _MonitoringPageState extends State<MonitoringPage>
 
   @override
   Widget build(BuildContext context) {
-    final dateKey = _selectedDay == null ? "" : "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
+    final dateKey = _selectedDay == null
+        ? ""
+        : "${_selectedDay!.year}-${_selectedDay!.month}-${_selectedDay!.day}";
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -356,7 +604,8 @@ class _MonitoringPageState extends State<MonitoringPage>
           SafeArea(
             child: NotificationListener<ScrollNotification>(
               onNotification: (notification) {
-                if (notification is ScrollStartNotification || notification is ScrollUpdateNotification) {
+                if (notification is ScrollStartNotification ||
+                    notification is ScrollUpdateNotification) {
                   if (_isFabVisible) setState(() => _isFabVisible = false);
                 } else if (notification is ScrollEndNotification) {
                   if (!_isFabVisible) setState(() => _isFabVisible = true);
@@ -382,9 +631,8 @@ class _MonitoringPageState extends State<MonitoringPage>
                       secondaryBlue: secondaryBlue,
                     ),
                   ),
-                  SliverToBoxAdapter(
-                    child: _buildCalendarSection(),
-                  ),
+                  SliverToBoxAdapter(child: _buildJobBanner()),
+                  SliverToBoxAdapter(child: _buildCalendarSection()),
                   SliverPersistentHeader(
                     pinned: true,
                     delegate: SliverAppBarDelegate(
@@ -393,29 +641,64 @@ class _MonitoringPageState extends State<MonitoringPage>
                         isScrollable: true,
                         tabAlignment: TabAlignment.start,
                         indicator: BoxDecoration(
-                          color: primaryBlue, 
-                          borderRadius: BorderRadius.circular(50), 
+                          color: primaryBlue,
+                          borderRadius: BorderRadius.circular(50),
                           boxShadow: [
                             BoxShadow(
-                              color: primaryBlue.withValues(alpha: 0.3), 
-                              blurRadius: 8, 
-                              offset: const Offset(0, 4)
-                            )
-                          ]
+                              color: primaryBlue.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         indicatorSize: TabBarIndicatorSize.tab,
                         labelColor: Colors.white,
                         unselectedLabelColor: const Color(0xFF64748B),
                         dividerColor: Colors.transparent,
-                        labelPadding: const EdgeInsets.symmetric(horizontal: 24),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        labelPadding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
                         tabs: [
-                          Tab(child: _buildTabLabel("Daily", Colors.green.shade400)),
-                          Tab(child: _buildTabLabel("Weekly", Colors.amber.shade400)),
-                          Tab(child: _buildTabLabel("Biweekly", Colors.purple.shade400)),
-                          Tab(child: _buildTabLabel("Growth", Colors.indigo.shade400)),
-                          Tab(child: _buildTabLabel("Trends", Colors.red.shade400)),
-                          Tab(child: _buildTabLabel("Expenses", Colors.teal.shade400)),
+                          Tab(
+                            child: _buildTabLabel(
+                              "Daily",
+                              Colors.green.shade400,
+                            ),
+                          ),
+                          Tab(
+                            child: _buildTabLabel(
+                              "Weekly",
+                              Colors.amber.shade400,
+                            ),
+                          ),
+                          Tab(
+                            child: _buildTabLabel(
+                              "Biweekly",
+                              Colors.purple.shade400,
+                            ),
+                          ),
+                          Tab(
+                            child: _buildTabLabel(
+                              "Growth",
+                              Colors.indigo.shade400,
+                            ),
+                          ),
+                          Tab(
+                            child: _buildTabLabel(
+                              "Trends",
+                              Colors.red.shade400,
+                            ),
+                          ),
+                          Tab(
+                            child: _buildTabLabel(
+                              "Expenses",
+                              Colors.teal.shade400,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -450,15 +733,15 @@ class _MonitoringPageState extends State<MonitoringPage>
       padding: const EdgeInsets.all(20.0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white, 
-          borderRadius: BorderRadius.circular(24), 
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04), 
-              blurRadius: 24, 
-              offset: const Offset(0, 8)
-            )
-          ]
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -471,7 +754,11 @@ class _MonitoringPageState extends State<MonitoringPage>
                 onDaySelected: (selectedDay, focusedDay) {
                   HapticFeedback.lightImpact();
                   setState(() {
-                    _selectedDay = DateTime.utc(selectedDay.year, selectedDay.month, selectedDay.day);
+                    _selectedDay = DateTime.utc(
+                      selectedDay.year,
+                      selectedDay.month,
+                      selectedDay.day,
+                    );
                     _focusedDay = focusedDay;
                   });
                 },
@@ -490,9 +777,23 @@ class _MonitoringPageState extends State<MonitoringPage>
       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: primaryBlue, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: primaryBlue,
+              shape: BoxShape.circle,
+            ),
+          ),
           const SizedBox(width: 8),
-          const Text("Dates with records", style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w600)),
+          const Text(
+            "Dates with records",
+            style: TextStyle(
+              color: Color(0xFF64748B),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -502,15 +803,24 @@ class _MonitoringPageState extends State<MonitoringPage>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+        ),
         const SizedBox(width: 8),
-        Text(text, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+        Text(
+          text,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+        ),
       ],
     );
   }
 
   Widget _buildStreamTab(String type, String dateKey) {
-    if (_selectedDay == null) return const Center(child: Text("Select a date to view data"));
+    if (_selectedDay == null) {
+      return const Center(child: Text("Select a date to view data"));
+    }
     return MeasurementListView(
       pondId: widget.pondId,
       type: type,
@@ -544,7 +854,11 @@ class _MonitoringPageState extends State<MonitoringPage>
       icon = Icons.ios_share_rounded;
       action = () {
         HapticFeedback.lightImpact();
-        SnackbarHelper.show(context, "Export functionality coming soon", backgroundColor: Colors.red.shade400);
+        SnackbarHelper.show(
+          context,
+          "Export functionality coming soon",
+          backgroundColor: Colors.red.shade400,
+        );
       };
       fabColor = Colors.red.shade400;
     } else if (_tabController.index == 5) {
@@ -557,7 +871,11 @@ class _MonitoringPageState extends State<MonitoringPage>
       icon = Icons.add_rounded;
       action = () {
         HapticFeedback.lightImpact();
-        SnackbarHelper.show(context, "Growth recording coming soon", backgroundColor: Colors.indigo.shade400);
+        SnackbarHelper.show(
+          context,
+          "Growth recording coming soon",
+          backgroundColor: Colors.indigo.shade400,
+        );
       };
       fabColor = Colors.indigo.shade400;
     } else {
@@ -579,10 +897,10 @@ class _MonitoringPageState extends State<MonitoringPage>
             borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: fabColor.withValues(alpha: 0.4), 
-                blurRadius: 16, 
-                offset: const Offset(0, 8)
-              )
+                color: fabColor.withValues(alpha: 0.4),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
           child: FloatingActionButton.extended(
@@ -590,7 +908,14 @@ class _MonitoringPageState extends State<MonitoringPage>
             backgroundColor: fabColor,
             elevation: 0,
             icon: Icon(icon, color: Colors.white),
-            label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+            label: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 16,
+              ),
+            ),
             extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
           ),
         ),

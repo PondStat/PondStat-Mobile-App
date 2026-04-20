@@ -15,10 +15,7 @@ class PondInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20.0,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(

@@ -73,56 +73,31 @@ class _GrowthTabState extends State<GrowthTab> {
       mainAxisSpacing: 16,
       childAspectRatio: 1.5,
       children: [
-        _buildSummaryCard("Current ABW", "${latest.abw.toStringAsFixed(1)}g", Icons.monitor_weight_rounded, Colors.blue),
-        _buildSummaryCard("Latest ADG", "${latest.adg.toStringAsFixed(2)}g/day", Icons.trending_up_rounded, Colors.green),
-        _buildSummaryCard("Current FCR", latest.fcr.toStringAsFixed(2), Icons.assignment_rounded, Colors.orange),
-        _buildSummaryCard("Current DFR", "${latest.dfr.toStringAsFixed(2)}%", Icons.set_meal_rounded, Colors.purple),
+        SummaryCard(
+          label: "Current ABW",
+          value: "${latest.abw.toStringAsFixed(1)}g",
+          icon: Icons.monitor_weight_rounded,
+          color: Colors.blue,
+        ),
+        SummaryCard(
+          label: "Latest ADG",
+          value: "${latest.adg.toStringAsFixed(2)}g",
+          icon: Icons.trending_up_rounded,
+          color: Colors.green,
+        ),
+        SummaryCard(
+          label: "Current FCR",
+          value: latest.fcr.toStringAsFixed(2),
+          icon: Icons.assignment_rounded,
+          color: Colors.orange,
+        ),
+        SummaryCard(
+          label: "Current DFR",
+          value: latest.dfr.toStringAsFixed(2),
+          icon: Icons.set_meal_rounded,
+          color: Colors.purple,
+        ),
       ],
-    );
-  }
-
-  Widget _buildSummaryCard(String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: color, size: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  color: textDark,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                label,
-                style: TextStyle(
-                  color: textMuted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
@@ -169,9 +144,17 @@ class _GrowthTabState extends State<GrowthTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMiniMetric("ADG", "${m.adg.toStringAsFixed(2)}g", Colors.green),
+              _buildMiniMetric(
+                "ADG",
+                "${m.adg.toStringAsFixed(2)}g",
+                Colors.green,
+              ),
               _buildMiniMetric("FCR", m.fcr.toStringAsFixed(2), Colors.orange),
-              _buildMiniMetric("DFR", "${m.dfr.toStringAsFixed(2)}%", Colors.purple),
+              _buildMiniMetric(
+                "DFR",
+                m.dfr.toStringAsFixed(2),
+                Colors.purple,
+              ),
             ],
           ),
         ],
@@ -207,7 +190,11 @@ class _GrowthTabState extends State<GrowthTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.query_stats_rounded, size: 64, color: Colors.grey.shade300),
+          Icon(
+            Icons.query_stats_rounded,
+            size: 64,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
             "No Growth Records Yet",
@@ -221,7 +208,7 @@ class _GrowthTabState extends State<GrowthTab> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              "Start recording ABW (Average Body Weight) weekly to see performance metrics here.",
+              "Start recording weight and fish count weekly to see performance metrics here.",
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: textMuted,
@@ -232,6 +219,106 @@ class _GrowthTabState extends State<GrowthTab> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class SummaryCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const SummaryCard({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Icon(icon, color: color, size: 20),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Color(0xFF1E293B),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MiniMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const MiniMetric({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }

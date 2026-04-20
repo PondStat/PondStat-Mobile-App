@@ -8,11 +8,18 @@ class ParameterChartCard extends StatelessWidget {
   final ParameterStats stats;
   final String species;
 
-  const ParameterChartCard({super.key, required this.stats, required this.species});
+  const ParameterChartCard({
+    super.key,
+    required this.stats,
+    required this.species,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final paramItem = MonitoringParameters.getParameterByLabel(stats.parameter, species);
+    final paramItem = MonitoringParameters.getParameterByLabel(
+      stats.parameter,
+      species,
+    );
     final color = paramItem?.color ?? Colors.blue;
     final unit = paramItem?.unit ?? '';
 
@@ -61,14 +68,21 @@ class ParameterChartCard extends StatelessWidget {
               ),
               if (stats.outlierCount > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 14),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.red,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         "${stats.outlierCount} Outliers",
@@ -92,22 +106,25 @@ class ParameterChartCard extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: 1,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.grey.shade100,
-                    strokeWidth: 1,
-                  ),
+                  getDrawingHorizontalLine: (value) =>
+                      FlLine(color: Colors.grey.shade100, strokeWidth: 1),
                 ),
                 titlesData: FlTitlesData(
                   show: true,
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
                       interval: _calculateInterval(stats.dataPoints.length),
                       getTitlesWidget: (value, meta) {
-                        if (value.toInt() < 0 || value.toInt() >= stats.dataPoints.length) {
+                        if (value.toInt() < 0 ||
+                            value.toInt() >= stats.dataPoints.length) {
                           return const SizedBox.shrink();
                         }
                         final date = stats.dataPoints[value.toInt()].timestamp;
@@ -161,11 +178,11 @@ class ParameterChartCard extends StatelessWidget {
                       show: true,
                       getDotPainter: (spot, percent, barData, index) =>
                           FlDotCirclePainter(
-                        radius: 4,
-                        color: Colors.white,
-                        strokeWidth: 2,
-                        strokeColor: color,
-                      ),
+                            radius: 4,
+                            color: Colors.white,
+                            strokeWidth: 2,
+                            strokeColor: color,
+                          ),
                     ),
                     belowBarData: BarAreaData(
                       show: true,
@@ -182,7 +199,8 @@ class ParameterChartCard extends StatelessWidget {
                 ],
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (touchedSpot) => color.withValues(alpha: 0.9),
+                    getTooltipColor: (touchedSpot) =>
+                        color.withValues(alpha: 0.9),
                     getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
                       return touchedBarSpots.map((barSpot) {
                         final flSpot = barSpot;
@@ -204,7 +222,9 @@ class ParameterChartCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Expanded(child: _buildStatItem("Average", "${stats.average}$unit")),
+              Expanded(
+                child: _buildStatItem("Average", "${stats.average}$unit"),
+              ),
               Expanded(child: _buildStatItem("Min", "${stats.min}$unit")),
               Expanded(child: _buildStatItem("Max", "${stats.max}$unit")),
             ],

@@ -156,7 +156,7 @@ class MonitoringCalendar extends StatelessWidget {
               calendarBuilders: CalendarBuilders(
                 selectedBuilder: (context, date, events) {
                   return Container(
-                    margin: const EdgeInsets.all(4),
+                    margin: const EdgeInsets.all(6),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -164,10 +164,10 @@ class MonitoringCalendar extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryBlue.withValues(alpha: 0.4),
+                          color: primaryBlue.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -178,25 +178,28 @@ class MonitoringCalendar extends StatelessWidget {
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
-                        fontSize: 15,
+                        fontSize: 16,
                       ),
                     ),
                   );
                 },
                 todayBuilder: (context, date, events) {
                   return Container(
-                    margin: const EdgeInsets.all(4),
+                    margin: const EdgeInsets.all(6),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: primaryBlue.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
+                      color: primaryBlue.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: primaryBlue.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: Text(
                       '${date.day}',
                       style: TextStyle(
                         color: primaryBlue,
                         fontWeight: FontWeight.w900,
-                        fontSize: 15,
+                        fontSize: 16,
                       ),
                     ),
                   );
@@ -229,7 +232,7 @@ class MonitoringCalendar extends StatelessWidget {
                   }
 
                   return Positioned(
-                    bottom: 6,
+                    bottom: 8,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: activeDots,

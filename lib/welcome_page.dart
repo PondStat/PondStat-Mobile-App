@@ -5,8 +5,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase/firestore_helper.dart';
 import 'utility/helpers.dart';
+
+class OnboardingStep {
+  final String title;
+  final String description;
+  final IconData icon;
+
+  OnboardingStep({
+    required this.title,
+    required this.description,
+    required this.icon,
+  });
+}
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -24,6 +37,41 @@ class _WelcomePageState extends State<WelcomePage>
   late Animation<double> _fadeAnimation;
 
   bool _isLoading = false;
+  late PageController _pageController;
+  int _currentPage = 0;
+
+  final List<OnboardingStep> _steps = [
+    OnboardingStep(
+      title: 'Fish 125: Aquaculture Technologies',
+      description:
+          'Learn the basic operation of different culture systems, soil and water chemistry and its influence in productivity, pond management, production of natural food, nutrition and feeding, water quality management, site selection, design and construction of aquaculture facilities as well as harvest and post-harvest handling.',
+      icon: Icons.school_rounded,
+    ),
+    OnboardingStep(
+      title: 'Digital Pond Management',
+      description:
+          'A centralized system to organize individual pond profiles and keep track of core operational details such as species, stocking density, and target harvest date.',
+      icon: Icons.space_dashboard_outlined,
+    ),
+    OnboardingStep(
+      title: 'Environmental Data Logging',
+      description:
+          'Comprehensive tracking of daily, weekly, and biweekly parameters to maintain optimal pond health and identify environmental trends.',
+      icon: Icons.analytics_outlined,
+    ),
+    OnboardingStep(
+      title: 'Growth Performance Analytics',
+      description:
+          'Automated calculation of vital growth metrics including ABW, ADG, DFR, and FCR based on regular weekly sampling records.',
+      icon: Icons.trending_up_rounded,
+    ),
+    OnboardingStep(
+      title: 'Collaborative Workspace',
+      description:
+          'Share access with professors for academic review and assign specific operational roles to team members for efficient pond management.',
+      icon: Icons.group_add_outlined,
+    ),
+  ];
 
   final GoogleSignIn googleSignIn = GoogleSignIn(
     clientId:
@@ -33,6 +81,8 @@ class _WelcomePageState extends State<WelcomePage>
   @override
   void initState() {
     super.initState();
+
+    _pageController = PageController();
 
     _bubbleController = AnimationController(
       vsync: this,
@@ -55,12 +105,30 @@ class _WelcomePageState extends State<WelcomePage>
     ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
 
     _textController.forward();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeen = prefs.getBool('hasSeenOnboarding') ?? false;
+    if (hasSeen && mounted) {
+      setState(() {
+        _currentPage = _steps.length;
+      });
+      _pageController.jumpToPage(_steps.length);
+    }
+  }
+
+  Future<void> _completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasSeenOnboarding', true);
   }
 
   @override
   void dispose() {
     _bubbleController.dispose();
     _textController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -72,6 +140,19 @@ class _WelcomePageState extends State<WelcomePage>
 
       if (googleUser == null) {
         if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      if (!googleUser.email.endsWith('@up.edu.ph')) {
+        await googleSignIn.signOut();
+        if (mounted) {
+          setState(() => _isLoading = false);
+          SnackbarHelper.show(
+            context,
+            "Only UP mail (@up.edu.ph) accounts are allowed to log in.",
+            backgroundColor: Colors.orange.shade700,
+          );
+        }
         return;
       }
 
@@ -217,15 +298,14 @@ class _WelcomePageState extends State<WelcomePage>
             ),
           ),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 20.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 20.0,
+                  ),
+                  child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8.0),
@@ -249,118 +329,245 @@ class _WelcomePageState extends State<WelcomePage>
                           letterSpacing: 1.0,
                         ),
                       ),
-                    ],
-                  ),
-                  const Spacer(),
-                  SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Smart Pond Monitoring',
+                      const Spacer(),
+                      if (_currentPage < _steps.length)
+                        TextButton(
+                          onPressed: () {
+                            _completeOnboarding();
+                            _pageController.animateToPage(
+                              _steps.length,
+                              duration: const Duration(milliseconds: 600),
+                              curve: Curves.easeInOutQuart,
+                            );
+                          },
+                          child: const Text(
+                            'Skip',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 32.0,
-                              height: 1.1,
-                              fontWeight: FontWeight.w800,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(0, 4),
-                                  blurRadius: 10.0,
-                                  color: Colors.black26,
-                                ),
-                              ],
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 12.0),
-                          Text(
-                            'Real-time analytics for your aquaculture.\nTrack parameters, manage teams, and boost production.',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 15.0,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() => _currentPage = index);
+                    },
+                    itemCount: _steps.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == _steps.length) {
+                        return _buildSignInPage(primaryColor);
+                      }
+                      return _buildOnboardingPage(_steps[index]);
+                    },
+                  ),
+                ),
+                _buildBottomControls(primaryColor),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnboardingPage(OnboardingStep step) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(24.0),
+            ),
+            child: Icon(step.icon, color: Colors.white, size: 48),
+          ),
+          const SizedBox(height: 32.0),
+          SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    step.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32.0,
+                      height: 1.1,
+                      fontWeight: FontWeight.w800,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 4),
+                          blurRadius: 10.0,
+                          color: Colors.black26,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 40.0),
-                  SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Column(
-                        children: [
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              minWidth: double.infinity,
-                              minHeight: 54.0,
-                            ),
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _signInWithGoogle,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: primaryColor,
-                                disabledBackgroundColor: Colors.white
-                                    .withValues(alpha: 0.8),
-                                elevation: 3,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(28.0),
-                                ),
-                              ),
-                              child: _isLoading
-                                  ? SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        color: primaryColor,
-                                        strokeWidth: 2.5,
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        FaIcon(
-                                          FontAwesomeIcons.google,
-                                          size: 22,
-                                          color: primaryColor,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        const Text(
-                                          'Continue with Google',
-                                          style: TextStyle(
-                                            fontSize: 16.0,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 24.0),
-                          Text(
-                            "By continuing, you agree to our Terms of Service\nand Privacy Policy.",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              fontSize: 12,
-                              height: 1.4,
-                            ),
-                          ),
-                          const SizedBox(height: 12.0),
-                        ],
-                      ),
+                  const SizedBox(height: 16.0),
+                  Text(
+                    step.description,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 16.0,
+                      height: 1.5,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSignInPage(Color primaryColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24.0),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.lock_person_rounded,
+              color: Colors.white,
+              size: 64,
+            ),
+          ),
+          const SizedBox(height: 32.0),
+          const Text(
+            'Ready to Start?',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 32.0,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12.0),
+          Text(
+            'Sign in with your UP mail account to access your pond dashboards and collaborate with your team.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 16.0,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 48.0),
+          ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: double.infinity,
+              minHeight: 56.0,
+            ),
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _signInWithGoogle,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: primaryColor,
+                disabledBackgroundColor: Colors.white.withValues(alpha: 0.8),
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28.0),
+                ),
+              ),
+              child: _isLoading
+                  ? SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: primaryColor,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        FaIcon(
+                          FontAwesomeIcons.google,
+                          size: 22,
+                          color: primaryColor,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Continue with Google',
+                          style: TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomControls(Color primaryColor) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: List.generate(
+              _steps.length + 1,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.only(right: 6),
+                height: 8,
+                width: _currentPage == index ? 24 : 8,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(
+                    alpha: _currentPage == index ? 1.0 : 0.4,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ),
+          if (_currentPage < _steps.length)
+            SizedBox(
+              height: 56,
+              width: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_currentPage == _steps.length - 1) {
+                    _completeOnboarding();
+                  }
+                  _pageController.nextPage(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: primaryColor,
+                  shape: const CircleBorder(),
+                  padding: EdgeInsets.zero,
+                  elevation: 4,
+                ),
+                child: const Icon(Icons.arrow_forward_rounded),
+              ),
+            ),
         ],
       ),
     );

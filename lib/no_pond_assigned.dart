@@ -141,7 +141,9 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: primaryColor,
-                    side: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
+                    side: BorderSide(
+                      color: primaryColor.withValues(alpha: 0.5),
+                    ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 12,

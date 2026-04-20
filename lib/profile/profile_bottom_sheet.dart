@@ -258,7 +258,10 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: avatarColor.withValues(alpha: 0.2), width: 2),
+              border: Border.all(
+                color: avatarColor.withValues(alpha: 0.2),
+                width: 2,
+              ),
             ),
             child: CircleAvatar(
               radius: 32,
@@ -355,7 +358,10 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: roleColor.withValues(alpha: 0.15), width: 1.5),
+        border: Border.all(
+          color: roleColor.withValues(alpha: 0.15),
+          width: 1.5,
+        ),
       ),
       padding: const EdgeInsets.all(16),
       child: Row(

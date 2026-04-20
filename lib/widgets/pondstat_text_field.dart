@@ -65,9 +65,7 @@ class PondStatTextField extends StatelessWidget {
           ),
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: prefixIcon != null
-                ? Icon(prefixIcon, size: 20)
-                : null,
+            prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
             suffixIcon: suffixIcon,
             // Rest of the styling is inherited from app_theme.dart's inputDecorationTheme
           ),

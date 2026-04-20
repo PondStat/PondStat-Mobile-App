@@ -25,10 +25,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
   final TextEditingController _pondAreaController = TextEditingController();
 
   String? _selectedSpecies;
-  final List<String> _speciesOptions = [
-    'Shrimp',
-    'Tilapia',
-  ];
+  final List<String> _speciesOptions = ['Shrimp', 'Tilapia'];
 
   @override
   void dispose() {
@@ -202,7 +199,13 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                         textInputAction: TextInputAction.next,
                         suffixIcon: const Padding(
                           padding: EdgeInsets.only(right: 16, top: 18),
-                          child: Text('pcs', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                          child: Text(
+                            'pcs',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                         validator: (val) {
                           if (val == null || val.isEmpty) return 'Required';
@@ -222,7 +225,13 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                         textInputAction: TextInputAction.next,
                         suffixIcon: const Padding(
                           padding: EdgeInsets.only(right: 16, top: 18),
-                          child: Text('days', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                          child: Text(
+                            'days',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                         validator: (val) {
                           if (val == null || val.isEmpty) return 'Required';
@@ -240,11 +249,19 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                   label: 'Pond Area',
                   hint: '2500',
                   prefixIcon: Icons.square_foot_rounded,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   textInputAction: TextInputAction.done,
                   suffixIcon: const Padding(
                     padding: EdgeInsets.only(right: 16, top: 18),
-                    child: Text('sqm', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'sqm',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   validator: (val) {
                     if (val == null || val.isEmpty) return 'Required';

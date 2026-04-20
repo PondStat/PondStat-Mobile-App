@@ -38,9 +38,11 @@ class PondStatusColors extends ThemeExtension<PondStatusColors> {
 }
 
 class AppTheme {
-  static const Color customBlue = Color(0xFF0A74DA); // Updated to main primary blue
+  static const Color customBlue = Color(
+    0xFF0A74DA,
+  ); // Updated to main primary blue
   static const Color secondaryBlue = Color(0xFF4FA0F0);
-  
+
   static final ColorScheme _lightColorScheme = ColorScheme.fromSeed(
     seedColor: customBlue,
     primary: customBlue,
@@ -85,7 +87,9 @@ class AppTheme {
     required ColorScheme colorScheme,
     required bool isDark,
   }) {
-    final baseTextTheme = isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme;
+    final baseTextTheme = isDark
+        ? ThemeData.dark().textTheme
+        : ThemeData.light().textTheme;
     final textTheme = GoogleFonts.interTextTheme(baseTextTheme).apply(
       bodyColor: colorScheme.onSurface,
       displayColor: colorScheme.onSurface,
@@ -94,7 +98,9 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: isDark ? const Color(0xFF0B1120) : const Color(0xFFF8FAFC), // Slate 50
+      scaffoldBackgroundColor: isDark
+          ? const Color(0xFF0B1120)
+          : const Color(0xFFF8FAFC), // Slate 50
       splashFactory: InkSparkle.splashFactory,
       textTheme: textTheme,
       extensions: <ThemeExtension<dynamic>>[
@@ -111,9 +117,7 @@ class AppTheme {
           fontWeight: FontWeight.w800,
           letterSpacing: -0.5,
         ),
-        iconTheme: IconThemeData(
-          color: colorScheme.onSurface,
-        ),
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
@@ -129,7 +133,9 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9), // Slate 100
+        fillColor: isDark
+            ? const Color(0xFF1E293B)
+            : const Color(0xFFF1F5F9), // Slate 100
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
           vertical: 18,
@@ -144,11 +150,17 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16.0),
-          borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.5), width: 2),
+          borderSide: BorderSide(
+            color: colorScheme.primary.withValues(alpha: 0.5),
+            width: 2,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16.0),
-          borderSide: BorderSide(color: colorScheme.error.withValues(alpha: 0.5), width: 2),
+          borderSide: BorderSide(
+            color: colorScheme.error.withValues(alpha: 0.5),
+            width: 2,
+          ),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16.0),
@@ -178,7 +190,10 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16.0),
           ),
-          textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+          textStyle: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -188,16 +203,17 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
           ),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+          textStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: isDark

@@ -40,9 +40,9 @@ class TrendsDataService {
       final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
 
       if (parameter != null && value != null && timestamp != null) {
-        groupedData.putIfAbsent(parameter, () => []).add(
-          TrendDataPoint(timestamp, value),
-        );
+        groupedData
+            .putIfAbsent(parameter, () => [])
+            .add(TrendDataPoint(timestamp, value));
       }
     }
 
@@ -60,7 +60,10 @@ class TrendsDataService {
       final max = values.reduce((a, b) => a > b ? a : b);
 
       // Outlier detection based on MonitoringParameters
-      final paramItem = MonitoringParameters.getParameterByLabel(parameter, species);
+      final paramItem = MonitoringParameters.getParameterByLabel(
+        parameter,
+        species,
+      );
       int outliers = 0;
       if (paramItem != null) {
         for (var val in values) {

@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../firebase/firestore_helper.dart';
 
 class MonitoringRepository {
-  static final MonitoringRepository _instance = MonitoringRepository._internal();
+  static final MonitoringRepository _instance =
+      MonitoringRepository._internal();
   factory MonitoringRepository() => _instance;
   MonitoringRepository._internal();
 
@@ -25,7 +26,8 @@ class MonitoringRepository {
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
-    final String dateKey = "${selectedDay.year}-${selectedDay.month}-${selectedDay.day}";
+    final String dateKey =
+        "${selectedDay.year}-${selectedDay.month}-${selectedDay.day}";
     final batch = _firestore.batch();
     final measurementRef = FirestoreHelper.measurementsCollection.doc();
 
@@ -69,7 +71,9 @@ class MonitoringRepository {
     if (currentUser == null) throw Exception('User not authenticated');
 
     final batch = _firestore.batch();
-    final measurementRef = FirestoreHelper.measurementsCollection.doc(measurementId);
+    final measurementRef = FirestoreHelper.measurementsCollection.doc(
+      measurementId,
+    );
 
     batch.delete(measurementRef);
 
@@ -106,10 +110,7 @@ class MonitoringRepository {
             .toStringAsFixed(2),
       );
 
-      batch.update(doc.reference, {
-        'pointValues': newPoints,
-        'value': avg,
-      });
+      batch.update(doc.reference, {'pointValues': newPoints, 'value': avg});
 
       _logHistory(
         batch: batch,
@@ -153,10 +154,7 @@ class MonitoringRepository {
     required String pondId,
     required String userId,
     required String userName,
-    required String jobTitle,
-    required List<int> scheduledDays,
-    required List<String> startTimes,
-    String? description,
+    required Map<String, dynamic> schedule,
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
@@ -165,18 +163,17 @@ class MonitoringRepository {
       'pondId': pondId,
       'userId': userId,
       'userName': userName,
-      'jobTitle': jobTitle,
-      'scheduledDays': scheduledDays,
-      'startTime': startTimes.isNotEmpty ? startTimes.first : '', // Backward compatibility
-      'startTimes': startTimes,
-      'description': description,
+      'schedule': schedule,
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedBy': currentUser!.uid,
     });
   }
 
   /// Fetches a job schedule for a specific user in a pond.
-  Future<Map<String, dynamic>?> getJobSchedule(String pondId, String userId) async {
+  Future<Map<String, dynamic>?> getJobSchedule(
+    String pondId,
+    String userId,
+  ) async {
     final docId = "${pondId}_$userId";
     final doc = await FirestoreHelper.schedulesCollection.doc(docId).get();
     return doc.exists ? doc.data() : null;

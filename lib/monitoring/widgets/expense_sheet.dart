@@ -8,10 +8,7 @@ import '../../widgets/primary_button.dart';
 class ExpenseSheet extends StatefulWidget {
   final String pondId;
 
-  const ExpenseSheet({
-    super.key,
-    required this.pondId,
-  });
+  const ExpenseSheet({super.key, required this.pondId});
 
   @override
   State<ExpenseSheet> createState() => _ExpenseSheetState();
@@ -20,9 +17,11 @@ class ExpenseSheet extends StatefulWidget {
 class _ExpenseSheetState extends State<ExpenseSheet> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _itemController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController(text: '1');
+  final TextEditingController _quantityController = TextEditingController(
+    text: '1',
+  );
   final TextEditingController _amountController = TextEditingController();
-  
+
   bool _isSaving = false;
   final MonitoringRepository _repository = MonitoringRepository();
 
@@ -57,11 +56,19 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
 
       if (mounted) {
         Navigator.pop(context, true);
-        SnackbarHelper.show(context, "Expense recorded successfully", backgroundColor: Colors.green.shade600);
+        SnackbarHelper.show(
+          context,
+          "Expense recorded successfully",
+          backgroundColor: Colors.green.shade600,
+        );
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(context, "Error recording expense: $e", backgroundColor: Colors.redAccent);
+        SnackbarHelper.show(
+          context,
+          "Error recording expense: $e",
+          backgroundColor: Colors.redAccent,
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -72,10 +79,10 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: 12, 
-        left: 24, 
-        right: 24, 
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32
+        top: 12,
+        left: 24,
+        right: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
       ),
       child: SingleChildScrollView(
         child: Form(
@@ -84,29 +91,62 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 48, height: 5, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
-              
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.teal.shade50, shape: BoxShape.circle),
-                    child: const Icon(Icons.receipt_long_rounded, color: Colors.teal),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.receipt_long_rounded,
+                      color: Colors.teal,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Record Expense", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
-                        Text("Add a new group expenditure", style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w600)),
+                        Text(
+                          "Record Expense",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        Text(
+                          "Add a new group expenditure",
+                          style: TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ],
               ),
-              
+
               const SizedBox(height: 28),
               PondStatTextField(
                 controller: _itemController,
@@ -128,7 +168,8 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                       prefixIcon: Icons.production_quantity_limits_rounded,
                       keyboardType: TextInputType.number,
                       onChanged: (_) => setState(() {}),
-                      validator: (v) => int.tryParse(v ?? '') == null ? "Invalid" : null,
+                      validator: (v) =>
+                          int.tryParse(v ?? '') == null ? "Invalid" : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -139,22 +180,27 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                       label: "Price per Item",
                       hint: "0.00",
                       prefixIcon: Icons.payments_outlined,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       onChanged: (_) => setState(() {}),
-                      validator: (v) => double.tryParse(v ?? '') == null ? "Invalid" : null,
+                      validator: (v) =>
+                          double.tryParse(v ?? '') == null ? "Invalid" : null,
                     ),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
               _buildTotalCard(),
-              
+
               const SizedBox(height: 32),
-              
+
               Theme(
                 data: Theme.of(context).copyWith(
-                  colorScheme: Theme.of(context).colorScheme.copyWith(primary: Colors.teal),
+                  colorScheme: Theme.of(
+                    context,
+                  ).colorScheme.copyWith(primary: Colors.teal),
                 ),
                 child: PrimaryButton(
                   text: 'Save Expense',
@@ -182,10 +228,21 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text("Total Amount", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.teal, fontSize: 16)),
+          const Text(
+            "Total Amount",
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Colors.teal,
+              fontSize: 16,
+            ),
+          ),
           Text(
-            "₱${_totalAmount.toStringAsFixed(2)}", 
-            style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.teal, fontSize: 24)
+            "₱${_totalAmount.toStringAsFixed(2)}",
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              color: Colors.teal,
+              fontSize: 24,
+            ),
           ),
         ],
       ),

@@ -18,7 +18,7 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: double.infinity,
@@ -30,7 +30,7 @@ class PrimaryButton extends StatelessWidget {
                   color: theme.colorScheme.primary.withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
-                )
+                ),
               ]
             : [],
       ),
