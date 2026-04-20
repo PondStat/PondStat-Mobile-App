@@ -185,4 +185,8 @@ class GrowthDataService {
   static double _round(double value, int places) {
     return double.parse(value.toStringAsFixed(places));
   }
+
+  static double _round(double value, int places) {
+    return double.parse(value.toStringAsFixed(places));
+  }
 }
