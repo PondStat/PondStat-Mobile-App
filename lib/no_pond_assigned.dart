@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 class NoPondAssignedWidget extends StatefulWidget {
   final Future<void> Function()? onRefresh;
+  final VoidCallback? onCreatePond;
 
-  const NoPondAssignedWidget({super.key, this.onRefresh});
+  const NoPondAssignedWidget({super.key, this.onRefresh, this.onCreatePond});
 
   @override
   State<NoPondAssignedWidget> createState() => _NoPondAssignedWidgetState();
@@ -33,6 +34,7 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
     return RefreshIndicator(
       onRefresh: _handleRefresh,
       color: primaryColor,
+      backgroundColor: Colors.white,
       child: Center(
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -42,114 +44,124 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                height: 160,
-                width: double.infinity,
+                height: 100,
+                width: 100,
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.water_drop_outlined,
-                      size: 48,
-                      color: primaryColor.withValues(alpha: 0.4),
-                    ),
-                    const SizedBox(height: 12),
-                    Icon(
-                      Icons.search_rounded,
-                      size: 32,
-                      color: primaryColor.withValues(alpha: 0.3),
+                  color: Colors.white.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withValues(alpha: 0.15),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
                     ),
                   ],
                 ),
+                child: Icon(
+                  Icons.science_rounded,
+                  size: 48,
+                  color: primaryColor,
+                ),
               ),
               const SizedBox(height: 32),
-              const Text(
-                'Waiting for Assignment',
+              Text(
+                'Welcome to Fish 125 Labs',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.blueGrey.shade900,
+                  letterSpacing: -0.5,
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                "You haven't been assigned to a pond yet. You can create one or ask your team leader to invite you.",
+                "You haven't been assigned to a pond yet. Create your first pond dashboard to begin your aquaculture practice, or request an invitation from your professor/team leader.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 15,
-                  height: 1.4,
+                  color: Colors.blueGrey.shade700,
+                  fontSize: 16,
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
+                  color: Colors.white.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Once assigned, you\'ll have access to:',
-                      style: TextStyle(
-                        color: Colors.grey.shade800,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 16.0,
-                      runSpacing: 12.0,
+                    Row(
                       children: [
-                        _buildRecordItem(primaryColor, 'Daily records'),
-                        _buildRecordItem(primaryColor, 'Biweekly records'),
-                        _buildRecordItem(primaryColor, 'Weekly records'),
-                        _buildRecordItem(primaryColor, 'Team dashboard'),
+                        Icon(Icons.dashboard_customize_rounded, color: primaryColor, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Once assigned, you\'ll unlock:',
+                          style: TextStyle(
+                            color: Colors.blueGrey.shade900,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 20),
+                    _buildFeatureItem(Icons.water_drop_rounded, 'Pond Parameters', Colors.blue),
+                    const SizedBox(height: 12),
+                    _buildFeatureItem(Icons.trending_up_rounded, 'Growth Analytics', Colors.green),
+                    const SizedBox(height: 12),
+                    _buildFeatureItem(Icons.bar_chart_rounded, 'Graphs for Trends', Colors.purple),
+                    const SizedBox(height: 12),
+                    _buildFeatureItem(Icons.receipt_long_rounded, 'Expense Tracker', Colors.teal),
+                    const SizedBox(height: 12),
+                    _buildFeatureItem(Icons.event_note_rounded, 'Scheduler Manager', Colors.orange),
                   ],
                 ),
               ),
               const SizedBox(height: 40),
               if (widget.onRefresh != null)
-                OutlinedButton.icon(
-                  onPressed: _isRefreshing ? null : _handleRefresh,
-                  icon: _isRefreshing
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: primaryColor,
-                          ),
-                        )
-                      : const Icon(Icons.refresh),
-                  label: Text(
-                    _isRefreshing ? "Refreshing..." : "Refresh Status",
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: primaryColor,
-                    side: BorderSide(
-                      color: primaryColor.withValues(alpha: 0.5),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton.icon(
+                    onPressed: _isRefreshing ? null : _handleRefresh,
+                    icon: _isRefreshing
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: primaryColor,
+                            ),
+                          )
+                        : const Icon(Icons.refresh_rounded, size: 22),
+                    label: Text(
+                      _isRefreshing ? "Refreshing..." : "Refresh Status",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryColor,
+                      side: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
                 ),
@@ -160,20 +172,28 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
     );
   }
 
-  Widget _buildRecordItem(Color color, String text) {
+  Widget _buildFeatureItem(IconData icon, String text, Color iconColor) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 6,
-          height: 6,
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.6),
-            shape: BoxShape.circle,
+            color: iconColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: iconColor),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.blueGrey.shade800,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
-        const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
       ],
     );
   }

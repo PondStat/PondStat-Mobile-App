@@ -8,6 +8,8 @@ import 'create_pond_sheet.dart';
 import 'pond_list_card.dart';
 import '../getting_started_dialog.dart';
 import '../widgets/empty_state_card.dart';
+import '../no_pond_assigned.dart';
+import '../pond_background.dart';
 
 class DefaultDashboardScreen extends StatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -228,7 +230,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     }
 
     return Scaffold(
-      backgroundColor: backgroundLight,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -299,92 +301,97 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirestoreHelper.pondsCollection
-            .where('memberIds', arrayContains: user.uid)
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData &&
-              snapshot.connectionState == ConnectionState.waiting) {
-            return _buildSkeletonLoader();
-          }
-
-          if (snapshot.hasError) {
-            return _buildErrorState(snapshot.error.toString());
-          }
-
-          var ponds = snapshot.data?.docs.toList() ?? [];
-
-          if (ponds.isEmpty) {
-            return _buildEmptyState(context);
-          }
-
-          return NotificationListener<ScrollNotification>(
-            onNotification: (ScrollNotification notification) {
-              if (notification is ScrollStartNotification ||
-                  notification is ScrollUpdateNotification) {
-                if (_isFabVisible) setState(() => _isFabVisible = false);
-              } else if (notification is ScrollEndNotification) {
-                if (!_isFabVisible) setState(() => _isFabVisible = true);
+      body: Stack(
+        children: [
+          const PondBackground(),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirestoreHelper.pondsCollection
+                .where('memberIds', arrayContains: user.uid)
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData &&
+                  snapshot.connectionState == ConnectionState.waiting) {
+                return _buildSkeletonLoader();
               }
-              return false;
-            },
-            child: RefreshIndicator(
-              color: primaryBlue,
-              backgroundColor: Colors.white,
-              onRefresh: () async =>
-                  await Future.delayed(const Duration(milliseconds: 800)),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16).copyWith(bottom: 100),
-                itemCount: ponds.length,
-                itemBuilder: (context, index) {
-                  final pondDoc = ponds[index];
-                  final pondData = pondDoc.data() as Map<String, dynamic>;
-                  final String pondName = pondData['name'] ?? 'Unnamed Pond';
-                  final String userRole =
-                      pondData['roles']?[user.uid] ?? 'viewer';
-                  final bool isOwner = userRole == 'owner';
 
-                  final card = PondListCard(
-                    pondId: pondDoc.id,
-                    pondName: pondName,
-                    species: pondData['species'] ?? 'Unspecified',
-                    userRole: userRole,
-                  );
+              if (snapshot.hasError) {
+                return _buildErrorState(snapshot.error.toString());
+              }
 
-                  if (isOwner) {
-                    return Dismissible(
-                      key: Key(pondDoc.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 24.0),
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade400,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.delete_sweep_rounded,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
-                      confirmDismiss: (direction) =>
-                          _confirmDelete(context, pondName),
-                      onDismissed: (direction) =>
-                          _deletePond(pondDoc.id, pondName),
-                      child: card,
-                    );
+              var ponds = snapshot.data?.docs.toList() ?? [];
+
+              if (ponds.isEmpty) {
+                return _buildEmptyState(context);
+              }
+
+              return NotificationListener<ScrollNotification>(
+                onNotification: (ScrollNotification notification) {
+                  if (notification is ScrollStartNotification ||
+                      notification is ScrollUpdateNotification) {
+                    if (_isFabVisible) setState(() => _isFabVisible = false);
+                  } else if (notification is ScrollEndNotification) {
+                    if (!_isFabVisible) setState(() => _isFabVisible = true);
                   }
-
-                  return card;
+                  return false;
                 },
-              ),
-            ),
-          );
-        },
+                child: RefreshIndicator(
+                  color: primaryBlue,
+                  backgroundColor: Colors.white,
+                  onRefresh: () async =>
+                      await Future.delayed(const Duration(milliseconds: 800)),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16).copyWith(bottom: 100),
+                    itemCount: ponds.length,
+                    itemBuilder: (context, index) {
+                      final pondDoc = ponds[index];
+                      final pondData = pondDoc.data() as Map<String, dynamic>;
+                      final String pondName = pondData['name'] ?? 'Unnamed Pond';
+                      final String userRole =
+                          pondData['roles']?[user.uid] ?? 'viewer';
+                      final bool isOwner = userRole == 'owner';
+
+                      final card = PondListCard(
+                        pondId: pondDoc.id,
+                        pondName: pondName,
+                        species: pondData['species'] ?? 'Unspecified',
+                        userRole: userRole,
+                      );
+
+                      if (isOwner) {
+                        return Dismissible(
+                          key: Key(pondDoc.id),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 24.0),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade400,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.delete_sweep_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          confirmDismiss: (direction) =>
+                              _confirmDelete(context, pondName),
+                          onDismissed: (direction) =>
+                              _deletePond(pondDoc.id, pondName),
+                          child: card,
+                        );
+                      }
+
+                      return card;
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       floatingActionButton: AnimatedSlide(
         duration: const Duration(milliseconds: 250),
@@ -522,13 +529,8 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return EmptyStateCard(
-      icon: Icons.water_drop_outlined,
-      title: "No Ponds Yet",
-      description:
-          "Start tracking your aquaculture farm parameters by creating your first pond.",
-      buttonText: "Create First Pond",
-      onButtonPressed: () => _showCreatePondSheet(context),
+    return NoPondAssignedWidget(
+      onCreatePond: () => _showCreatePondSheet(context),
     );
   }
 
