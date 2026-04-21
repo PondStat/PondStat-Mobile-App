@@ -22,6 +22,7 @@ class MonitoringRepository {
     required double averageValue,
     required String type,
     required Map<String, double> pointValues,
+    required Map<String, List<double>> replicateValues,
     required DateTime selectedDay,
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
@@ -44,6 +45,7 @@ class MonitoringRepository {
       'unit': unit,
       'timeString': timeString,
       'pointValues': pointValues,
+      'replicateValues': replicateValues,
     };
 
     batch.set(measurementRef, measurementData);
@@ -55,7 +57,11 @@ class MonitoringRepository {
       parameter: label,
       action: 'create',
       before: null,
-      after: {'value': averageValue, 'pointValues': pointValues},
+      after: {
+        'value': averageValue,
+        'pointValues': pointValues,
+        'replicateValues': replicateValues,
+      },
     );
 
     await batch.commit();
@@ -120,6 +126,59 @@ class MonitoringRepository {
         action: 'update',
         before: {'value': data['value'], 'pointValues': data['pointValues']},
         after: {'value': avg, 'pointValues': newPoints},
+      );
+    }
+
+    await batch.commit();
+  }
+
+  /// Updates measurements with replicate values and calculates point averages.
+  Future<void> updateMeasurementsWithReplicates({
+    required String pondId,
+    required List<DocumentSnapshot> docs,
+    required Map<String, Map<String, double>> updatedPointValues,
+    required Map<String, Map<String, List<double>>> updatedReplicateValues,
+  }) async {
+    if (currentUser == null) throw Exception('User not authenticated');
+
+    final batch = _firestore.batch();
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final newPointValues = updatedPointValues[doc.id];
+      final newReplicateValues = updatedReplicateValues[doc.id];
+
+      if (newPointValues == null || newReplicateValues == null) continue;
+
+      final double avg = double.parse(
+        (newPointValues.values.reduce((a, b) => a + b) / newPointValues.length)
+            .toStringAsFixed(2),
+      );
+
+      batch.update(doc.reference, {
+        'pointValues': newPointValues,
+        'replicateValues': newReplicateValues,
+        'value': avg,
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': currentUser?.uid,
+      });
+
+      _logHistory(
+        batch: batch,
+        pondId: pondId,
+        measurementId: doc.id,
+        parameter: data['parameter'],
+        action: 'update',
+        before: {
+          'value': data['value'],
+          'pointValues': data['pointValues'],
+          'replicateValues': data['replicateValues'],
+        },
+        after: {
+          'value': avg,
+          'pointValues': newPointValues,
+          'replicateValues': newReplicateValues,
+        },
       );
     }
 

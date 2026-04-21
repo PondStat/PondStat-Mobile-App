@@ -18,6 +18,7 @@ class RecordDataSheet extends StatefulWidget {
     required double averageValue,
     required String type,
     required Map<String, double> pointValues,
+    required Map<String, List<double>> replicateValues,
   })
   onSave;
 
@@ -38,6 +39,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   TimeOfDay selectedTime = TimeOfDay.now();
 
   final List<String> points = const ['A', 'B', 'C', 'D'];
+  final List<int> replicates = const [1, 2, 3];
   late final Map<String, TextEditingController> valueControllers;
   late final Map<String, FocusNode> focusNodes;
 
@@ -51,8 +53,17 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   @override
   void initState() {
     super.initState();
-    valueControllers = {for (var p in points) p: TextEditingController()};
-    focusNodes = {for (var p in points) p: FocusNode()};
+    // Create controllers for each replicate of each point
+    valueControllers = {};
+    focusNodes = {};
+
+    for (var p in points) {
+      for (var r in replicates) {
+        final key = '$p-$r';
+        valueControllers[key] = TextEditingController();
+        focusNodes[key] = FocusNode();
+      }
+    }
 
     for (var controller in valueControllers.values) {
       controller.addListener(() => setState(() {}));
@@ -75,67 +86,92 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
   // --- Logic ---
 
-  void _processAndSaveForm() async {
-    if (selectedParameter == null || _isSaving) return;
-
+  double? _calculatePointAverage(String point) {
     double sum = 0;
     int count = 0;
-    Map<String, double> pointValues = {};
 
-    for (var p in points) {
-      final textVal = valueControllers[p]!.text.trim();
+    for (var r in replicates) {
+      final key = '$point-$r';
+      final textVal = valueControllers[key]!.text.trim();
       if (textVal.isNotEmpty) {
         final val = double.tryParse(textVal);
-
-        if (val == null &&
-            selectedParameter!.keyboardType != TextInputType.text) {
-          SnackbarHelper.show(
-            context,
-            "Point $p has an invalid number",
-            backgroundColor: Colors.red,
-          );
-          return;
-        }
-
         if (val != null) {
-          if (selectedParameter!.minVal != null &&
-              val < selectedParameter!.minVal!) {
-            SnackbarHelper.show(
-              context,
-              "Point $p is below the minimum (${selectedParameter!.minVal})",
-              backgroundColor: Colors.red,
-            );
-            focusNodes[p]?.requestFocus();
-            return;
-          }
-          if (selectedParameter!.maxVal != null &&
-              val > selectedParameter!.maxVal!) {
-            SnackbarHelper.show(
-              context,
-              "Point $p is above the maximum (${selectedParameter!.maxVal})",
-              backgroundColor: Colors.red,
-            );
-            focusNodes[p]?.requestFocus();
-            return;
-          }
           sum += val;
           count++;
-          pointValues[p] = val;
         }
       }
     }
 
-    if (count == 0) {
+    if (count == 0) return null;
+    return double.parse((sum / count).toStringAsFixed(2));
+  }
+
+  void _processAndSaveForm() async {
+    if (selectedParameter == null || _isSaving) return;
+
+    double totalSum = 0;
+    int pointsWithData = 0;
+    Map<String, double> pointValues = {};
+    Map<String, List<double>> replicateValues = {};
+
+    // Calculate average for each point
+    for (var p in points) {
+      final pointAvg = _calculatePointAverage(p);
+      if (pointAvg != null) {
+        // Validate against min/max
+        if (selectedParameter!.minVal != null &&
+            pointAvg < selectedParameter!.minVal!) {
+          SnackbarHelper.show(
+            context,
+            "Point $p average is below the minimum (${selectedParameter!.minVal})",
+            backgroundColor: Colors.red,
+          );
+          focusNodes['$p-1']?.requestFocus();
+          return;
+        }
+        if (selectedParameter!.maxVal != null &&
+            pointAvg > selectedParameter!.maxVal!) {
+          SnackbarHelper.show(
+            context,
+            "Point $p average is above the maximum (${selectedParameter!.maxVal})",
+            backgroundColor: Colors.red,
+          );
+          focusNodes['$p-1']?.requestFocus();
+          return;
+        }
+        pointValues[p] = pointAvg;
+        totalSum += pointAvg;
+        pointsWithData++;
+
+        // Collect replicate values for this point
+        final replicates = <double>[];
+        for (var r in this.replicates) {
+          final key = '$p-$r';
+          final textVal = valueControllers[key]!.text.trim();
+          if (textVal.isNotEmpty) {
+            final val = double.tryParse(textVal);
+            if (val != null) {
+              replicates.add(val);
+            }
+          }
+        }
+        if (replicates.isNotEmpty) {
+          replicateValues[p] = replicates;
+        }
+      }
+    }
+
+    if (pointsWithData == 0) {
       SnackbarHelper.show(
         context,
-        "Please enter at least one valid value",
+        "Please enter at least one valid replicate value",
         backgroundColor: Colors.orange.shade700,
       );
       return;
     }
 
     setState(() => _isSaving = true);
-    double avg = double.parse((sum / count).toStringAsFixed(2));
+    double avg = double.parse((totalSum / pointsWithData).toStringAsFixed(2));
     String type = ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
     try {
@@ -146,6 +182,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         averageValue: avg,
         type: type,
         pointValues: pointValues,
+        replicateValues: replicateValues,
       );
 
       HapticFeedback.heavyImpact();
@@ -317,7 +354,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           selectedDocId = docId;
         });
         Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted) focusNodes['A']?.requestFocus();
+          if (mounted) focusNodes['A-1']?.requestFocus();
         });
       },
       borderRadius: BorderRadius.circular(20),
@@ -689,138 +726,174 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
   Widget _buildDataPointInputs(Color themeColor) {
     if (selectedParameter!.isSinglePoint) {
-      final p = 'A';
-      final bool isFocused = focusNodes[p]?.hasFocus ?? false;
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: isFocused ? Colors.white : const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isFocused ? themeColor : Colors.transparent,
-              width: isFocused ? 2 : 0,
-            ),
-            boxShadow: isFocused
-                ? [
-                    BoxShadow(
-                      color: themeColor.withValues(alpha: 0.2),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [],
-          ),
-          child: TextField(
-            controller: valueControllers[p],
-            focusNode: focusNodes[p],
-            keyboardType: selectedParameter!.keyboardType,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) {
-              FocusScope.of(context).unfocus();
-            },
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
-              color: textDark,
-            ),
-            decoration: InputDecoration(
-              labelText: "Value",
-              floatingLabelBehavior: FloatingLabelBehavior.always,
-              labelStyle: TextStyle(
-                color: isFocused ? themeColor : Colors.grey.shade500,
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
+      // For single point parameters, show 3 replicates vertically
+      return Column(
+        children: [
+          for (int rIdx = 0; rIdx < replicates.length; rIdx++)
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: rIdx < replicates.length - 1 ? 12 : 0,
               ),
-              hintText: selectedParameter!.hint,
-              hintStyle: TextStyle(
-                color: Colors.grey.shade400,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.only(top: 8, bottom: 12),
+              child: _buildReplicateInput('A', replicates[rIdx], themeColor),
             ),
-          ),
-        ),
+          const SizedBox(height: 16),
+          _buildAverageDisplay('A', themeColor),
+        ],
       );
     }
 
-    return Row(
-      children: points.map((p) {
-        final isLast = p == 'D';
-        final nextNode = isLast
-            ? null
-            : focusNodes[points[points.indexOf(p) + 1]];
-        final bool isFocused = focusNodes[p]?.hasFocus ?? false;
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: isFocused ? Colors.white : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isFocused ? themeColor : Colors.transparent,
-                  width: isFocused ? 2 : 0,
+    // For multi-point parameters, show each point with its 3 replicates and average
+    return Column(
+      children: [
+        for (int pIdx = 0; pIdx < points.length; pIdx++)
+          Padding(
+            padding: EdgeInsets.only(bottom: pIdx < points.length - 1 ? 24 : 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Point header
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    "Point ${points[pIdx]}",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      color: textDark,
+                    ),
+                  ),
                 ),
-                boxShadow: isFocused
-                    ? [
-                        BoxShadow(
-                          color: themeColor.withValues(alpha: 0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                // Replicate inputs
+                Row(
+                  children: [
+                    for (int rIdx = 0; rIdx < replicates.length; rIdx++)
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            right: rIdx < replicates.length - 1 ? 8 : 0,
+                          ),
+                          child: _buildReplicateInput(
+                            points[pIdx],
+                            replicates[rIdx],
+                            themeColor,
+                            isCompact: true,
+                          ),
                         ),
-                      ]
-                    : [],
-              ),
-              child: TextField(
-                controller: valueControllers[p],
-                focusNode: focusNodes[p],
-                keyboardType: selectedParameter!.keyboardType,
-                textInputAction: isLast
-                    ? TextInputAction.done
-                    : TextInputAction.next,
-                onSubmitted: (_) {
-                  if (!isLast) {
-                    FocusScope.of(context).requestFocus(nextNode);
-                  } else {
-                    FocusScope.of(context).unfocus();
-                  }
-                },
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  color: textDark,
+                      ),
+                  ],
                 ),
-                decoration: InputDecoration(
-                  labelText: "Pt $p",
-                  floatingLabelBehavior: FloatingLabelBehavior.always,
-                  labelStyle: TextStyle(
-                    color: isFocused ? themeColor : Colors.grey.shade500,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                  ),
-                  hintText: selectedParameter!.hint.isEmpty
-                      ? ''
-                      : selectedParameter!.hint.split(' ').last,
-                  hintStyle: TextStyle(
-                    color: Colors.grey.shade400,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.only(top: 8, bottom: 12),
-                ),
-              ),
+                // Average display for this point
+                const SizedBox(height: 10),
+                _buildAverageDisplay(points[pIdx], themeColor),
+              ],
             ),
           ),
-        );
-      }).toList(),
+      ],
+    );
+  }
+
+  Widget _buildReplicateInput(
+    String point,
+    int replicate,
+    Color themeColor, {
+    bool isCompact = false,
+  }) {
+    final key = '$point-$replicate';
+    final bool isFocused = focusNodes[key]?.hasFocus ?? false;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: isFocused ? Colors.white : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isFocused ? themeColor : Colors.transparent,
+          width: isFocused ? 2 : 0,
+        ),
+        boxShadow: isFocused
+            ? [
+                BoxShadow(
+                  color: themeColor.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
+      ),
+      child: TextField(
+        controller: valueControllers[key],
+        focusNode: focusNodes[key],
+        keyboardType: selectedParameter!.keyboardType,
+        textInputAction: TextInputAction.next,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontWeight: FontWeight.w900,
+          fontSize: isCompact ? 14 : 18,
+          color: textDark,
+        ),
+        decoration: InputDecoration(
+          labelText: isCompact ? "R$replicate" : "Replicate $replicate",
+          floatingLabelBehavior: FloatingLabelBehavior.always,
+          labelStyle: TextStyle(
+            color: isFocused ? themeColor : Colors.grey.shade500,
+            fontWeight: FontWeight.w800,
+            fontSize: isCompact ? 11 : 12,
+          ),
+          hintText: selectedParameter!.hint.isEmpty
+              ? ''
+              : selectedParameter!.hint.split(' ').last,
+          hintStyle: TextStyle(
+            color: Colors.grey.shade400,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.only(top: 8, bottom: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAverageDisplay(String point, Color themeColor) {
+    final average = _calculatePointAverage(point);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: themeColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: themeColor.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.show_chart_rounded, color: themeColor, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                "Average for Point $point",
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: textMuted,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            average != null ? average.toString() : "—",
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              color: themeColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
