@@ -1,13 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../profile/profile_bottom_sheet.dart';
 import '../firebase/firestore_helper.dart';
 import '../utility/helpers.dart';
 import 'create_pond_sheet.dart';
 import 'pond_list_card.dart';
-import '../getting_started_dialog.dart';
 import '../widgets/empty_state_card.dart';
+import '../no_pond_assigned.dart';
+import '../pond_background.dart';
 
 class DefaultDashboardScreen extends StatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -20,6 +23,10 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     with SingleTickerProviderStateMixin {
   bool _isFabVisible = true;
   late AnimationController _shimmerController;
+
+  bool _hasConnection = true;
+  bool _showOnlineMessage = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   final Color primaryBlue = const Color(0xFF0A74DA);
   final Color secondaryBlue = const Color(0xFF4FA0F0);
@@ -34,13 +41,55 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      GettingStartedDialog.showIfNeeded(context);
-    });
+    _initConnectivity();
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
+  }
+
+  Future<void> _initConnectivity() async {
+    late List<ConnectivityResult> result;
+    try {
+      result = await Connectivity().checkConnectivity();
+    } catch (e) {
+      debugPrint('Couldn\'t check connectivity status: $e');
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    _updateConnectionStatus(result);
+  }
+
+  void _updateConnectionStatus(List<ConnectivityResult> result) {
+    final bool hasInternet = !result.contains(ConnectivityResult.none);
+    
+    if (hasInternet && !_hasConnection) {
+      setState(() {
+        _hasConnection = true;
+        _showOnlineMessage = true;
+      });
+      Timer(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _showOnlineMessage = false;
+          });
+        }
+      });
+    } else if (!hasInternet && _hasConnection) {
+      setState(() {
+        _hasConnection = false;
+      });
+    } else {
+      // For initial load or unchanged status
+      setState(() {
+        _hasConnection = hasInternet;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     _shimmerController.dispose();
     super.dispose();
   }
@@ -67,7 +116,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     final name = user.displayName;
     if (name != null && name.trim().isNotEmpty) {
       final firstName = name.split(' ').first;
-      return 'Hello, $firstName 👋';
+      return 'Hello, $firstName';
     }
     return 'My Ponds';
   }
@@ -228,8 +277,9 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     }
 
     return Scaffold(
-      backgroundColor: backgroundLight,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        toolbarHeight: 90,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -241,150 +291,223 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
         ),
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Row(
+        title: Padding(
+          padding: const EdgeInsets.only(left: 20, top: 12, bottom: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(
                 Icons.water_drop,
                 color: Colors.white,
-                size: 24,
+                size: 28,
               ),
             ),
-            const SizedBox(width: 12),
-            Text(
-              _getGreeting(user),
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 22,
-                letterSpacing: -0.5,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _getGreeting(user),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      letterSpacing: 0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    "Pond Dashboard",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline_rounded, color: Colors.white),
-            tooltip: 'How it works',
-            onPressed: () => GettingStartedDialog.showManual(context),
-          ),
           Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: GestureDetector(
-              onTap: () => _showProfileSheet(context),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white,
-                backgroundImage: user.photoURL != null
-                    ? NetworkImage(user.photoURL!)
-                    : null,
-                child: user.photoURL == null
-                    ? Text(
-                        user.displayName?.isNotEmpty == true
-                            ? user.displayName![0].toUpperCase()
-                            : 'U',
-                        style: TextStyle(
-                          color: primaryBlue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      )
-                    : null,
+            padding: const EdgeInsets.only(right: 20.0),
+            child: Center(
+              child: GestureDetector(
+                onTap: () => _showProfileSheet(context),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      width: 2,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.white,
+                    backgroundImage: user.photoURL != null
+                        ? NetworkImage(user.photoURL!)
+                        : null,
+                    child: user.photoURL == null
+                        ? Text(
+                            user.displayName?.isNotEmpty == true
+                                ? user.displayName![0].toUpperCase()
+                                : 'U',
+                            style: TextStyle(
+                              color: primaryBlue,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
               ),
             ),
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirestoreHelper.pondsCollection
-            .where('memberIds', arrayContains: user.uid)
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData &&
-              snapshot.connectionState == ConnectionState.waiting) {
-            return _buildSkeletonLoader();
-          }
-
-          if (snapshot.hasError) {
-            return _buildErrorState(snapshot.error.toString());
-          }
-
-          var ponds = snapshot.data?.docs.toList() ?? [];
-
-          if (ponds.isEmpty) {
-            return _buildEmptyState(context);
-          }
-
-          return NotificationListener<ScrollNotification>(
-            onNotification: (ScrollNotification notification) {
-              if (notification is ScrollStartNotification ||
-                  notification is ScrollUpdateNotification) {
-                if (_isFabVisible) setState(() => _isFabVisible = false);
-              } else if (notification is ScrollEndNotification) {
-                if (!_isFabVisible) setState(() => _isFabVisible = true);
-              }
-              return false;
-            },
-            child: RefreshIndicator(
-              color: primaryBlue,
-              backgroundColor: Colors.white,
-              onRefresh: () async =>
-                  await Future.delayed(const Duration(milliseconds: 800)),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16).copyWith(bottom: 100),
-                itemCount: ponds.length,
-                itemBuilder: (context, index) {
-                  final pondDoc = ponds[index];
-                  final pondData = pondDoc.data() as Map<String, dynamic>;
-                  final String pondName = pondData['name'] ?? 'Unnamed Pond';
-                  final String userRole =
-                      pondData['roles']?[user.uid] ?? 'viewer';
-                  final bool isOwner = userRole == 'owner';
-
-                  final card = PondListCard(
-                    pondId: pondDoc.id,
-                    pondName: pondName,
-                    species: pondData['species'] ?? 'Unspecified',
-                    userRole: userRole,
-                  );
-
-                  if (isOwner) {
-                    return Dismissible(
-                      key: Key(pondDoc.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 24.0),
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade400,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.delete_sweep_rounded,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
-                      confirmDismiss: (direction) =>
-                          _confirmDelete(context, pondName),
-                      onDismissed: (direction) =>
-                          _deletePond(pondDoc.id, pondName),
-                      child: card,
-                    );
-                  }
-
-                  return card;
-                },
+      body: Column(
+        children: [
+          if (!_hasConnection)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              color: Colors.grey.shade600,
+              child: const Text(
+                "You are offline",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            )
+          else if (_showOnlineMessage)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              color: Colors.green,
+              child: const Text(
+                "You are online",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
               ),
             ),
-          );
-        },
+          Expanded(
+            child: Stack(
+              children: [
+                const PondBackground(),
+                StreamBuilder<QuerySnapshot>(
+            stream: FirestoreHelper.pondsCollection
+                .where('memberIds', arrayContains: user.uid)
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData &&
+                  snapshot.connectionState == ConnectionState.waiting) {
+                return _buildSkeletonLoader();
+              }
+
+              if (snapshot.hasError) {
+                return _buildErrorState(snapshot.error.toString());
+              }
+
+              var ponds = snapshot.data?.docs.toList() ?? [];
+
+              if (ponds.isEmpty) {
+                return _buildEmptyState(context);
+              }
+
+              return NotificationListener<ScrollNotification>(
+                onNotification: (ScrollNotification notification) {
+                  if (notification is ScrollStartNotification ||
+                      notification is ScrollUpdateNotification) {
+                    if (_isFabVisible) setState(() => _isFabVisible = false);
+                  } else if (notification is ScrollEndNotification) {
+                    if (!_isFabVisible) setState(() => _isFabVisible = true);
+                  }
+                  return false;
+                },
+                child: RefreshIndicator(
+                  color: primaryBlue,
+                  backgroundColor: Colors.white,
+                  onRefresh: () async =>
+                      await Future.delayed(const Duration(milliseconds: 800)),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16).copyWith(bottom: 100),
+                    itemCount: ponds.length,
+                    itemBuilder: (context, index) {
+                      final pondDoc = ponds[index];
+                      final pondData = pondDoc.data() as Map<String, dynamic>;
+                      final String pondName = pondData['name'] ?? 'Unnamed Pond';
+                      final String userRole =
+                          pondData['roles']?[user.uid] ?? 'viewer';
+                      final bool isOwner = userRole == 'owner';
+
+                      final card = PondListCard(
+                        pondId: pondDoc.id,
+                        pondName: pondName,
+                        species: pondData['species'] ?? 'Unspecified',
+                        userRole: userRole,
+                      );
+
+                      if (isOwner) {
+                        return Dismissible(
+                          key: Key(pondDoc.id),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 24.0),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade400,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.delete_sweep_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          confirmDismiss: (direction) =>
+                              _confirmDelete(context, pondName),
+                          onDismissed: (direction) =>
+                              _deletePond(pondDoc.id, pondName),
+                          child: card,
+                        );
+                      }
+
+                      return card;
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+              ],
+            ),
+          ),
+        ],
       ),
       floatingActionButton: AnimatedSlide(
         duration: const Duration(milliseconds: 250),
@@ -522,13 +645,8 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return EmptyStateCard(
-      icon: Icons.water_drop_outlined,
-      title: "No Ponds Yet",
-      description:
-          "Start tracking your aquaculture farm parameters by creating your first pond.",
-      buttonText: "Create First Pond",
-      onButtonPressed: () => _showCreatePondSheet(context),
+    return NoPondAssignedWidget(
+      onCreatePond: () => _showCreatePondSheet(context),
     );
   }
 
