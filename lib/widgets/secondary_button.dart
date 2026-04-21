@@ -31,8 +31,12 @@ class SecondaryButton extends StatelessWidget {
           backgroundColor: isDark
               ? buttonColor.withValues(alpha: 0.1)
               : buttonColor.withValues(alpha: 0.08),
-          disabledForegroundColor: Colors.grey.shade500,
-          disabledBackgroundColor: Colors.grey.shade200,
+          disabledForegroundColor: isDark
+              ? Colors.white38
+              : Colors.grey.shade500,
+          disabledBackgroundColor: isDark
+              ? Colors.white12
+              : Colors.grey.shade200,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

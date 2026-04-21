@@ -90,12 +90,18 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: isDark
+              ? const Border(top: BorderSide(color: Colors.white12))
+              : null,
         ),
         padding: EdgeInsets.only(
           top: 12,
@@ -116,12 +122,12 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                     height: 5,
                     margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: isDark ? Colors.white24 : Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),
-                _buildHeader(context),
+                _buildHeader(context, theme, isDark),
                 const SizedBox(height: 32),
 
                 PondStatTextField(
@@ -131,7 +137,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                   prefixIcon: Icons.label_outline_rounded,
                   textInputAction: TextInputAction.next,
                   validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Enter a name'
+                      ? 'Enter a group name'
                       : null,
                 ),
                 const SizedBox(height: 20),
@@ -169,12 +175,12 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
-                        suffixIcon: const Padding(
-                          padding: EdgeInsets.only(right: 16, top: 18),
+                        suffixIcon: Padding(
+                          padding: const EdgeInsets.only(right: 16, top: 18),
                           child: Text(
                             'pcs',
                             style: TextStyle(
-                              color: Colors.grey,
+                              color: isDark ? Colors.white38 : Colors.grey,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -198,12 +204,12 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
-                        suffixIcon: const Padding(
-                          padding: EdgeInsets.only(right: 16, top: 18),
+                        suffixIcon: Padding(
+                          padding: const EdgeInsets.only(right: 16, top: 18),
                           child: Text(
                             'days',
                             style: TextStyle(
-                              color: Colors.grey,
+                              color: isDark ? Colors.white38 : Colors.grey,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -233,23 +239,23 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ThemeData theme, bool isDark) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(
             Icons.water_drop_rounded,
-            color: Theme.of(context).colorScheme.primary,
+            color: theme.colorScheme.primary,
             size: 28,
           ),
         ),
         const SizedBox(width: 16),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -259,14 +265,15 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 'Enter the physical and biological parameters.',
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey,
+                  color: theme.colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -275,11 +282,15 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: isDark ? Colors.white12 : Colors.grey.shade100,
             shape: BoxShape.circle,
           ),
           child: IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.grey, size: 20),
+            icon: Icon(
+              Icons.close_rounded,
+              color: isDark ? Colors.white54 : Colors.grey,
+              size: 20,
+            ),
             onPressed: _isLoading ? null : () => Navigator.pop(context),
           ),
         ),

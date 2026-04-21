@@ -22,6 +22,10 @@ class PondStatDropdownField<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -29,10 +33,12 @@ class PondStatDropdownField<T> extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             label.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF64748B),
+              color: isDark
+                  ? colorScheme.onSurfaceVariant
+                  : const Color(0xFF64748B),
               letterSpacing: 1.2,
             ),
           ),
@@ -42,7 +48,7 @@ class PondStatDropdownField<T> extends StatelessWidget {
           isExpanded: true,
           icon: Icon(
             Icons.keyboard_arrow_down_rounded,
-            color: Colors.grey.shade600,
+            color: isDark ? Colors.white38 : Colors.grey.shade600,
           ),
           decoration: InputDecoration(
             hintText: hint,
@@ -51,10 +57,10 @@ class PondStatDropdownField<T> extends StatelessWidget {
           items: items,
           onChanged: onChanged,
           validator: validator,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1E293B),
+            color: colorScheme.onSurface,
             fontFamily:
                 'Roboto', // Default material font to avoid weird inheritance issues
           ),

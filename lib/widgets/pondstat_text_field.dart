@@ -37,6 +37,10 @@ class PondStatTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -44,10 +48,12 @@ class PondStatTextField extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             label.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF64748B),
+              color: isDark
+                  ? colorScheme.onSurfaceVariant
+                  : const Color(0xFF64748B),
               letterSpacing: 1.2,
             ),
           ),
@@ -63,9 +69,9 @@ class PondStatTextField extends StatelessWidget {
           onFieldSubmitted: onSubmitted,
           onChanged: onChanged,
           validator: validator,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1E293B),
+            color: colorScheme.onSurface,
           ),
           decoration: InputDecoration(
             hintText: hint,

@@ -8,9 +8,13 @@ import 'app_theme.dart';
 import 'auth_wrapper.dart';
 import 'firebase/firebase_options.dart';
 import 'services/notification_service.dart';
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load user settings early
+  await SettingsService().loadSettings();
 
   // Initialize notifications (Mobile only)
   if (!kIsWeb) {
@@ -47,20 +51,38 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'PondStat',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme.copyWith(
-        textTheme: GoogleFonts.interTextTheme(AppTheme.lightTheme.textTheme),
-        appBarTheme: AppBarTheme(
-          titleTextStyle: GoogleFonts.poppins(
-            color: Colors.black87,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+    return ListenableBuilder(
+      listenable: SettingsService(),
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'PondStat',
+          debugShowCheckedModeBanner: false,
+          themeMode: SettingsService().themeMode,
+          theme: AppTheme.lightTheme.copyWith(
+            textTheme: GoogleFonts.interTextTheme(
+              AppTheme.lightTheme.textTheme,
+            ),
+            appBarTheme: AppBarTheme(
+              titleTextStyle: GoogleFonts.poppins(
+                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-        ),
-      ),
-      home: const AuthWrapper(),
+          darkTheme: AppTheme.darkTheme.copyWith(
+            textTheme: GoogleFonts.interTextTheme(AppTheme.darkTheme.textTheme),
+            appBarTheme: AppBarTheme(
+              titleTextStyle: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          home: const AuthWrapper(),
+        );
+      },
     );
   }
 }
