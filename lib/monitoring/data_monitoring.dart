@@ -186,6 +186,7 @@ class _MonitoringPageState extends State<MonitoringPage>
     required double averageValue,
     required String type,
     required Map<String, double> pointValues,
+    required Map<String, List<double>> replicateValues,
   }) async {
     try {
       await _repository.saveMeasurement(
@@ -196,6 +197,7 @@ class _MonitoringPageState extends State<MonitoringPage>
         averageValue: averageValue,
         type: type,
         pointValues: pointValues,
+        replicateValues: replicateValues,
         selectedDay: _selectedDay!,
       );
 
@@ -228,16 +230,27 @@ class _MonitoringPageState extends State<MonitoringPage>
   void _showEditDataDialog(List<DocumentSnapshot> docs) {
     if (!canEdit) return;
 
-    final Map<String, Map<String, TextEditingController>> groupControllers = {};
     final List<String> points = const ['A', 'B', 'C', 'D'];
+    final List<int> replicates = const [1, 2, 3];
+    final Map<String, Map<String, TextEditingController>> groupControllers = {};
 
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final pointValues = data['pointValues'] as Map<String, dynamic>? ?? {};
-      groupControllers[doc.id] = {
-        for (var p in points)
-          p: TextEditingController(text: pointValues[p]?.toString() ?? ''),
-      };
+      final replicateValuesMap =
+          data['replicateValues'] as Map<String, dynamic>? ?? {};
+      groupControllers[doc.id] = {};
+
+      // Create controllers for each replicate of each point
+      for (var p in points) {
+        for (var r in replicates) {
+          final key = '$p-$r';
+          final replicates_list = replicateValuesMap[p] as List<dynamic>? ?? [];
+          final value = r <= replicates_list.length
+              ? replicates_list[r - 1].toString()
+              : '';
+          groupControllers[doc.id]![key] = TextEditingController(text: value);
+        }
+      }
     }
 
     showDialog(
@@ -246,17 +259,18 @@ class _MonitoringPageState extends State<MonitoringPage>
         scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text(
-          'Edit Measurements',
+          'Edit Measurements (Replicates Only)',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: docs
               .map(
-                (doc) => _buildEditFieldGroup(
+                (doc) => _buildEditReplicateGroup(
                   doc,
                   groupControllers[doc.id]!,
                   points,
+                  replicates,
                 ),
               )
               .toList(),
@@ -285,7 +299,12 @@ class _MonitoringPageState extends State<MonitoringPage>
               ),
               elevation: 0,
             ),
-            onPressed: () => _handleBatchUpdate(docs, groupControllers, points),
+            onPressed: () => _handleBatchUpdateWithReplicates(
+              docs,
+              groupControllers,
+              points,
+              replicates,
+            ),
             child: const Text(
               "Update",
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -317,36 +336,63 @@ class _MonitoringPageState extends State<MonitoringPage>
     }
   }
 
-  Future<void> _handleBatchUpdate(
+  Future<void> _handleBatchUpdateWithReplicates(
     List<DocumentSnapshot> docs,
     Map<String, Map<String, TextEditingController>> groupControllers,
     List<String> points,
+    List<int> replicates,
   ) async {
-    final Map<String, Map<String, double>> updatedValues = {};
+    final Map<String, Map<String, double>> updatedPointValues = {};
+    final Map<String, Map<String, List<double>>> updatedReplicateValues = {};
 
+    // Calculate point averages from replicate values
     for (var doc in docs) {
       final controllersMap = groupControllers[doc.id]!;
-      Map<String, double> newPoints = {};
+      Map<String, double> newPointValues = {};
+      Map<String, List<double>> newReplicateValues = {};
+
       for (var p in points) {
-        final val = double.tryParse(controllersMap[p]?.text ?? '');
-        if (val != null) newPoints[p] = val;
+        final replicatesList = <double>[];
+        for (var r in replicates) {
+          final key = '$p-$r';
+          final val = double.tryParse(controllersMap[key]?.text ?? '');
+          if (val != null) {
+            replicatesList.add(val);
+          }
+        }
+
+        if (replicatesList.isNotEmpty) {
+          newReplicateValues[p] = replicatesList;
+          final avg = double.parse(
+            (replicatesList.reduce((a, b) => a + b) / replicatesList.length)
+                .toStringAsFixed(2),
+          );
+          newPointValues[p] = avg;
+        }
       }
-      if (newPoints.isNotEmpty) updatedValues[doc.id] = newPoints;
+
+      if (newPointValues.isNotEmpty) {
+        updatedPointValues[doc.id] = newPointValues;
+        updatedReplicateValues[doc.id] = newReplicateValues;
+      }
     }
 
     try {
-      await _repository.updateMeasurements(
+      await _repository.updateMeasurementsWithReplicates(
         pondId: widget.pondId,
         docs: docs,
-        updatedValues: updatedValues,
+        updatedPointValues: updatedPointValues,
+        updatedReplicateValues: updatedReplicateValues,
       );
 
       for (var doc in docs) {
         final data = doc.data() as Map<String, dynamic>;
-        final points = updatedValues[doc.id];
-        if (points == null) continue;
+        final pointValues = updatedPointValues[doc.id];
+        if (pointValues == null) continue;
 
-        final avg = points.values.reduce((a, b) => a + b) / points.length;
+        final avg =
+            pointValues.values.reduce((a, b) => a + b) /
+            pointValues.values.length;
         final paramItem = MonitoringParameters.getParameterByLabel(
           data['parameter'],
           widget.species,
@@ -362,19 +408,26 @@ class _MonitoringPageState extends State<MonitoringPage>
 
       if (mounted) {
         Navigator.pop(context);
-        SnackbarHelper.show(context, "Measurements updated");
+        SnackbarHelper.show(
+          context,
+          "Measurements updated",
+          backgroundColor: Colors.green,
+        );
       }
     } catch (e) {
-      if (mounted) SnackbarHelper.show(context, "Error: $e");
+      if (mounted) {
+        SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+      }
     }
   }
 
   // --- Helper Builders ---
 
-  Widget _buildEditFieldGroup(
+  Widget _buildEditReplicateGroup(
     DocumentSnapshot doc,
     Map<String, TextEditingController> controllers,
     List<String> points,
+    List<int> replicates,
   ) {
     final data = doc.data() as Map<String, dynamic>;
     return Padding(
@@ -390,39 +443,133 @@ class _MonitoringPageState extends State<MonitoringPage>
               fontSize: 16,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: points
-                .map(
-                  (p) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: TextField(
-                        controller: controllers[p],
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                        decoration: InputDecoration(
-                          labelText: p,
-                          isDense: true,
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade200),
-                          ),
-                        ),
+          const SizedBox(height: 16),
+          for (int pIdx = 0; pIdx < points.length; pIdx++)
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: pIdx < points.length - 1 ? 20 : 0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Point header
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      "Point ${points[pIdx]}",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
                       ),
                     ),
                   ),
-                )
-                .toList(),
-          ),
+                  // Replicate inputs
+                  Row(
+                    children: [
+                      for (int rIdx = 0; rIdx < replicates.length; rIdx++)
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right: rIdx < replicates.length - 1 ? 8 : 0,
+                            ),
+                            child: TextField(
+                              controller:
+                                  controllers['${points[pIdx]}-${replicates[rIdx]}'],
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              decoration: InputDecoration(
+                                labelText: "R${replicates[rIdx]}",
+                                isDense: true,
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade200,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  // Average display
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primaryBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: primaryBlue.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Avg:",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        Text(
+                          _calculateEditReplicateAverage(
+                            controllers,
+                            points[pIdx],
+                            replicates,
+                          ),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: primaryBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  String _calculateEditReplicateAverage(
+    Map<String, TextEditingController> controllers,
+    String point,
+    List<int> replicates,
+  ) {
+    double sum = 0;
+    int count = 0;
+    for (var r in replicates) {
+      final key = '$point-$r';
+      final text = controllers[key]?.text.trim() ?? '';
+      if (text.isNotEmpty) {
+        final val = double.tryParse(text);
+        if (val != null) {
+          sum += val;
+          count++;
+        }
+      }
+    }
+    if (count == 0) return "—";
+    return double.parse((sum / count).toStringAsFixed(2)).toString();
   }
 
   Widget _buildJobBanner() {
