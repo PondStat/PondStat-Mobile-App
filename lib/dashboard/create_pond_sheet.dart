@@ -22,7 +22,6 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
       TextEditingController();
   final TextEditingController _culturePeriodController =
       TextEditingController();
-  final TextEditingController _pondAreaController = TextEditingController();
 
   String? _selectedSpecies;
   final List<String> _speciesOptions = ['Shrimp', 'Tilapia'];
@@ -32,7 +31,6 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
     _newPondNameController.dispose();
     _stockingQuantityController.dispose();
     _culturePeriodController.dispose();
-    _pondAreaController.dispose();
     super.dispose();
   }
 
@@ -52,7 +50,6 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
     final quantity = int.tryParse(_stockingQuantityController.text.trim()) ?? 0;
     final culturePeriod =
         int.tryParse(_culturePeriodController.text.trim()) ?? 0;
-    final pondArea = double.tryParse(_pondAreaController.text.trim()) ?? 0.0;
 
     try {
       final newPondRef = FirestoreHelper.pondsCollection.doc();
@@ -63,7 +60,6 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
             'species': species,
             'stockingQuantity': quantity,
             'targetCulturePeriodDays': culturePeriod,
-            'pondAreaSqm': pondArea,
             'createdAt': FieldValue.serverTimestamp(),
             'ownerId': user.uid,
             'memberIds': [user.uid],
@@ -98,6 +94,10 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
         padding: EdgeInsets.only(
           top: 12,
           left: 24,
@@ -127,8 +127,8 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
 
                 PondStatTextField(
                   controller: _newPondNameController,
-                  label: 'Pond Name *',
-                  hint: 'e.g., North Farm',
+                  label: 'Group Name',
+                  hint: 'e.g., Group A',
                   prefixIcon: Icons.label_outline_rounded,
                   textInputAction: TextInputAction.next,
                   validator: (value) => value == null || value.trim().isEmpty
@@ -193,7 +193,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                       child: PondStatTextField(
                         controller: _stockingQuantityController,
                         label: 'Quantity',
-                        hint: '50000',
+                        hint: '5000',
                         prefixIcon: Icons.numbers_rounded,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
@@ -218,8 +218,8 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                     Expanded(
                       child: PondStatTextField(
                         controller: _culturePeriodController,
-                        label: 'Period',
-                        hint: '120',
+                        label: 'Culture Period',
+                        hint: '90',
                         prefixIcon: Icons.calendar_month_rounded,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
@@ -241,33 +241,6 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 20),
-
-                PondStatTextField(
-                  controller: _pondAreaController,
-                  label: 'Pond Area',
-                  hint: '2500',
-                  prefixIcon: Icons.square_foot_rounded,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  textInputAction: TextInputAction.done,
-                  suffixIcon: const Padding(
-                    padding: EdgeInsets.only(right: 16, top: 18),
-                    child: Text(
-                      'sqm',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  validator: (val) {
-                    if (val == null || val.isEmpty) return 'Required';
-                    if ((double.tryParse(val) ?? 0) <= 0) return 'Invalid';
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 36),
 

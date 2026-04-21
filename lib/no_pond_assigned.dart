@@ -76,7 +76,7 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
               ),
               const SizedBox(height: 12),
               Text(
-                "You haven't been assigned to a pond yet. Create your first pond dashboard to begin your aquaculture practice, or request an invitation from your professor/team leader.",
+                "You haven't been assigned to a pond yet. Create your first pond to begin your aquaculture practice, or request an invitation from your team leader.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.blueGrey.shade700,
