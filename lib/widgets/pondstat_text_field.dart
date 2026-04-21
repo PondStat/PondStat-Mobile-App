@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class PondStatTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -14,6 +15,7 @@ class PondStatTextField extends StatelessWidget {
   final void Function(String)? onSubmitted;
   final Widget? suffixIcon;
   final bool obscureText;
+  final List<TextInputFormatter>? inputFormatters;
 
   const PondStatTextField({
     super.key,
@@ -30,6 +32,7 @@ class PondStatTextField extends StatelessWidget {
     this.onSubmitted,
     this.suffixIcon,
     this.obscureText = false,
+    this.inputFormatters,
   });
 
   @override
@@ -56,6 +59,7 @@ class PondStatTextField extends StatelessWidget {
           maxLines: maxLines,
           obscureText: obscureText,
           textInputAction: textInputAction,
+          inputFormatters: inputFormatters,
           onFieldSubmitted: onSubmitted,
           onChanged: onChanged,
           validator: validator,

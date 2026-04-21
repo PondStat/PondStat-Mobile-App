@@ -150,11 +150,7 @@ class _GrowthTabState extends State<GrowthTab> {
                 Colors.green,
               ),
               _buildMiniMetric("FCR", m.fcr.toStringAsFixed(2), Colors.orange),
-              _buildMiniMetric(
-                "DFR",
-                m.dfr.toStringAsFixed(2),
-                Colors.purple,
-              ),
+              _buildMiniMetric("DFR", m.dfr.toStringAsFixed(2), Colors.purple),
             ],
           ),
         ],

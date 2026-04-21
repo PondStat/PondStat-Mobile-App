@@ -54,12 +54,14 @@ class GrowthDataService {
 
     final feedConsumedDocs = allDocs.where((doc) {
       final data = doc.data();
-      return data['type'] == 'daily' && data['parameter'] == 'Total feed consumed';
+      return data['type'] == 'daily' &&
+          data['parameter'] == 'Total feed consumed';
     }).toList();
 
     final weightGainedDocs = allDocs.where((doc) {
       final data = doc.data();
-      return data['type'] == 'daily' && data['parameter'] == 'Total weight gained';
+      return data['type'] == 'daily' &&
+          data['parameter'] == 'Total weight gained';
     }).toList();
 
     if (weightDocs.isEmpty || countDocs.isEmpty) return [];
@@ -87,7 +89,8 @@ class GrowthDataService {
 
     final List<Map<String, dynamic>> pairedSamplings = [];
     for (var dateKey in allDates) {
-      if (dailyWeights.containsKey(dateKey) && dailyCounts.containsKey(dateKey)) {
+      if (dailyWeights.containsKey(dateKey) &&
+          dailyCounts.containsKey(dateKey)) {
         final weight = dailyWeights[dateKey]!;
         final count = dailyCounts[dateKey]!;
         if (count > 0) {
@@ -97,15 +100,14 @@ class GrowthDataService {
             int.parse(parts[1]),
             int.parse(parts[2]),
           );
-          pairedSamplings.add({
-            'date': date,
-            'abw': weight / count,
-          });
+          pairedSamplings.add({'date': date, 'abw': weight / count});
         }
       }
     }
 
-    pairedSamplings.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
+    pairedSamplings.sort(
+      (a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime),
+    );
 
     if (pairedSamplings.isEmpty) return [];
 
@@ -139,13 +141,22 @@ class GrowthDataService {
           }).toList();
 
           if (currentFeedingRateDoc.isNotEmpty) {
-            final feedingRate = (currentFeedingRateDoc.first.data()['value'] as num).toDouble();
+            final feedingRate =
+                (currentFeedingRateDoc.first.data()['value'] as num).toDouble();
             dfr = currentAbw * fishCount * feedingRate / 100.0;
           }
 
           // Calculate total feed and weight gained between samplings for FCR
-          final start = DateTime(previousDate.year, previousDate.month, previousDate.day);
-          final end = DateTime(currentDate.year, currentDate.month, currentDate.day);
+          final start = DateTime(
+            previousDate.year,
+            previousDate.month,
+            previousDate.day,
+          );
+          final end = DateTime(
+            currentDate.year,
+            currentDate.month,
+            currentDate.day,
+          );
 
           final periodFeedDocs = feedConsumedDocs.where((doc) {
             final date = (doc.data()['timestamp'] as Timestamp).toDate();
@@ -159,8 +170,14 @@ class GrowthDataService {
             return !d.isBefore(start) && !d.isAfter(end);
           }).toList();
 
-          final double totalFeed = periodFeedDocs.fold(0.0, (acc, doc) => acc + (doc.data()['value'] as num).toDouble());
-          final double totalWeightGained = periodWeightGainedDocs.fold(0.0, (acc, doc) => acc + (doc.data()['value'] as num).toDouble());
+          final double totalFeed = periodFeedDocs.fold(
+            0.0,
+            (acc, doc) => acc + (doc.data()['value'] as num).toDouble(),
+          );
+          final double totalWeightGained = periodWeightGainedDocs.fold(
+            0.0,
+            (acc, doc) => acc + (doc.data()['value'] as num).toDouble(),
+          );
 
           if (totalWeightGained > 0) {
             fcr = totalFeed / totalWeightGained;

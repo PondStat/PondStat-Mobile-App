@@ -730,8 +730,12 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final activeColor = label == "Morning" ? Colors.amber.shade700 : Colors.indigo.shade600;
-    final activeBgColor = label == "Morning" ? Colors.amber.shade50 : Colors.indigo.shade50;
+    final activeColor = label == "Morning"
+        ? Colors.amber.shade700
+        : Colors.indigo.shade600;
+    final activeBgColor = label == "Morning"
+        ? Colors.amber.shade50
+        : Colors.indigo.shade50;
 
     return InkWell(
       onTap: onTap,

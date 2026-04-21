@@ -42,8 +42,9 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     )..repeat();
 
     _initConnectivity();
-    _connectivitySubscription =
-        Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+      _updateConnectionStatus,
+    );
   }
 
   Future<void> _initConnectivity() async {
@@ -62,7 +63,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
 
   void _updateConnectionStatus(List<ConnectivityResult> result) {
     final bool hasInternet = !result.contains(ConnectivityResult.none);
-    
+
     if (hasInternet && !_hasConnection) {
       setState(() {
         _hasConnection = true;
@@ -295,51 +296,51 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
           padding: const EdgeInsets.only(left: 20, top: 12, bottom: 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(14),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.water_drop,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
-              child: const Icon(
-                Icons.water_drop,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _getGreeting(user),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      letterSpacing: 0.2,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _getGreeting(user),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        letterSpacing: 0.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    "Pond Dashboard",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 22,
-                      letterSpacing: -0.5,
+                    const SizedBox(height: 2),
+                    const Text(
+                      "Pond Dashboard",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
         actions: [
           Padding(
@@ -389,7 +390,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
               padding: const EdgeInsets.symmetric(vertical: 8),
               color: Colors.grey.shade600,
               child: const Text(
-                "You are offline",
+                "You have no internet connection",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
@@ -404,7 +405,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
               padding: const EdgeInsets.symmetric(vertical: 8),
               color: Colors.green,
               child: const Text(
-                "You are online",
+                "Back online!",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
@@ -418,92 +419,99 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
               children: [
                 const PondBackground(),
                 StreamBuilder<QuerySnapshot>(
-            stream: FirestoreHelper.pondsCollection
-                .where('memberIds', arrayContains: user.uid)
-                .orderBy('createdAt', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData &&
-                  snapshot.connectionState == ConnectionState.waiting) {
-                return _buildSkeletonLoader();
-              }
+                  stream: FirestoreHelper.pondsCollection
+                      .where('memberIds', arrayContains: user.uid)
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData &&
+                        snapshot.connectionState == ConnectionState.waiting) {
+                      return _buildSkeletonLoader();
+                    }
 
-              if (snapshot.hasError) {
-                return _buildErrorState(snapshot.error.toString());
-              }
+                    if (snapshot.hasError) {
+                      return _buildErrorState(snapshot.error.toString());
+                    }
 
-              var ponds = snapshot.data?.docs.toList() ?? [];
+                    var ponds = snapshot.data?.docs.toList() ?? [];
 
-              if (ponds.isEmpty) {
-                return _buildEmptyState(context);
-              }
+                    if (ponds.isEmpty) {
+                      return _buildEmptyState(context);
+                    }
 
-              return NotificationListener<ScrollNotification>(
-                onNotification: (ScrollNotification notification) {
-                  if (notification is ScrollStartNotification ||
-                      notification is ScrollUpdateNotification) {
-                    if (_isFabVisible) setState(() => _isFabVisible = false);
-                  } else if (notification is ScrollEndNotification) {
-                    if (!_isFabVisible) setState(() => _isFabVisible = true);
-                  }
-                  return false;
-                },
-                child: RefreshIndicator(
-                  color: primaryBlue,
-                  backgroundColor: Colors.white,
-                  onRefresh: () async =>
-                      await Future.delayed(const Duration(milliseconds: 800)),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16).copyWith(bottom: 100),
-                    itemCount: ponds.length,
-                    itemBuilder: (context, index) {
-                      final pondDoc = ponds[index];
-                      final pondData = pondDoc.data() as Map<String, dynamic>;
-                      final String pondName = pondData['name'] ?? 'Unnamed Pond';
-                      final String userRole =
-                          pondData['roles']?[user.uid] ?? 'viewer';
-                      final bool isOwner = userRole == 'owner';
+                    return NotificationListener<ScrollNotification>(
+                      onNotification: (ScrollNotification notification) {
+                        if (notification is ScrollStartNotification ||
+                            notification is ScrollUpdateNotification) {
+                          if (_isFabVisible)
+                            setState(() => _isFabVisible = false);
+                        } else if (notification is ScrollEndNotification) {
+                          if (!_isFabVisible)
+                            setState(() => _isFabVisible = true);
+                        }
+                        return false;
+                      },
+                      child: RefreshIndicator(
+                        color: primaryBlue,
+                        backgroundColor: Colors.white,
+                        onRefresh: () async => await Future.delayed(
+                          const Duration(milliseconds: 800),
+                        ),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(
+                            16,
+                          ).copyWith(bottom: 100),
+                          itemCount: ponds.length,
+                          itemBuilder: (context, index) {
+                            final pondDoc = ponds[index];
+                            final pondData =
+                                pondDoc.data() as Map<String, dynamic>;
+                            final String pondName =
+                                pondData['name'] ?? 'Unnamed Pond';
+                            final String userRole =
+                                pondData['roles']?[user.uid] ?? 'viewer';
+                            final bool isOwner = userRole == 'owner';
 
-                      final card = PondListCard(
-                        pondId: pondDoc.id,
-                        pondName: pondName,
-                        species: pondData['species'] ?? 'Unspecified',
-                        userRole: userRole,
-                      );
+                            final card = PondListCard(
+                              pondId: pondDoc.id,
+                              pondName: pondName,
+                              species: pondData['species'] ?? 'Unspecified',
+                              userRole: userRole,
+                            );
 
-                      if (isOwner) {
-                        return Dismissible(
-                          key: Key(pondDoc.id),
-                          direction: DismissDirection.endToStart,
-                          background: Container(
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 24.0),
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade400,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Icon(
-                              Icons.delete_sweep_rounded,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                          confirmDismiss: (direction) =>
-                              _confirmDelete(context, pondName),
-                          onDismissed: (direction) =>
-                              _deletePond(pondDoc.id, pondName),
-                          child: card,
-                        );
-                      }
+                            if (isOwner) {
+                              return Dismissible(
+                                key: Key(pondDoc.id),
+                                direction: DismissDirection.endToStart,
+                                background: Container(
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 24.0),
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade400,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_sweep_rounded,
+                                    color: Colors.white,
+                                    size: 32,
+                                  ),
+                                ),
+                                confirmDismiss: (direction) =>
+                                    _confirmDelete(context, pondName),
+                                onDismissed: (direction) =>
+                                    _deletePond(pondDoc.id, pondName),
+                                child: card,
+                              );
+                            }
 
-                      return card;
-                    },
-                  ),
+                            return card;
+                          },
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
               ],
             ),
           ),

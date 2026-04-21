@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firestore_helper.dart';
 import '../utility/helpers.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/pondstat_text_field.dart';
+import '../widgets/pondstat_dropdown_field.dart';
 
 class CreatePondSheet extends StatefulWidget {
   const CreatePondSheet({super.key});
@@ -34,7 +36,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
     super.dispose();
   }
 
-  void _createNewPond() {
+  Future<void> _createNewPond() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -54,20 +56,16 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
     try {
       final newPondRef = FirestoreHelper.pondsCollection.doc();
 
-      newPondRef
-          .set({
-            'name': pondName,
-            'species': species,
-            'stockingQuantity': quantity,
-            'targetCulturePeriodDays': culturePeriod,
-            'createdAt': FieldValue.serverTimestamp(),
-            'ownerId': user.uid,
-            'memberIds': [user.uid],
-            'roles': {user.uid: 'owner'},
-          })
-          .catchError((error) {
-            debugPrint("Background sync error: $error");
-          });
+      await newPondRef.set({
+        'name': pondName,
+        'species': species,
+        'stockingQuantity': quantity,
+        'targetCulturePeriodDays': culturePeriod,
+        'createdAt': FieldValue.serverTimestamp(),
+        'ownerId': user.uid,
+        'memberIds': [user.uid],
+        'roles': {user.uid: 'owner'},
+      });
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -78,6 +76,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
         );
       }
     } catch (e) {
+      debugPrint("Background sync error: $e");
       if (mounted) {
         setState(() => _isLoading = false);
         SnackbarHelper.show(
@@ -137,52 +136,22 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                 ),
                 const SizedBox(height: 20),
 
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4, bottom: 8),
-                      child: Text(
-                        'TARGET SPECIES *',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF64748B),
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ),
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedSpecies,
-                      isExpanded: true,
-                      icon: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: Colors.grey.shade600,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: 'Select species',
-                        prefixIcon: Icon(Icons.set_meal_outlined, size: 20),
-                      ),
-                      items: _speciesOptions.map((String species) {
-                        return DropdownMenuItem<String>(
-                          value: species,
-                          child: Text(
-                            species,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: _isLoading
-                          ? null
-                          : (val) => setState(() => _selectedSpecies = val),
-                      validator: (value) =>
-                          value == null ? 'Select a species' : null,
-                    ),
-                  ],
+                PondStatDropdownField<String>(
+                  value: _selectedSpecies,
+                  label: 'Target Species',
+                  hint: 'Select species',
+                  prefixIcon: Icons.set_meal_outlined,
+                  items: _speciesOptions.map((String species) {
+                    return DropdownMenuItem<String>(
+                      value: species,
+                      child: Text(species, overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: _isLoading
+                      ? null
+                      : (val) => setState(() => _selectedSpecies = val),
+                  validator: (value) =>
+                      value == null ? 'Select a species' : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -197,6 +166,9 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                         prefixIcon: Icons.numbers_rounded,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                         suffixIcon: const Padding(
                           padding: EdgeInsets.only(right: 16, top: 18),
                           child: Text(
@@ -223,6 +195,9 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                         prefixIcon: Icons.calendar_month_rounded,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                         suffixIcon: const Padding(
                           padding: EdgeInsets.only(right: 16, top: 18),
                           child: Text(
@@ -248,7 +223,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                   text: 'Create Pond',
                   icon: Icons.arrow_forward_rounded,
                   isLoading: _isLoading,
-                  onPressed: _createNewPond,
+                  onPressed: _isLoading ? () {} : _createNewPond,
                 ),
               ],
             ),
