@@ -244,9 +244,9 @@ class _MonitoringPageState extends State<MonitoringPage>
       for (var p in points) {
         for (var r in replicates) {
           final key = '$p-$r';
-          final replicates_list = replicateValuesMap[p] as List<dynamic>? ?? [];
-          final value = r <= replicates_list.length
-              ? replicates_list[r - 1].toString()
+          final replicatesList = replicateValuesMap[p] as List<dynamic>? ?? [];
+          final value = r <= replicatesList.length
+              ? replicatesList[r - 1].toString()
               : '';
           groupControllers[doc.id]![key] = TextEditingController(text: value);
         }
@@ -264,16 +264,22 @@ class _MonitoringPageState extends State<MonitoringPage>
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: docs
-              .map(
-                (doc) => _buildEditReplicateGroup(
-                  doc,
-                  groupControllers[doc.id]!,
-                  points,
-                  replicates,
-                ),
-              )
-              .toList(),
+          children: docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final paramItem = MonitoringParameters.getParameterByLabel(
+              data['parameter'],
+              widget.species,
+            );
+            final isSinglePoint = paramItem?.isSinglePoint ?? false;
+
+            return _buildEditReplicateGroup(
+              doc,
+              groupControllers[doc.id]!,
+              points,
+              replicates,
+              isSinglePoint: isSinglePoint,
+            );
+          }).toList(),
         ),
         actions: [
           TextButton(
@@ -427,8 +433,9 @@ class _MonitoringPageState extends State<MonitoringPage>
     DocumentSnapshot doc,
     Map<String, TextEditingController> controllers,
     List<String> points,
-    List<int> replicates,
-  ) {
+    List<int> replicates, {
+    bool isSinglePoint = false,
+  }) {
     final data = doc.data() as Map<String, dynamic>;
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
@@ -444,107 +451,132 @@ class _MonitoringPageState extends State<MonitoringPage>
             ),
           ),
           const SizedBox(height: 16),
-          for (int pIdx = 0; pIdx < points.length; pIdx++)
+          if (isSinglePoint)
             Padding(
-              padding: EdgeInsets.only(
-                bottom: pIdx < points.length - 1 ? 20 : 0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Row(
                 children: [
-                  // Point header
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(
-                      "Point ${points[pIdx]}",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
+                  Expanded(
+                    child: TextField(
+                      controller: controllers['A-1'],
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Value',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ),
-                  // Replicate inputs
-                  Row(
-                    children: [
-                      for (int rIdx = 0; rIdx < replicates.length; rIdx++)
-                        Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              right: rIdx < replicates.length - 1 ? 8 : 0,
-                            ),
-                            child: TextField(
-                              controller:
-                                  controllers['${points[pIdx]}-${replicates[rIdx]}'],
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
+                ],
+              ),
+            )
+          else
+            for (int pIdx = 0; pIdx < points.length; pIdx++)
+              Padding(
+                padding: EdgeInsets.only(
+                  bottom: pIdx < points.length - 1 ? 20 : 0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Point header
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        "Point ${points[pIdx]}",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                    // Replicate inputs
+                    Row(
+                      children: [
+                        for (int rIdx = 0; rIdx < replicates.length; rIdx++)
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                right: rIdx < replicates.length - 1 ? 8 : 0,
                               ),
-                              decoration: InputDecoration(
-                                labelText: "R${replicates[rIdx]}",
-                                isDense: true,
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade200,
+                              child: TextField(
+                                controller:
+                                    controllers['${points[pIdx]}-${replicates[rIdx]}'],
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "R${replicates[rIdx]}",
+                                  isDense: true,
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade200,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                  // Average display
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: primaryBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: primaryBlue.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Avg:",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        Text(
-                          _calculateEditReplicateAverage(
-                            controllers,
-                            points[pIdx],
-                            replicates,
-                          ),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: primaryBlue,
-                          ),
-                        ),
                       ],
                     ),
-                  ),
-                ],
+                    // Average display
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: primaryBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: primaryBlue.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Avg:",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          Text(
+                            _calculateEditReplicateAverage(
+                              controllers,
+                              points[pIdx],
+                              replicates,
+                            ),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: primaryBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
         ],
       ),
     );

@@ -726,19 +726,10 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
   Widget _buildDataPointInputs(Color themeColor) {
     if (selectedParameter!.isSinglePoint) {
-      // For single point parameters, show 3 replicates vertically
-      return Column(
-        children: [
-          for (int rIdx = 0; rIdx < replicates.length; rIdx++)
-            Padding(
-              padding: EdgeInsets.only(
-                bottom: rIdx < replicates.length - 1 ? 12 : 0,
-              ),
-              child: _buildReplicateInput('A', replicates[rIdx], themeColor),
-            ),
-          const SizedBox(height: 16),
-          _buildAverageDisplay('A', themeColor),
-        ],
+      // For single point parameters, show 1 input value (treated as Point A, Replicate 1 behind the scenes)
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _buildReplicateInput('A', 1, themeColor, customLabel: "Value"),
       );
     }
 
@@ -797,6 +788,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     int replicate,
     Color themeColor, {
     bool isCompact = false,
+    String? customLabel,
   }) {
     final key = '$point-$replicate';
     final bool isFocused = focusNodes[key]?.hasFocus ?? false;
@@ -832,7 +824,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           color: textDark,
         ),
         decoration: InputDecoration(
-          labelText: isCompact ? "R$replicate" : "Replicate $replicate",
+          labelText:
+              customLabel ??
+              (isCompact ? "R$replicate" : "Replicate $replicate"),
           floatingLabelBehavior: FloatingLabelBehavior.always,
           labelStyle: TextStyle(
             color: isFocused ? themeColor : Colors.grey.shade500,

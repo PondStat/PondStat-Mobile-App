@@ -8,11 +8,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../profile/profile_bottom_sheet.dart';
 import '../firebase/firestore_helper.dart';
 import '../utility/helpers.dart';
-import 'create_pond_sheet.dart';
-import 'pond_list_card.dart';
 import '../widgets/empty_state_card.dart';
 import '../no_pond_assigned.dart';
 import '../pond_background.dart';
+import 'create_pond_sheet.dart';
+import 'edit_pond_sheet.dart';
+import 'pond_list_card.dart';
 
 class DefaultDashboardScreen extends StatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -114,6 +115,20 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     );
   }
 
+  void _showEditPondSheet(
+    BuildContext context,
+    String pondId,
+    Map<String, dynamic> pondData,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          EditPondSheet(pondId: pondId, initialData: pondData),
+    );
+  }
+
   String _getGreeting(User user) {
     final name = user.displayName;
     if (name != null && name.trim().isNotEmpty) {
@@ -126,76 +141,123 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   Future<bool?> _confirmDelete(BuildContext context, String pondName) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    String typedName = '';
 
     return showDialog<bool>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: colorScheme.error.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.warning_amber_rounded,
-                  color: colorScheme.error,
-                ),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final bool isMatch = typedName.trim() == 'DELETE';
+            return AlertDialog(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  "Delete Pond?",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: colorScheme.onSurface,
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.error.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.warning_amber_rounded,
+                      color: colorScheme.error,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Delete Pond?",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Are you sure you want to delete '$pondName'? This action is permanent and will erase all data, measurements, and history associated with it.",
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.5,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Type 'DELETE' to confirm:",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    autofocus: true,
+                    onChanged: (val) => setState(() => typedName = val),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: isDark ? Colors.white12 : Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          content: Text(
-            "Are you sure you want to delete '$pondName'? This action is permanent and will erase all data, measurements, and history associated with it.",
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              height: 1.5,
-              fontSize: 15,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text(
-                "Cancel",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.error,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: isDark
+                        ? Colors.white12
+                        : Colors.grey.shade300,
+                    disabledForegroundColor: isDark
+                        ? Colors.white38
+                        : Colors.grey.shade500,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: isMatch
+                      ? () => Navigator.pop(context, true)
+                      : null,
+                  child: const Text(
+                    "Delete Forever",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.error,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text(
-                "Delete Forever",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
@@ -532,20 +594,48 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                                 key: Key(pondDoc.id),
                                 endActionPane: ActionPane(
                                   motion: const ScrollMotion(),
-                                  extentRatio: 0.25,
-                                  dismissible: DismissiblePane(
-                                    onDismissed: () =>
-                                        _deletePond(pondDoc.id, pondName),
-                                    confirmDismiss: () async {
-                                      HapticFeedback.mediumImpact();
-                                      return await _confirmDelete(
-                                            context,
-                                            pondName,
-                                          ) ??
-                                          false;
-                                    },
-                                  ),
+                                  extentRatio: 0.50,
                                   children: [
+                                    CustomSlidableAction(
+                                      onPressed: (context) {
+                                        HapticFeedback.mediumImpact();
+                                        _showEditPondSheet(
+                                          context,
+                                          pondDoc.id,
+                                          pondData,
+                                        );
+                                      },
+                                      backgroundColor: Colors.transparent,
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.zero,
+                                      child: Container(
+                                        margin: const EdgeInsets.only(
+                                          bottom: 16,
+                                          left: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: primaryBlue,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: const Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.edit_rounded, size: 28),
+                                            SizedBox(height: 4),
+                                            Text(
+                                              'Edit',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                     CustomSlidableAction(
                                       onPressed: (context) async {
                                         HapticFeedback.mediumImpact();
