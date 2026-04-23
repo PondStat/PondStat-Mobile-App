@@ -16,6 +16,7 @@ class PondStatTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final bool obscureText;
   final List<TextInputFormatter>? inputFormatters;
+  final String? helperText;
 
   const PondStatTextField({
     super.key,
@@ -33,6 +34,7 @@ class PondStatTextField extends StatelessWidget {
     this.suffixIcon,
     this.obscureText = false,
     this.inputFormatters,
+    this.helperText,
   });
 
   @override
@@ -75,6 +77,7 @@ class PondStatTextField extends StatelessWidget {
           ),
           decoration: InputDecoration(
             hintText: hint,
+            helperText: helperText,
             prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
             suffixIcon: suffixIcon,
             // Rest of the styling is inherited from app_theme.dart's inputDecorationTheme

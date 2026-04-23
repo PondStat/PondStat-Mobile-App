@@ -5,6 +5,7 @@ class PrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final bool isSuccess;
   final IconData? icon;
 
   const PrimaryButton({
@@ -12,6 +13,7 @@ class PrimaryButton extends StatelessWidget {
     required this.text,
     required this.onPressed,
     this.isLoading = false,
+    this.isSuccess = false,
     this.icon,
   });
 
@@ -28,7 +30,9 @@ class PrimaryButton extends StatelessWidget {
         boxShadow: onPressed != null && !isLoading
             ? [
                 BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  color: isSuccess
+                      ? Colors.green.withValues(alpha: 0.3)
+                      : theme.colorScheme.primary.withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
@@ -37,7 +41,7 @@ class PrimaryButton extends StatelessWidget {
       ),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.primary,
+          backgroundColor: isSuccess ? Colors.green : theme.colorScheme.primary,
           foregroundColor: Colors.white,
           disabledBackgroundColor: isDark
               ? Colors.white12
@@ -51,7 +55,7 @@ class PrimaryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        onPressed: isLoading
+        onPressed: (isLoading || isSuccess)
             ? null
             : () {
                 if (onPressed != null) {
@@ -59,31 +63,46 @@ class PrimaryButton extends StatelessWidget {
                   onPressed!();
                 }
               },
-        child: isLoading
-            ? const SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: isSuccess
+                  ? const Icon(
+                      Icons.check_circle_rounded,
+                      size: 24,
+                      key: ValueKey('success'),
+                    )
+                  : isLoading
+                  ? const SizedBox(
+                      key: ValueKey('loading'),
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : icon != null
+                  ? Icon(icon, size: 20, key: const ValueKey('icon'))
+                  : const SizedBox.shrink(key: ValueKey('empty')),
+            ),
+            if (icon != null || isLoading || isSuccess)
+              const SizedBox(width: 8),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                isSuccess ? 'Success' : text,
+                key: ValueKey(isSuccess ? 'success_text' : 'normal_text'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 20),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
               ),
+            ),
+          ],
+        ),
       ),
     );
   }
