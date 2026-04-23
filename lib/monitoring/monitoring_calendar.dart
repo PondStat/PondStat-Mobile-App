@@ -9,6 +9,8 @@ class MonitoringCalendar extends StatelessWidget {
   final DateTime? selectedDay;
   final Function(DateTime, DateTime) onDaySelected;
   final VoidCallback? onReturnToToday;
+  final DateTime firstDay;
+  final DateTime lastDay;
 
   const MonitoringCalendar({
     super.key,
@@ -16,6 +18,8 @@ class MonitoringCalendar extends StatelessWidget {
     required this.focusedDay,
     required this.selectedDay,
     required this.onDaySelected,
+    required this.firstDay,
+    required this.lastDay,
     this.onReturnToToday,
   });
 

@@ -7,6 +7,8 @@ class PondListCard extends StatefulWidget {
   final String pondName;
   final String species;
   final String userRole;
+  final DateTime createdAt;
+  final int targetCulturePeriodDays;
 
   const PondListCard({
     super.key,
@@ -14,6 +16,8 @@ class PondListCard extends StatefulWidget {
     required this.pondName,
     required this.species,
     required this.userRole,
+    required this.createdAt,
+    required this.targetCulturePeriodDays,
   });
 
   @override
@@ -43,6 +47,8 @@ class _PondListCardState extends State<PondListCard> {
           pondName: widget.pondName,
           userRole: widget.userRole,
           species: widget.species,
+          createdAt: widget.createdAt,
+          targetCulturePeriodDays: widget.targetCulturePeriodDays,
         ),
       ),
     );

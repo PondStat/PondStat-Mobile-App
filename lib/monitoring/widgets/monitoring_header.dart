@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'sync_status_icon.dart';
 
 class MonitoringHeader extends StatelessWidget {
   final String pondId;
@@ -78,14 +77,13 @@ class MonitoringHeader extends StatelessWidget {
                     letterSpacing: -0.5,
                   ),
                 ),
-                SyncStatusIcon(),
               ],
             ),
           ),
           _buildCircleIconButton(
             icon: Icons.history_rounded,
             onPressed: onHistoryTap,
-            tooltip: 'Edit History',
+            tooltip: 'History',
           ),
           const SizedBox(width: 8),
           GestureDetector(

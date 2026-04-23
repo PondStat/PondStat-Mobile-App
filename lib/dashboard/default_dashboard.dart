@@ -587,6 +587,12 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                               pondName: pondName,
                               species: pondData['species'] ?? 'Unspecified',
                               userRole: userRole,
+                              createdAt:
+                                  (pondData['createdAt'] as Timestamp?)
+                                      ?.toDate() ??
+                                  DateTime.now(),
+                              targetCulturePeriodDays:
+                                  pondData['targetCulturePeriodDays'] ?? 90,
                             );
 
                             if (isOwner) {
