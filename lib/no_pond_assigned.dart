@@ -106,7 +106,11 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.dashboard_customize_rounded, color: primaryColor, size: 20),
+                        Icon(
+                          Icons.dashboard_customize_rounded,
+                          color: primaryColor,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Once assigned, you\'ll unlock:',
@@ -119,15 +123,35 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    _buildFeatureItem(Icons.water_drop_rounded, 'Pond Parameters', Colors.blue),
+                    _buildFeatureItem(
+                      Icons.water_drop_rounded,
+                      'Pond Parameters',
+                      Colors.blue,
+                    ),
                     const SizedBox(height: 12),
-                    _buildFeatureItem(Icons.trending_up_rounded, 'Growth Analytics', Colors.green),
+                    _buildFeatureItem(
+                      Icons.trending_up_rounded,
+                      'Growth Analytics',
+                      Colors.green,
+                    ),
                     const SizedBox(height: 12),
-                    _buildFeatureItem(Icons.bar_chart_rounded, 'Graphs for Trends', Colors.purple),
+                    _buildFeatureItem(
+                      Icons.bar_chart_rounded,
+                      'Graphs for Trends',
+                      Colors.purple,
+                    ),
                     const SizedBox(height: 12),
-                    _buildFeatureItem(Icons.receipt_long_rounded, 'Expense Tracker', Colors.teal),
+                    _buildFeatureItem(
+                      Icons.receipt_long_rounded,
+                      'Expense Tracker',
+                      Colors.teal,
+                    ),
                     const SizedBox(height: 12),
-                    _buildFeatureItem(Icons.event_note_rounded, 'Scheduler Manager', Colors.orange),
+                    _buildFeatureItem(
+                      Icons.event_note_rounded,
+                      'Scheduler Manager',
+                      Colors.orange,
+                    ),
                   ],
                 ),
               ),
@@ -158,7 +182,9 @@ class _NoPondAssignedWidgetState extends State<NoPondAssignedWidget> {
                     ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: primaryColor,
-                      side: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
+                      side: BorderSide(
+                        color: primaryColor.withValues(alpha: 0.5),
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),

@@ -6,11 +6,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_theme.dart';
 import 'auth_wrapper.dart';
+import 'loading_overlay.dart';
 import 'firebase/firebase_options.dart';
 import 'services/notification_service.dart';
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load user settings early
+  await SettingsService().loadSettings();
 
   // Initialize notifications (Mobile only)
   if (!kIsWeb) {
@@ -47,20 +52,72 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'PondStat',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme.copyWith(
-        textTheme: GoogleFonts.interTextTheme(AppTheme.lightTheme.textTheme),
-        appBarTheme: AppBarTheme(
-          titleTextStyle: GoogleFonts.poppins(
-            color: Colors.black87,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+    return ListenableBuilder(
+      listenable: SettingsService(),
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'PondStat',
+          debugShowCheckedModeBanner: false,
+          themeMode: SettingsService().themeMode,
+          theme: AppTheme.lightTheme.copyWith(
+            textTheme: GoogleFonts.interTextTheme(
+              AppTheme.lightTheme.textTheme,
+            ),
+            appBarTheme: AppBarTheme(
+              titleTextStyle: GoogleFonts.poppins(
+                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-        ),
-      ),
-      home: const AuthWrapper(),
+          darkTheme: AppTheme.darkTheme.copyWith(
+            textTheme: GoogleFonts.interTextTheme(AppTheme.darkTheme.textTheme),
+            appBarTheme: AppBarTheme(
+              titleTextStyle: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          home: const SplashScreen(),
+        );
+      },
     );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const AuthWrapper(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const LoadingOverlay();
   }
 }

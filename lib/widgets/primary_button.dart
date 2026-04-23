@@ -18,6 +18,7 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -38,8 +39,12 @@ class PrimaryButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: theme.colorScheme.primary,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey.shade300,
-          disabledForegroundColor: Colors.grey.shade500,
+          disabledBackgroundColor: isDark
+              ? Colors.white12
+              : Colors.grey.shade300,
+          disabledForegroundColor: isDark
+              ? Colors.white38
+              : Colors.grey.shade500,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(

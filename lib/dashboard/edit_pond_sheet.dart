@@ -1,42 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../firebase/firestore_helper.dart';
 import '../utility/helpers.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/pondstat_text_field.dart';
 import '../widgets/pondstat_dropdown_field.dart';
 
-class CreatePondSheet extends StatefulWidget {
-  const CreatePondSheet({super.key});
+class EditPondSheet extends StatefulWidget {
+  final String pondId;
+  final Map<String, dynamic> initialData;
+
+  const EditPondSheet({
+    super.key,
+    required this.pondId,
+    required this.initialData,
+  });
 
   @override
-  State<CreatePondSheet> createState() => _CreatePondSheetState();
+  State<EditPondSheet> createState() => _EditPondSheetState();
 }
 
-class _CreatePondSheetState extends State<CreatePondSheet> {
+class _EditPondSheetState extends State<EditPondSheet> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  final TextEditingController _newPondNameController = TextEditingController();
-  final TextEditingController _stockingQuantityController =
-      TextEditingController();
-  final TextEditingController _culturePeriodController =
-      TextEditingController();
+  late final TextEditingController _pondNameController;
+  late final TextEditingController _stockingQuantityController;
+  late final TextEditingController _culturePeriodController;
 
   String? _selectedSpecies;
   final List<String> _speciesOptions = ['Shrimp', 'Tilapia'];
 
   @override
+  void initState() {
+    super.initState();
+    _pondNameController = TextEditingController(
+      text: widget.initialData['name'] ?? '',
+    );
+    _stockingQuantityController = TextEditingController(
+      text: widget.initialData['stockingQuantity']?.toString() ?? '',
+    );
+    _culturePeriodController = TextEditingController(
+      text: widget.initialData['targetCulturePeriodDays']?.toString() ?? '',
+    );
+
+    final species = widget.initialData['species'];
+    if (_speciesOptions.contains(species)) {
+      _selectedSpecies = species;
+    }
+  }
+
+  @override
   void dispose() {
-    _newPondNameController.dispose();
+    _pondNameController.dispose();
     _stockingQuantityController.dispose();
     _culturePeriodController.dispose();
     super.dispose();
   }
 
-  Future<void> _createNewPond() async {
+  Future<void> _updatePond() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -47,31 +70,27 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
       return;
     }
 
-    final pondName = _newPondNameController.text.trim();
+    final pondName = _pondNameController.text.trim();
     final species = _selectedSpecies ?? 'Unspecified';
     final quantity = int.tryParse(_stockingQuantityController.text.trim()) ?? 0;
     final culturePeriod =
         int.tryParse(_culturePeriodController.text.trim()) ?? 0;
 
     try {
-      final newPondRef = FirestoreHelper.pondsCollection.doc();
+      final pondRef = FirestoreHelper.pondsCollection.doc(widget.pondId);
 
-      await newPondRef.set({
+      await pondRef.update({
         'name': pondName,
         'species': species,
         'stockingQuantity': quantity,
         'targetCulturePeriodDays': culturePeriod,
-        'createdAt': FieldValue.serverTimestamp(),
-        'ownerId': user.uid,
-        'memberIds': [user.uid],
-        'roles': {user.uid: 'owner'},
       });
 
       if (mounted) {
         Navigator.of(context).pop();
         SnackbarHelper.show(
           context,
-          'Pond setup complete!',
+          'Pond updated successfully!',
           backgroundColor: Colors.green,
         );
       }
@@ -81,7 +100,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
         setState(() => _isLoading = false);
         SnackbarHelper.show(
           context,
-          'Failed to create pond: $e',
+          'Failed to update pond: $e',
           backgroundColor: Colors.redAccent,
         );
       }
@@ -131,7 +150,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                 const SizedBox(height: 32),
 
                 PondStatTextField(
-                  controller: _newPondNameController,
+                  controller: _pondNameController,
                   label: 'Group Name',
                   hint: 'e.g., Group A',
                   prefixIcon: Icons.label_outline_rounded,
@@ -226,10 +245,10 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                 const SizedBox(height: 36),
 
                 PrimaryButton(
-                  text: 'Create Pond',
-                  icon: Icons.arrow_forward_rounded,
+                  text: 'Save Changes',
+                  icon: Icons.check_rounded,
                   isLoading: _isLoading,
-                  onPressed: _isLoading ? () {} : _createNewPond,
+                  onPressed: _isLoading ? () {} : _updatePond,
                 ),
               ],
             ),
@@ -249,7 +268,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
             borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(
-            Icons.water_drop_rounded,
+            Icons.edit_rounded,
             color: theme.colorScheme.primary,
             size: 28,
           ),
@@ -260,7 +279,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Set Up a New Pond',
+                'Edit Pond Details',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -270,7 +289,7 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Enter the physical and biological parameters.',
+                'Update physical and biological parameters.',
                 style: TextStyle(
                   fontSize: 13,
                   color: theme.colorScheme.onSurfaceVariant,

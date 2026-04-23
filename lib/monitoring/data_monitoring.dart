@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../profile/profile_bottom_sheet.dart';
 import '../utility/helpers.dart';
@@ -27,6 +29,8 @@ class MonitoringPage extends StatefulWidget {
   final String pondName;
   final String userRole;
   final String species;
+  final DateTime createdAt;
+  final int targetCulturePeriodDays;
 
   const MonitoringPage({
     super.key,
@@ -34,6 +38,8 @@ class MonitoringPage extends StatefulWidget {
     required this.pondName,
     required this.userRole,
     required this.species,
+    required this.createdAt,
+    required this.targetCulturePeriodDays,
   });
 
   @override
@@ -48,6 +54,10 @@ class _MonitoringPageState extends State<MonitoringPage>
   late DateTime _focusedDay;
   DateTime? _selectedDay;
   bool _isFabVisible = true;
+
+  bool _hasConnection = true;
+  bool _showOnlineMessage = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   Map<String, dynamic>? _mySchedule;
   bool _isLoadingSchedule = true;
@@ -86,6 +96,51 @@ class _MonitoringPageState extends State<MonitoringPage>
     _selectedDay = DateTime.utc(now.year, now.month, now.day);
 
     _loadMySchedule();
+    _initConnectivity();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+      _updateConnectionStatus,
+    );
+  }
+
+  Future<void> _initConnectivity() async {
+    late List<ConnectivityResult> result;
+    try {
+      result = await Connectivity().checkConnectivity();
+    } catch (e) {
+      debugPrint('Couldn\'t check connectivity status: $e');
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    _updateConnectionStatus(result);
+  }
+
+  void _updateConnectionStatus(List<ConnectivityResult> result) {
+    final bool hasInternet = !result.contains(ConnectivityResult.none);
+
+    if (hasInternet && !_hasConnection) {
+      setState(() {
+        _hasConnection = true;
+        _showOnlineMessage = true;
+      });
+      Timer(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _showOnlineMessage = false;
+          });
+        }
+      });
+    } else if (!hasInternet && _hasConnection) {
+      setState(() {
+        _hasConnection = false;
+      });
+    } else {
+      // For initial load or unchanged status
+      setState(() {
+        _hasConnection = hasInternet;
+      });
+    }
   }
 
   Future<void> _loadMySchedule() async {
@@ -113,6 +168,7 @@ class _MonitoringPageState extends State<MonitoringPage>
 
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     _tabController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -244,9 +300,9 @@ class _MonitoringPageState extends State<MonitoringPage>
       for (var p in points) {
         for (var r in replicates) {
           final key = '$p-$r';
-          final replicates_list = replicateValuesMap[p] as List<dynamic>? ?? [];
-          final value = r <= replicates_list.length
-              ? replicates_list[r - 1].toString()
+          final replicatesList = replicateValuesMap[p] as List<dynamic>? ?? [];
+          final value = r <= replicatesList.length
+              ? replicatesList[r - 1].toString()
               : '';
           groupControllers[doc.id]![key] = TextEditingController(text: value);
         }
@@ -264,16 +320,22 @@ class _MonitoringPageState extends State<MonitoringPage>
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: docs
-              .map(
-                (doc) => _buildEditReplicateGroup(
-                  doc,
-                  groupControllers[doc.id]!,
-                  points,
-                  replicates,
-                ),
-              )
-              .toList(),
+          children: docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final paramItem = MonitoringParameters.getParameterByLabel(
+              data['parameter'],
+              widget.species,
+            );
+            final isSinglePoint = paramItem?.isSinglePoint ?? false;
+
+            return _buildEditReplicateGroup(
+              doc,
+              groupControllers[doc.id]!,
+              points,
+              replicates,
+              isSinglePoint: isSinglePoint,
+            );
+          }).toList(),
         ),
         actions: [
           TextButton(
@@ -427,8 +489,9 @@ class _MonitoringPageState extends State<MonitoringPage>
     DocumentSnapshot doc,
     Map<String, TextEditingController> controllers,
     List<String> points,
-    List<int> replicates,
-  ) {
+    List<int> replicates, {
+    bool isSinglePoint = false,
+  }) {
     final data = doc.data() as Map<String, dynamic>;
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
@@ -444,107 +507,132 @@ class _MonitoringPageState extends State<MonitoringPage>
             ),
           ),
           const SizedBox(height: 16),
-          for (int pIdx = 0; pIdx < points.length; pIdx++)
+          if (isSinglePoint)
             Padding(
-              padding: EdgeInsets.only(
-                bottom: pIdx < points.length - 1 ? 20 : 0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Row(
                 children: [
-                  // Point header
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(
-                      "Point ${points[pIdx]}",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
+                  Expanded(
+                    child: TextField(
+                      controller: controllers['A-1'],
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Value',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ),
-                  // Replicate inputs
-                  Row(
-                    children: [
-                      for (int rIdx = 0; rIdx < replicates.length; rIdx++)
-                        Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              right: rIdx < replicates.length - 1 ? 8 : 0,
-                            ),
-                            child: TextField(
-                              controller:
-                                  controllers['${points[pIdx]}-${replicates[rIdx]}'],
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
+                ],
+              ),
+            )
+          else
+            for (int pIdx = 0; pIdx < points.length; pIdx++)
+              Padding(
+                padding: EdgeInsets.only(
+                  bottom: pIdx < points.length - 1 ? 20 : 0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Point header
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        "Point ${points[pIdx]}",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                    // Replicate inputs
+                    Row(
+                      children: [
+                        for (int rIdx = 0; rIdx < replicates.length; rIdx++)
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                right: rIdx < replicates.length - 1 ? 8 : 0,
                               ),
-                              decoration: InputDecoration(
-                                labelText: "R${replicates[rIdx]}",
-                                isDense: true,
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade200,
+                              child: TextField(
+                                controller:
+                                    controllers['${points[pIdx]}-${replicates[rIdx]}'],
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "R${replicates[rIdx]}",
+                                  isDense: true,
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade200,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                  // Average display
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: primaryBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: primaryBlue.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Avg:",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        Text(
-                          _calculateEditReplicateAverage(
-                            controllers,
-                            points[pIdx],
-                            replicates,
-                          ),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: primaryBlue,
-                          ),
-                        ),
                       ],
                     ),
-                  ),
-                ],
+                    // Average display
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: primaryBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: primaryBlue.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Avg:",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          Text(
+                            _calculateEditReplicateAverage(
+                              controllers,
+                              points[pIdx],
+                              replicates,
+                            ),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: primaryBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
         ],
       ),
     );
@@ -745,128 +833,181 @@ class _MonitoringPageState extends State<MonitoringPage>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(
+      body: Column(
         children: [
-          const PondBackground(),
-          SafeArea(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is ScrollStartNotification ||
-                    notification is ScrollUpdateNotification) {
-                  if (_isFabVisible) setState(() => _isFabVisible = false);
-                } else if (notification is ScrollEndNotification) {
-                  if (!_isFabVisible) setState(() => _isFabVisible = true);
-                }
-                return false;
-              },
-              child: NestedScrollView(
-                headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                  SliverToBoxAdapter(
-                    child: MonitoringHeader(
-                      pondId: widget.pondId,
-                      onBackTap: () => Navigator.pop(context),
-                      onHistoryTap: _showEditHistory,
-                      onProfileTap: _showProfileSheet,
-                      primaryBlue: primaryBlue,
-                      secondaryBlue: secondaryBlue,
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: PondInfoCard(
-                      pondName: widget.pondName,
-                      primaryBlue: primaryBlue,
-                      secondaryBlue: secondaryBlue,
-                    ),
-                  ),
-                  SliverToBoxAdapter(child: _buildJobBanner()),
-                  SliverToBoxAdapter(child: _buildCalendarSection()),
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: SliverAppBarDelegate(
-                      TabBar(
-                        controller: _tabController,
-                        isScrollable: true,
-                        tabAlignment: TabAlignment.start,
-                        indicator: BoxDecoration(
-                          color: primaryBlue,
-                          borderRadius: BorderRadius.circular(50),
-                          boxShadow: [
-                            BoxShadow(
-                              color: primaryBlue.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: !_hasConnection
+                  ? Container(
+                      key: const ValueKey('offline'),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      color: Colors.grey.shade600,
+                      child: const Text(
+                        "You have no internet connection",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
                         ),
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: const Color(0xFF64748B),
-                        dividerColor: Colors.transparent,
-                        labelPadding: const EdgeInsets.symmetric(
-                          horizontal: 24,
+                      ),
+                    )
+                  : _showOnlineMessage
+                  ? Container(
+                      key: const ValueKey('online'),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      color: Colors.green,
+                      child: const Text(
+                        "Back online!",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
+                      ),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('empty')),
+            ),
+          ),
+          Expanded(
+            child: Stack(
+              children: [
+                const PondBackground(),
+                SafeArea(
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      if (notification is ScrollStartNotification ||
+                          notification is ScrollUpdateNotification) {
+                        if (_isFabVisible) {
+                          setState(() => _isFabVisible = false);
+                        }
+                      } else if (notification is ScrollEndNotification) {
+                        if (!_isFabVisible) {
+                          setState(() => _isFabVisible = true);
+                        }
+                      }
+                      return false;
+                    },
+                    child: NestedScrollView(
+                      headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                        SliverToBoxAdapter(
+                          child: MonitoringHeader(
+                            pondId: widget.pondId,
+                            onBackTap: () => Navigator.pop(context),
+                            onHistoryTap: _showEditHistory,
+                            onProfileTap: _showProfileSheet,
+                            primaryBlue: primaryBlue,
+                            secondaryBlue: secondaryBlue,
+                          ),
                         ),
-                        tabs: [
-                          Tab(
-                            child: _buildTabLabel(
-                              "Daily",
-                              Colors.green.shade400,
+                        SliverToBoxAdapter(
+                          child: PondInfoCard(
+                            pondName: widget.pondName,
+                            primaryBlue: primaryBlue,
+                            secondaryBlue: secondaryBlue,
+                          ),
+                        ),
+                        SliverToBoxAdapter(child: _buildJobBanner()),
+                        SliverToBoxAdapter(child: _buildCalendarSection()),
+                        SliverPersistentHeader(
+                          pinned: true,
+                          delegate: SliverAppBarDelegate(
+                            TabBar(
+                              controller: _tabController,
+                              isScrollable: true,
+                              tabAlignment: TabAlignment.start,
+                              indicator: BoxDecoration(
+                                color: primaryBlue,
+                                borderRadius: BorderRadius.circular(50),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryBlue.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              indicatorSize: TabBarIndicatorSize.tab,
+                              labelColor: Colors.white,
+                              unselectedLabelColor: const Color(0xFF64748B),
+                              dividerColor: Colors.transparent,
+                              labelPadding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 8,
+                              ),
+                              tabs: [
+                                Tab(
+                                  child: _buildTabLabel(
+                                    "Daily",
+                                    Colors.green.shade400,
+                                  ),
+                                ),
+                                Tab(
+                                  child: _buildTabLabel(
+                                    "Weekly",
+                                    Colors.amber.shade400,
+                                  ),
+                                ),
+                                Tab(
+                                  child: _buildTabLabel(
+                                    "Biweekly",
+                                    Colors.purple.shade400,
+                                  ),
+                                ),
+                                Tab(
+                                  child: _buildTabLabel(
+                                    "Growth",
+                                    Colors.indigo.shade400,
+                                  ),
+                                ),
+                                Tab(
+                                  child: _buildTabLabel(
+                                    "Trends",
+                                    Colors.red.shade400,
+                                  ),
+                                ),
+                                Tab(
+                                  child: _buildTabLabel(
+                                    "Expenses",
+                                    Colors.teal.shade400,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Tab(
-                            child: _buildTabLabel(
-                              "Weekly",
-                              Colors.amber.shade400,
-                            ),
+                        ),
+                      ],
+                      body: PageView(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          _tabController.animateTo(index);
+                          setState(() {});
+                        },
+                        children: [
+                          _buildStreamTab('daily', dateKey),
+                          _buildStreamTab('weekly', dateKey),
+                          _buildStreamTab('biweekly', dateKey),
+                          GrowthTab(pondId: widget.pondId),
+                          TrendsTab(
+                            pondId: widget.pondId,
+                            species: widget.species,
                           ),
-                          Tab(
-                            child: _buildTabLabel(
-                              "Biweekly",
-                              Colors.purple.shade400,
-                            ),
-                          ),
-                          Tab(
-                            child: _buildTabLabel(
-                              "Growth",
-                              Colors.indigo.shade400,
-                            ),
-                          ),
-                          Tab(
-                            child: _buildTabLabel(
-                              "Trends",
-                              Colors.red.shade400,
-                            ),
-                          ),
-                          Tab(
-                            child: _buildTabLabel(
-                              "Expenses",
-                              Colors.teal.shade400,
-                            ),
-                          ),
+                          ExpensesTab(pondId: widget.pondId, canAdd: canEdit),
                         ],
                       ),
                     ),
                   ),
-                ],
-                body: PageView(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    _tabController.animateTo(index);
-                    setState(() {});
-                  },
-                  children: [
-                    _buildStreamTab('daily', dateKey),
-                    _buildStreamTab('weekly', dateKey),
-                    _buildStreamTab('biweekly', dateKey),
-                    GrowthTab(pondId: widget.pondId),
-                    TrendsTab(pondId: widget.pondId, species: widget.species),
-                    ExpensesTab(pondId: widget.pondId, canAdd: canEdit),
-                  ],
                 ),
-              ),
+              ],
             ),
           ),
         ],
@@ -876,6 +1017,15 @@ class _MonitoringPageState extends State<MonitoringPage>
   }
 
   Widget _buildCalendarSection() {
+    final firstDay = DateTime.utc(
+      widget.createdAt.year,
+      widget.createdAt.month,
+      widget.createdAt.day,
+    );
+    final lastDay = firstDay.add(
+      Duration(days: widget.targetCulturePeriodDays),
+    );
+
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Container(
@@ -898,6 +1048,8 @@ class _MonitoringPageState extends State<MonitoringPage>
                 pondId: widget.pondId,
                 focusedDay: _focusedDay,
                 selectedDay: _selectedDay,
+                firstDay: firstDay,
+                lastDay: lastDay,
                 onDaySelected: (selectedDay, focusedDay) {
                   HapticFeedback.lightImpact();
                   setState(() {

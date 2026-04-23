@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../utility/helpers.dart';
 import 'edit_profile_page.dart';
 import 'manage_collaborators_page.dart';
+import 'settings_page.dart';
 
 class ProfileBottomSheet extends StatefulWidget {
   final String? currentPondId;
@@ -25,8 +26,6 @@ class ProfileBottomSheet extends StatefulWidget {
 class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     with SingleTickerProviderStateMixin {
   final Color primaryBlue = const Color(0xFF0A74DA);
-  final Color textDark = const Color(0xFF1E293B);
-  final Color textMuted = const Color(0xFF64748B);
 
   late AnimationController _entranceController;
   late Animation<double> _fadeHeader;
@@ -97,11 +96,12 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
   Widget build(BuildContext context) {
     final User? user = FirebaseAuth.instance.currentUser;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(32),
           topRight: Radius.circular(32),
         ),
@@ -119,7 +119,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                   height: 5,
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: isDark ? Colors.white24 : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -129,11 +129,14 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                 opacity: _fadeHeader,
                 child: SlideTransition(
                   position: _slideUp,
-                  child: _buildUserInfo(user, theme),
+                  child: _buildUserInfo(user, theme, isDark),
                 ),
               ),
               const SizedBox(height: 24),
-              Divider(height: 1, color: Colors.grey.shade100),
+              Divider(
+                height: 1,
+                color: isDark ? Colors.white12 : Colors.grey.shade100,
+              ),
               const SizedBox(height: 24),
 
               if (widget.currentPondId != null &&
@@ -155,9 +158,12 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _buildPondRoleCard(context, theme),
+                        _buildPondRoleCard(context, theme, isDark),
                         const SizedBox(height: 28),
-                        Divider(height: 1, color: Colors.grey.shade100),
+                        Divider(
+                          height: 1,
+                          color: isDark ? Colors.white12 : Colors.grey.shade100,
+                        ),
                         const SizedBox(height: 20),
                       ],
                     ),
@@ -170,7 +176,9 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                 child: SlideTransition(
                   position: _slideUp,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildSectionHeader("ACCOUNT & WORKSPACE"),
                       BouncyMenuButton(
                         icon: Icons.person_outline_rounded,
                         text: 'Edit Profile',
@@ -216,13 +224,35 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                           },
                         ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
+                      _buildSectionHeader("PREFERENCES"),
+                      BouncyMenuButton(
+                        icon: Icons.settings_rounded,
+                        text: 'App Settings',
+                        onTap: () async {
+                          HapticFeedback.lightImpact();
+                          Navigator.pop(context);
+                          await Future.delayed(
+                            const Duration(milliseconds: 150),
+                          );
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SettingsPage(),
+                              ),
+                            );
+                          }
+                        },
+                      ),
 
+                      const SizedBox(height: 16),
+                      _buildSectionHeader("ACTIONS"),
                       BouncyMenuButton(
                         icon: Icons.logout_rounded,
                         text: 'Sign Out',
                         isDestructive: true,
-                        onTap: () => _confirmSignOut(context, theme),
+                        onTap: () => _confirmSignOut(context, theme, isDark),
                       ),
                     ],
                   ),
@@ -235,7 +265,22 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     );
   }
 
-  Widget _buildUserInfo(User? user, ThemeData theme) {
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w900,
+          fontSize: 11,
+          color: primaryBlue,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserInfo(User? user, ThemeData theme, bool isDark) {
     final name = user?.displayName ?? 'PondStat User';
     final email = user?.email ?? 'No Email';
     final avatarColor = _getAvatarColor(name);
@@ -246,7 +291,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white,
+            color: isDark ? theme.scaffoldBackgroundColor : Colors.white,
             boxShadow: [
               BoxShadow(
                 color: avatarColor.withValues(alpha: 0.3),
@@ -292,7 +337,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
-                  color: textDark,
+                  color: theme.colorScheme.onSurface,
                   letterSpacing: -0.5,
                 ),
                 maxLines: 1,
@@ -305,13 +350,13 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: isDark ? Colors.white12 : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   email,
                   style: TextStyle(
-                    color: textMuted,
+                    color: theme.colorScheme.onSurfaceVariant,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
@@ -326,15 +371,19 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     );
   }
 
-  Widget _buildPondRoleCard(BuildContext context, ThemeData theme) {
+  Widget _buildPondRoleCard(
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+  ) {
     IconData roleIcon = Icons.visibility_outlined;
     String roleTitle = 'Viewer';
-    Color roleColor = textMuted;
+    Color roleColor = theme.colorScheme.onSurfaceVariant;
 
     if (widget.currentUserRole == 'owner') {
       roleIcon = Icons.admin_panel_settings_rounded;
       roleTitle = 'Owner';
-      roleColor = Colors.orange.shade600;
+      roleColor = isDark ? Colors.orange.shade400 : Colors.orange.shade600;
     } else if (widget.currentUserRole == 'editor') {
       roleIcon = Icons.edit_note_rounded;
       roleTitle = 'Editor';
@@ -343,9 +392,12 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? theme.scaffoldBackgroundColor : Colors.white,
         borderRadius: BorderRadius.circular(20),
-
+        border: Border.all(
+          color: isDark ? Colors.white12 : roleColor.withValues(alpha: 0.15),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: roleColor.withValues(alpha: 0.12),
@@ -358,10 +410,6 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(
-          color: roleColor.withValues(alpha: 0.15),
-          width: 1.5,
-        ),
       ),
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -391,7 +439,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                   widget.currentPondName ?? 'Unknown Pond',
                   style: TextStyle(
                     fontSize: 17,
-                    color: textDark,
+                    color: theme.colorScheme.onSurface,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.3,
                   ),
@@ -415,13 +463,17 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     );
   }
 
-  Future<void> _confirmSignOut(BuildContext context, ThemeData theme) async {
+  Future<void> _confirmSignOut(
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+  ) async {
     HapticFeedback.selectionClick();
     final shouldSignOut = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: theme.scaffoldBackgroundColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -440,7 +492,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                 child: Text(
                   'Sign Out',
                   style: TextStyle(
-                    color: textDark,
+                    color: theme.colorScheme.onSurface,
                     fontWeight: FontWeight.w900,
                     fontSize: 18,
                   ),
@@ -450,7 +502,11 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
           ),
           content: Text(
             'Are you sure you want to sign out of PondStat?',
-            style: TextStyle(color: textMuted, height: 1.4, fontSize: 15),
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.4,
+              fontSize: 15,
+            ),
           ),
           actions: [
             TextButton(
@@ -551,15 +607,18 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final Color itemColor = widget.isDestructive
         ? Colors.red.shade600
-        : const Color(0xFF1E293B);
+        : theme.colorScheme.onSurface;
     final Color iconBgColor = widget.isDestructive
-        ? Colors.red.shade50
-        : Colors.grey.shade100;
+        ? Colors.red.withValues(alpha: 0.1)
+        : (isDark ? Colors.white12 : Colors.grey.shade100);
     final Color iconColor = widget.isDestructive
         ? Colors.red.shade600
-        : const Color(0xFF64748B);
+        : theme.colorScheme.onSurfaceVariant;
 
     return GestureDetector(
       onTapDown: _onTapDown,
@@ -572,7 +631,7 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.transparent),
           ),
@@ -600,7 +659,7 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
               if (!widget.isDestructive)
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: Colors.grey.shade400,
+                  color: isDark ? Colors.white38 : Colors.grey.shade400,
                   size: 24,
                 ),
             ],

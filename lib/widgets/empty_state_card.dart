@@ -18,6 +18,10 @@ class EmptyStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -27,7 +31,7 @@ class EmptyStateCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -37,16 +41,22 @@ class EmptyStateCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(icon, size: 64, color: Colors.grey.shade300),
+              child: Icon(
+                icon,
+                size: 64,
+                color: isDark
+                    ? colorScheme.primary.withValues(alpha: 0.5)
+                    : Colors.grey.shade300,
+              ),
             ),
             const SizedBox(height: 32),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
-                color: Color(0xFF1E293B),
+                color: colorScheme.onSurface,
                 letterSpacing: -0.5,
               ),
             ),
@@ -56,7 +66,7 @@ class EmptyStateCard extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: Colors.grey.shade500,
+                color: colorScheme.onSurfaceVariant,
                 height: 1.5,
               ),
             ),
@@ -70,7 +80,7 @@ class EmptyStateCard extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: colorScheme.primary,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
                     vertical: 16,
@@ -79,9 +89,7 @@ class EmptyStateCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   side: BorderSide(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.2),
+                    color: colorScheme.primary.withValues(alpha: 0.2),
                     width: 2,
                   ),
                 ),

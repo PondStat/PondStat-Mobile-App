@@ -91,7 +91,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                "Edit History",
+                "History",
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
