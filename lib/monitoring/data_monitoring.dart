@@ -12,6 +12,7 @@ import '../services/safety_service.dart';
 
 import 'monitoring_parameters.dart';
 import 'monitoring_ui_helpers.dart';
+import 'daily_charts.dart';
 import 'edit_history_sheet.dart';
 import 'trends_tab.dart';
 import 'record_data_sheet.dart';
@@ -1120,7 +1121,8 @@ class _MonitoringPageState extends State<MonitoringPage>
     if (_selectedDay == null) {
       return const Center(child: Text("Select a date to view data"));
     }
-    return MeasurementListView(
+
+    final listView = MeasurementListView(
       pondId: widget.pondId,
       type: type,
       dateKey: dateKey,
@@ -1128,6 +1130,56 @@ class _MonitoringPageState extends State<MonitoringPage>
       onEdit: _showEditDataDialog,
       primaryBlue: primaryBlue,
     );
+
+    // For the daily tab, prepend the trend chart above the record list.
+    if (type == 'daily') {
+      return CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 20, bottom: 8),
+              child: DailyParametersChart(
+                pondId: widget.pondId,
+                species: widget.species,
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade400,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    "Today's Records",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverFillRemaining(
+            hasScrollBody: true,
+            child: listView,
+          ),
+        ],
+      );
+    }
+
+    return listView;
   }
 
   void _showExpenseOverlay() {
