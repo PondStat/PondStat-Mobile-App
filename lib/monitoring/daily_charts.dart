@@ -155,7 +155,7 @@ class _DailyParametersChartState extends State<DailyParametersChart>
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: _params.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final selected = i == _selectedIndex;
           final param = _params[i];
@@ -495,7 +495,7 @@ class _DailyParametersChartState extends State<DailyParametersChart>
             isStrokeCapRound: true,
             dotData: FlDotData(
               show: records.length <= 15,
-              getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
+              getDotPainter: (spot, _, _, _) => FlDotCirclePainter(
                   radius: 3.5,
                   color: Colors.white,
                   strokeWidth: 2,

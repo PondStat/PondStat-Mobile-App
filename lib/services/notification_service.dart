@@ -33,7 +33,7 @@ class NotificationService {
         );
 
     await _flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         // Handle notification tap if needed
       },
@@ -96,10 +96,10 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch.remainder(100000),
-      title,
-      body,
-      platformChannelSpecifics,
+      id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title: title,
+      body: body,
+      notificationDetails: platformChannelSpecifics,
     );
   }
 
@@ -136,10 +136,10 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch.remainder(100000),
-      title,
-      body,
-      platformChannelSpecifics,
+      id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title: title,
+      body: body,
+      notificationDetails: platformChannelSpecifics,
     );
   }
 }

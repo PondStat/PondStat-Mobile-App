@@ -547,7 +547,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
       await Future.delayed(const Duration(milliseconds: 150));
       try {
         await FirebaseAuth.instance.signOut();
-        await GoogleSignIn().signOut();
+        await GoogleSignIn.instance.signOut();
       } catch (e) {
         debugPrint('Sign out error: $e');
       }

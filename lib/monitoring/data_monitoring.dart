@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-import '../profile/profile_bottom_sheet.dart';
 import '../utility/helpers.dart';
+import '../profile/profile_bottom_sheet.dart';
 import '../pond_background.dart';
 import '../repositories/monitoring_repository.dart';
 import '../services/safety_service.dart';

@@ -73,10 +73,7 @@ class _WelcomePageState extends State<WelcomePage>
     ),
   ];
 
-  final GoogleSignIn googleSignIn = GoogleSignIn(
-    clientId:
-        '624574025589-5390binsi9sh8plk6ii0h929dtq63dvu.apps.googleusercontent.com',
-  );
+
 
   @override
   void initState() {
@@ -136,7 +133,7 @@ class _WelcomePageState extends State<WelcomePage>
     setState(() => _isLoading = true);
 
     try {
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
 
       if (googleUser == null) {
         if (mounted) setState(() => _isLoading = false);
@@ -144,7 +141,7 @@ class _WelcomePageState extends State<WelcomePage>
       }
 
       if (!googleUser.email.endsWith('@up.edu.ph')) {
-        await googleSignIn.signOut();
+        await GoogleSignIn.instance.signOut();
         if (mounted) {
           setState(() => _isLoading = false);
           SnackbarHelper.show(
@@ -157,10 +154,9 @@ class _WelcomePageState extends State<WelcomePage>
       }
 
       final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+          googleUser.authentication;
 
       final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
@@ -219,7 +215,7 @@ class _WelcomePageState extends State<WelcomePage>
               break;
           }
         } else if (e is PlatformException) {
-          if (e.code == GoogleSignIn.kNetworkError) {
+          if (e.code == 'network_error') {
             errorMessage = "A network error occurred during Google Sign-In.";
           }
         }
