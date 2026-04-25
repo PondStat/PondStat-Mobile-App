@@ -12,7 +12,7 @@ import '../services/safety_service.dart';
 
 import 'monitoring_parameters.dart';
 import 'monitoring_ui_helpers.dart';
-import 'daily_charts.dart';
+import 'periodic_parameters_chart.dart';
 import 'edit_history_sheet.dart';
 import 'trends_tab.dart';
 import 'record_data_sheet.dart';
@@ -1131,16 +1131,26 @@ class _MonitoringPageState extends State<MonitoringPage>
       primaryBlue: primaryBlue,
     );
 
-    // For the daily tab, prepend the trend chart above the record list.
-    if (type == 'daily') {
+    // Show the trend chart above the record list for daily, weekly, and biweekly tabs.
+    if (type == 'daily' || type == 'weekly' || type == 'biweekly') {
+      String headerText;
+      if (type == 'daily') {
+        headerText = "Today's Records";
+      } else if (type == 'weekly') {
+        headerText = "This Week's Records";
+      } else {
+        headerText = "This Period's Records";
+      }
+
       return CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(top: 20, bottom: 8),
-              child: DailyParametersChart(
+              child: PeriodicParametersChart(
                 pondId: widget.pondId,
                 species: widget.species,
+                type: type,
               ),
             ),
           ),
@@ -1153,13 +1163,17 @@ class _MonitoringPageState extends State<MonitoringPage>
                     width: 4,
                     height: 18,
                     decoration: BoxDecoration(
-                      color: Colors.green.shade400,
+                      color: type == 'daily'
+                          ? Colors.green.shade400
+                          : type == 'weekly'
+                              ? Colors.amber.shade400
+                              : Colors.purple.shade400,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    "Today's Records",
+                    headerText,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,

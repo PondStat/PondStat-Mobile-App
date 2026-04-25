@@ -15,20 +15,22 @@ class _DailyRecord {
   });
 }
 
-class DailyParametersChart extends StatefulWidget {
+class PeriodicParametersChart extends StatefulWidget {
   final String pondId;
   final String species;
-  const DailyParametersChart({
+  final String type;
+  const PeriodicParametersChart({
     super.key,
     required this.pondId,
     required this.species,
+    required this.type,
   });
 
   @override
-  State<DailyParametersChart> createState() => _DailyParametersChartState();
+  State<PeriodicParametersChart> createState() => _PeriodicParametersChartState();
 }
 
-class _DailyParametersChartState extends State<DailyParametersChart>
+class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     with SingleTickerProviderStateMixin {
   late final List<ParameterItem> _params;
   int _selectedIndex = 0;
@@ -40,10 +42,18 @@ class _DailyParametersChartState extends State<DailyParametersChart>
   @override
   void initState() {
     super.initState();
-    final daily = MonitoringParameters.getDailyParameters(widget.species);
+    List<ParameterItem> paramsToUse;
+    if (widget.type == 'weekly') {
+      paramsToUse = MonitoringParameters.weeklyParameters;
+    } else if (widget.type == 'biweekly') {
+      paramsToUse = MonitoringParameters.biweeklyParameters;
+    } else {
+      paramsToUse = MonitoringParameters.getDailyParameters(widget.species);
+    }
+    
     _params = [
-      ...daily.where((p) => p.isSinglePoint),
-      ...daily.where((p) => !p.isSinglePoint),
+      ...paramsToUse.where((p) => p.isSinglePoint),
+      ...paramsToUse.where((p) => !p.isSinglePoint),
     ];
     final firstRangeIdx = _params.indexWhere((p) => !p.isSinglePoint);
     if (firstRangeIdx != -1) _selectedIndex = firstRangeIdx;
@@ -58,7 +68,7 @@ class _DailyParametersChartState extends State<DailyParametersChart>
     _cachedStreamIndex = index;
     _cachedStream = FirestoreHelper.measurementsCollection
         .where('pondId', isEqualTo: widget.pondId)
-        .where('type', isEqualTo: 'daily')
+        .where('type', isEqualTo: widget.type)
         .where('parameter', isEqualTo: param.label)
         .orderBy('timestamp', descending: true)  // descending avoids limitToLast index
         .limit(30)
@@ -119,7 +129,11 @@ class _DailyParametersChartState extends State<DailyParametersChart>
           ),
           const SizedBox(width: 12),
           Text(
-            'Daily Trends',
+            widget.type == 'daily'
+                ? 'Daily Trends'
+                : widget.type == 'weekly'
+                    ? 'Weekly Trends'
+                    : 'Biweekly Trends',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
