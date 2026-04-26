@@ -123,6 +123,7 @@ class _MeasurementListViewState extends State<MeasurementListView> {
                       title: data['parameter'] ?? 'Unknown Parameter',
                       content:
                           "${data['value'] ?? '0'} ${data['unit'] ?? ''}\n(Avg across recorded points)",
+                      notes: data['notes'],
                       canEdit: widget.canEdit,
                       groupDocs: [filteredDocs[index]],
                       onEdit: () => widget.onEdit([filteredDocs[index]]),

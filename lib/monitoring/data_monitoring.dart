@@ -244,6 +244,7 @@ class _MonitoringPageState extends State<MonitoringPage>
     required String type,
     required Map<String, double> pointValues,
     required Map<String, List<double>> replicateValues,
+    required String notes,
   }) async {
     try {
       await _repository.saveMeasurement(
@@ -255,6 +256,7 @@ class _MonitoringPageState extends State<MonitoringPage>
         type: type,
         pointValues: pointValues,
         replicateValues: replicateValues,
+        notes: notes,
         selectedDay: _selectedDay!,
       );
 

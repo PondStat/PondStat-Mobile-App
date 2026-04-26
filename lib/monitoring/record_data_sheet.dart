@@ -19,6 +19,7 @@ class RecordDataSheet extends StatefulWidget {
     required String type,
     required Map<String, double> pointValues,
     required Map<String, List<double>> replicateValues,
+    required String notes,
   })
   onSave;
 
@@ -42,6 +43,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   final List<int> replicates = const [1, 2, 3];
   late final Map<String, TextEditingController> valueControllers;
   late final Map<String, FocusNode> focusNodes;
+  final TextEditingController notesController = TextEditingController();
 
   bool _isSaving = false;
   final MonitoringRepository _repository = MonitoringRepository();
@@ -81,6 +83,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     for (var node in focusNodes.values) {
       node.dispose();
     }
+    notesController.dispose();
     super.dispose();
   }
 
@@ -183,6 +186,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         type: type,
         pointValues: pointValues,
         replicateValues: replicateValues,
+        notes: notesController.text.trim(),
       );
 
       HapticFeedback.heavyImpact();
@@ -569,6 +573,8 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         const SizedBox(height: 16),
         _buildDataPointInputs(themeColor),
         const SizedBox(height: 32),
+        _buildNotesField(themeColor),
+        const SizedBox(height: 32),
 
         Theme(
           data: Theme.of(context).copyWith(
@@ -779,6 +785,47 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
               ],
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildNotesField(Color themeColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Notes / Other Findings",
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            color: textDark,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: notesController,
+          minLines: 2,
+          maxLines: 4,
+          textInputAction: TextInputAction.newline,
+          decoration: InputDecoration(
+            hintText: "e.g., water color, fish behavior, unusual observations",
+            prefixIcon: Icon(Icons.notes_rounded, color: themeColor),
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: themeColor, width: 2),
+            ),
+          ),
+        ),
       ],
     );
   }

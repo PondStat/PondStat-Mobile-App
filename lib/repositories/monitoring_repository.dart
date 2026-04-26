@@ -23,6 +23,7 @@ class MonitoringRepository {
     required String type,
     required Map<String, double> pointValues,
     required Map<String, List<double>> replicateValues,
+    required String notes,
     required DateTime selectedDay,
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
@@ -46,6 +47,7 @@ class MonitoringRepository {
       'timeString': timeString,
       'pointValues': pointValues,
       'replicateValues': replicateValues,
+      'notes': notes,
     };
 
     batch.set(measurementRef, measurementData);
@@ -61,6 +63,7 @@ class MonitoringRepository {
         'value': averageValue,
         'pointValues': pointValues,
         'replicateValues': replicateValues,
+        'notes': notes,
       },
     );
 
