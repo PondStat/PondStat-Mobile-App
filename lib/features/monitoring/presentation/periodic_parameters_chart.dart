@@ -32,12 +32,12 @@ class PeriodicParametersChart extends StatefulWidget {
 
 class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     with SingleTickerProviderStateMixin {
-  late final List<ParameterItem> _params;
+  late final List<ParameterItem> _baseParams;
   int _selectedIndex = 0;
 
   // FIX 1: Cache the active stream so it is not recreated on every build/setState.
   Stream<List<_DailyRecord>>? _cachedStream;
-  int _cachedStreamIndex = -1; // tracks which param the cached stream belongs to
+  String? _cachedStreamParamLabel; // tracks which param the cached stream belongs to
 
   @override
   void initState() {
@@ -51,21 +51,17 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
       paramsToUse = MonitoringParameters.getDailyParameters(widget.species);
     }
     
-    _params = [
-      ...paramsToUse.where((p) => p.isSinglePoint),
-      ...paramsToUse.where((p) => !p.isSinglePoint),
-    ];
-    final firstRangeIdx = _params.indexWhere((p) => !p.isSinglePoint);
+    _baseParams = paramsToUse;
+    final firstRangeIdx = _baseParams.indexWhere((p) => !p.isSinglePoint);
     if (firstRangeIdx != -1) _selectedIndex = firstRangeIdx;
   }
 
   /// Returns the cached stream, only rebuilding it when the selected parameter changes.
-  Stream<List<_DailyRecord>> _getStream(int index) {
-    if (_cachedStream != null && _cachedStreamIndex == index) {
+  Stream<List<_DailyRecord>> _getStream(ParameterItem param) {
+    if (_cachedStream != null && _cachedStreamParamLabel == param.label) {
       return _cachedStream!;
     }
-    final param = _params[index];
-    _cachedStreamIndex = index;
+    _cachedStreamParamLabel = param.label;
     _cachedStream = FirestoreHelper.measurementsCollection
         .where('pondId', isEqualTo: widget.pondId)
         .where('type', isEqualTo: widget.type)
@@ -100,16 +96,50 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader(theme),
-        const SizedBox(height: 12),
-        _buildParamTabBar(theme, isDark),
-        const SizedBox(height: 16),
-        _buildChartArea(theme, isDark),
-        const SizedBox(height: 24),
-      ],
+    
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('pondstat-app-v1')
+          .doc('pondstat-app-v1')
+          .collection('custom_parameters')
+          .where('type', isEqualTo: widget.type)
+          .snapshots(),
+      builder: (context, snapshot) {
+        List<ParameterItem> allParams = List.from(_baseParams);
+        
+        if (snapshot.hasData) {
+          for (var doc in snapshot.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            allParams.add(ParameterItem(
+              label: data['label'],
+              unit: data['unit'] ?? '',
+              icon: Icons.dashboard_customize_rounded,
+              color: Colors.blueGrey,
+            ));
+          }
+        }
+
+        final params = [
+          ...allParams.where((p) => p.isSinglePoint),
+          ...allParams.where((p) => !p.isSinglePoint),
+        ];
+
+        if (_selectedIndex >= params.length) {
+          _selectedIndex = 0;
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(theme),
+            const SizedBox(height: 12),
+            _buildParamTabBar(theme, isDark, params),
+            const SizedBox(height: 16),
+            _buildChartArea(theme, isDark, params),
+            const SizedBox(height: 24),
+          ],
+        );
+      },
     );
   }
 
@@ -162,17 +192,17 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     );
   }
 
-  Widget _buildParamTabBar(ThemeData theme, bool isDark) {
+  Widget _buildParamTabBar(ThemeData theme, bool isDark, List<ParameterItem> params) {
     return SizedBox(
       height: 42,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _params.length,
+        itemCount: params.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final selected = i == _selectedIndex;
-          final param = _params[i];
+          final param = params[i];
           return GestureDetector(
             onTap: () {
               if (_selectedIndex != i) {
@@ -180,7 +210,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                   _selectedIndex = i;
                   // Invalidate cache so _getStream() rebuilds for new param
                   _cachedStream = null;
-                  _cachedStreamIndex = -1;
+                  _cachedStreamParamLabel = null;
                 });
               }
             },
@@ -237,11 +267,12 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     );
   }
 
-  Widget _buildChartArea(ThemeData theme, bool isDark) {
-    final param = _params[_selectedIndex];
+  Widget _buildChartArea(ThemeData theme, bool isDark, List<ParameterItem> params) {
+    if (params.isEmpty) return const SizedBox.shrink();
+    final param = params[_selectedIndex];
     return StreamBuilder<List<_DailyRecord>>(
       // FIX 1: use cached stream instead of calling _recordsStream() directly
-      stream: _getStream(_selectedIndex),
+      stream: _getStream(param),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return _buildLoadingCard(isDark, param.color);
@@ -418,7 +449,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
       height: 220,
       child: LineChart(LineChartData(
         minX: 0,
-        maxX: (records.length - 1).toDouble(),
+        maxX: records.length > 1 ? (records.length - 1).toDouble() : 1.0,
         minY: minY,
         maxY: maxY,
         clipData: const FlClipData.all(),
@@ -647,8 +678,9 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
   }
 
   double _xInterval(int count) {
-    if (count <= 7) return 1;
-    if (count <= 15) return 3;
-    return 5;
+    if (count <= 1) return 1.0;
+    if (count <= 7) return 1.0;
+    if (count <= 15) return 3.0;
+    return 5.0;
   }
 }
