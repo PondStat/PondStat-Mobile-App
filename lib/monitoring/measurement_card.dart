@@ -9,7 +9,6 @@ class MeasurementCard extends StatelessWidget {
   final String time;
   final String title;
   final String content;
-  final String? notes;
   final bool canEdit;
   final List<QueryDocumentSnapshot> groupDocs;
   final VoidCallback onEdit;
@@ -22,7 +21,6 @@ class MeasurementCard extends StatelessWidget {
     required this.canEdit,
     required this.groupDocs,
     required this.onEdit,
-    this.notes,
   });
 
   final Color primaryBlue = const Color(0xFF0A74DA);
@@ -352,33 +350,6 @@ class MeasurementCard extends StatelessWidget {
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                      if (notes != null && notes!.trim().isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(Icons.note_alt_rounded, size: 16, color: textMuted),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  notes!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: textMuted,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ],
                     ],
