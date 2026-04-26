@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/features/monitoring/presentation/trends_data_service.dart';
 import 'package:pondstat/features/monitoring/presentation/parameter_chart_card.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/physical_parameters_chart.dart';
 
 class TrendsTab extends StatefulWidget {
   final String pondId;
@@ -43,6 +44,11 @@ class _TrendsTabState extends State<TrendsTab> {
                 return _buildEmptyState();
               }
 
+              final normalizedData = TrendsDataService.getNormalizedPhysicalParameters(
+                docs,
+                widget.species,
+              );
+
               final statsList = TrendsDataService.processMeasurements(
                 docs,
                 widget.species,
@@ -53,10 +59,17 @@ class _TrendsTabState extends State<TrendsTab> {
                   horizontal: 20,
                   vertical: 10,
                 ),
-                itemCount: statsList.length,
+                itemCount: statsList.length + 1,
                 itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return PhysicalParametersChart(
+                      normalizedData: normalizedData,
+                      species: widget.species,
+                    );
+                  }
+                  
                   return ParameterChartCard(
-                    stats: statsList[index],
+                    stats: statsList[index - 1],
                     species: widget.species,
                   );
                 },
