@@ -126,6 +126,7 @@ class _MeasurementListViewState extends State<MeasurementListView> {
                       canEdit: widget.canEdit,
                       groupDocs: [filteredDocs[index]],
                       onEdit: () => widget.onEdit([filteredDocs[index]]),
+                      notes: data['notes'] as String?,
                     );
                   },
                 ),

@@ -244,6 +244,7 @@ class _MonitoringPageState extends State<MonitoringPage>
     required String type,
     required Map<String, double> pointValues,
     required Map<String, List<double>> replicateValues,
+    String? notes,
   }) async {
     try {
       await _repository.saveMeasurement(
@@ -256,6 +257,7 @@ class _MonitoringPageState extends State<MonitoringPage>
         pointValues: pointValues,
         replicateValues: replicateValues,
         selectedDay: _selectedDay!,
+        notes: notes,
       );
 
       final parameterItem = MonitoringParameters.getParameterByLabel(
@@ -290,12 +292,14 @@ class _MonitoringPageState extends State<MonitoringPage>
     final List<String> points = const ['A', 'B', 'C', 'D'];
     final List<int> replicates = const [1, 2, 3];
     final Map<String, Map<String, TextEditingController>> groupControllers = {};
+    final Map<String, TextEditingController> notesControllers = {};
 
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
       final replicateValuesMap =
           data['replicateValues'] as Map<String, dynamic>? ?? {};
       groupControllers[doc.id] = {};
+      notesControllers[doc.id] = TextEditingController(text: data['notes'] as String? ?? '');
 
       // Create controllers for each replicate of each point
       for (var p in points) {
@@ -332,6 +336,7 @@ class _MonitoringPageState extends State<MonitoringPage>
             return _buildEditReplicateGroup(
               doc,
               groupControllers[doc.id]!,
+              notesControllers[doc.id]!,
               points,
               replicates,
               isSinglePoint: isSinglePoint,
@@ -365,6 +370,7 @@ class _MonitoringPageState extends State<MonitoringPage>
             onPressed: () => _handleBatchUpdateWithReplicates(
               docs,
               groupControllers,
+              notesControllers,
               points,
               replicates,
             ),
@@ -402,17 +408,22 @@ class _MonitoringPageState extends State<MonitoringPage>
   Future<void> _handleBatchUpdateWithReplicates(
     List<DocumentSnapshot> docs,
     Map<String, Map<String, TextEditingController>> groupControllers,
+    Map<String, TextEditingController> notesControllers,
     List<String> points,
     List<int> replicates,
   ) async {
     final Map<String, Map<String, double>> updatedPointValues = {};
     final Map<String, Map<String, List<double>>> updatedReplicateValues = {};
+    final Map<String, String?> updatedNotes = {};
 
     // Calculate point averages from replicate values
     for (var doc in docs) {
       final controllersMap = groupControllers[doc.id]!;
       Map<String, double> newPointValues = {};
       Map<String, List<double>> newReplicateValues = {};
+
+      final newNote = notesControllers[doc.id]?.text.trim();
+      updatedNotes[doc.id] = newNote != null && newNote.isNotEmpty ? newNote : null;
 
       for (var p in points) {
         final replicatesList = <double>[];
@@ -446,6 +457,7 @@ class _MonitoringPageState extends State<MonitoringPage>
         docs: docs,
         updatedPointValues: updatedPointValues,
         updatedReplicateValues: updatedReplicateValues,
+        updatedNotes: updatedNotes,
       );
 
       for (var doc in docs) {
@@ -489,6 +501,7 @@ class _MonitoringPageState extends State<MonitoringPage>
   Widget _buildEditReplicateGroup(
     DocumentSnapshot doc,
     Map<String, TextEditingController> controllers,
+    TextEditingController notesController,
     List<String> points,
     List<int> replicates, {
     bool isSinglePoint = false,
@@ -634,6 +647,20 @@ class _MonitoringPageState extends State<MonitoringPage>
                   ],
                 ),
               ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: notesController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: 'Notes or Findings (Optional)',
+              alignLabelWithHint: true,
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -12,6 +12,7 @@ class MeasurementCard extends StatelessWidget {
   final bool canEdit;
   final List<QueryDocumentSnapshot> groupDocs;
   final VoidCallback onEdit;
+  final String? notes;
 
   const MeasurementCard({
     super.key,
@@ -21,6 +22,7 @@ class MeasurementCard extends StatelessWidget {
     required this.canEdit,
     required this.groupDocs,
     required this.onEdit,
+    this.notes,
   });
 
   final Color primaryBlue = const Color(0xFF0A74DA);
@@ -393,6 +395,41 @@ class MeasurementCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (notes != null && notes!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade100),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.sticky_note_2_rounded,
+                      size: 16,
+                      color: Colors.amber.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        notes!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.amber.shade900,
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FontStyle.italic,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
