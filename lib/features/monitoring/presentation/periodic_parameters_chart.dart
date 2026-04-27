@@ -61,33 +61,38 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     if (_cachedStream != null && _cachedStreamParamLabel == param.label) {
       return _cachedStream!;
     }
+
     _cachedStreamParamLabel = param.label;
     _cachedStream = FirestoreHelper.measurementsCollection
         .where('pondId', isEqualTo: widget.pondId)
         .where('type', isEqualTo: widget.type)
         .where('parameter', isEqualTo: param.label)
-        .orderBy('timestamp', descending: true)  // descending avoids limitToLast index
-        .limit(30)
         .snapshots()
         .map((snap) {
-          // Reverse so chart renders oldest → newest (left → right)
-          final docs = snap.docs.reversed.toList();
-          return docs.map((doc) {
-              final data = doc.data();
-              final ts =
-                  (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-              // field is 'value', not 'averageValue'
-              final avg = (data['value'] as num?)?.toDouble() ?? 0.0;
-              final rawPoints =
-                  (data['pointValues'] as Map<String, dynamic>?) ?? {};
-              final points = rawPoints
-                  .map((k, v) => MapEntry(k, (v as num).toDouble()));
-              return _DailyRecord(
-                timestamp: ts,
-                averageValue: avg,
-                pointValues: points,
-              );
-            }).toList();
+          final sortedDocs = snap.docs.toList()..sort((a, b) {
+            final tA = a.data()['timestamp'] as Timestamp?;
+            final tB = b.data()['timestamp'] as Timestamp?;
+            if (tA == null || tB == null) return 0;
+            return tB.compareTo(tA); // descending
+          });
+
+          final limitedDocs = sortedDocs.take(30).toList().reversed.toList();
+
+          return limitedDocs.map((doc) {
+            final data = doc.data();
+            final ts =
+                (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final avg = (data['value'] as num?)?.toDouble() ?? 0.0;
+            final rawPoints =
+                (data['pointValues'] as Map<String, dynamic>?) ?? {};
+            final points = rawPoints
+                .map((k, v) => MapEntry(k, (v as num).toDouble()));
+            return _DailyRecord(
+              timestamp: ts,
+              averageValue: avg,
+              pointValues: points,
+            );
+          }).toList();
         });
     return _cachedStream!;
   }

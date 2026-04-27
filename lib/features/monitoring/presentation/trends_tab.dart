@@ -4,6 +4,8 @@ import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/features/monitoring/presentation/trends_data_service.dart';
 import 'package:pondstat/features/monitoring/presentation/parameter_chart_card.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/physical_parameters_chart.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/chemical_parameters_chart_one.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/chemical_parameters_chart_two.dart';
 
 class TrendsTab extends StatefulWidget {
   final String pondId;
@@ -17,6 +19,37 @@ class TrendsTab extends StatefulWidget {
 
 class _TrendsTabState extends State<TrendsTab> {
   int _selectedDays = 7;
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _historicalMeasurementsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _initStream();
+  }
+
+  @override
+  void didUpdateWidget(covariant TrendsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pondId != widget.pondId) {
+      _initStream();
+    }
+  }
+
+  void _initStream() {
+    _historicalMeasurementsStream = FirestoreHelper.getHistoricalMeasurements(
+      widget.pondId,
+      _selectedDays,
+    ).snapshots();
+  }
+
+  void _updatePeriod(int days) {
+    if (_selectedDays != days) {
+      setState(() {
+        _selectedDays = days;
+        _initStream();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,10 +58,7 @@ class _TrendsTabState extends State<TrendsTab> {
         _buildPeriodSelector(),
         Expanded(
           child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirestoreHelper.getHistoricalMeasurements(
-              widget.pondId,
-              _selectedDays,
-            ).snapshots(),
+            stream: _historicalMeasurementsStream,
             builder: (context, snapshot) {
               if (!snapshot.hasData &&
                   snapshot.connectionState == ConnectionState.waiting) {
@@ -44,9 +74,22 @@ class _TrendsTabState extends State<TrendsTab> {
                 return _buildEmptyState();
               }
 
-              final normalizedData = TrendsDataService.getNormalizedPhysicalParameters(
+              final physicalData = TrendsDataService.getNormalizedParameters(
                 docs,
                 widget.species,
+                ['Temperature', 'Salinity', 'Transparency'],
+              );
+              
+              final chemicalOneData = TrendsDataService.getNormalizedParameters(
+                docs,
+                widget.species,
+                ['pH Level', 'Dissolved Oxygen', 'Nitrate', 'Nitrite', 'Ammonia', 'Carbon dioxide'],
+              );
+              
+              final chemicalTwoData = TrendsDataService.getNormalizedParameters(
+                docs,
+                widget.species,
+                ['Magnesium', 'Calcium', 'Total Alkalinity'],
               );
 
               final statsList = TrendsDataService.processMeasurements(
@@ -59,17 +102,29 @@ class _TrendsTabState extends State<TrendsTab> {
                   horizontal: 20,
                   vertical: 10,
                 ),
-                itemCount: statsList.length + 1,
+                itemCount: statsList.length + 3,
                 itemBuilder: (context, index) {
                   if (index == 0) {
                     return PhysicalParametersChart(
-                      normalizedData: normalizedData,
+                      normalizedData: physicalData,
+                      species: widget.species,
+                    );
+                  }
+                  if (index == 1) {
+                    return ChemicalParametersChartOne(
+                      normalizedData: chemicalOneData,
+                      species: widget.species,
+                    );
+                  }
+                  if (index == 2) {
+                    return ChemicalParametersChartTwo(
+                      normalizedData: chemicalTwoData,
                       species: widget.species,
                     );
                   }
                   
                   return ParameterChartCard(
-                    stats: statsList[index - 1],
+                    stats: statsList[index - 3],
                     species: widget.species,
                   );
                 },
@@ -109,7 +164,7 @@ class _TrendsTabState extends State<TrendsTab> {
       ),
       selected: isSelected,
       onSelected: (selected) {
-        if (selected) setState(() => _selectedDays = days);
+        if (selected) _updatePeriod(days);
       },
       selectedColor: const Color(0xFF0A74DA),
       backgroundColor: Colors.grey.shade100,

@@ -64,8 +64,6 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
       query = query.where('action', isEqualTo: selectedFilter);
     }
 
-    query = query.orderBy('editedAt', descending: true).limit(30);
-
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,

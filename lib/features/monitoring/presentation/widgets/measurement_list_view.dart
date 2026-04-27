@@ -24,28 +24,39 @@ class MeasurementListView extends StatefulWidget {
   @override
   State<MeasurementListView> createState() => _MeasurementListViewState();
 }
-
 class _MeasurementListViewState extends State<MeasurementListView> {
   String? _selectedFilter;
+  late Stream<QuerySnapshot> _measurementsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _initStream();
+  }
 
   @override
   void didUpdateWidget(covariant MeasurementListView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reset filter when changing tabs or dates
-    if (oldWidget.type != widget.type || oldWidget.dateKey != widget.dateKey) {
+    if (oldWidget.pondId != widget.pondId || 
+        oldWidget.type != widget.type || 
+        oldWidget.dateKey != widget.dateKey) {
+      _initStream();
       setState(() => _selectedFilter = null);
     }
+  }
+
+  void _initStream() {
+    _measurementsStream = FirestoreHelper.measurementsCollection
+        .where('pondId', isEqualTo: widget.pondId)
+        .where('type', isEqualTo: widget.type)
+        .where('dateKey', isEqualTo: widget.dateKey)
+        .snapshots();
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirestoreHelper.measurementsCollection
-          .where('pondId', isEqualTo: widget.pondId)
-          .where('type', isEqualTo: widget.type)
-          .where('dateKey', isEqualTo: widget.dateKey)
-          .orderBy('recordedAt', descending: true)
-          .snapshots(includeMetadataChanges: true),
+      stream: _measurementsStream,
       builder: (context, snapshot) {
         // Only show loader if we have NO data yet AND we are waiting
         if (!snapshot.hasData &&
@@ -64,10 +75,19 @@ class _MeasurementListViewState extends State<MeasurementListView> {
 
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) return _buildEmptyState();
+        
+        final sortedDocs = docs.toList()..sort((a, b) {
+          final dataA = a.data() as Map<String, dynamic>;
+          final dataB = b.data() as Map<String, dynamic>;
+          final tA = dataA['timestamp'] as Timestamp?;
+          final tB = dataB['timestamp'] as Timestamp?;
+          if (tA == null || tB == null) return 0;
+          return tB.compareTo(tA); // Descending
+        });
 
         // 1. Extract Unique Parameters
         final Set<String> uniqueParams = {};
-        for (var doc in docs) {
+        for (var doc in sortedDocs) {
           final data = doc.data() as Map<String, dynamic>;
           final param = data['parameter'] as String?;
           if (param != null) uniqueParams.add(param);
@@ -76,8 +96,8 @@ class _MeasurementListViewState extends State<MeasurementListView> {
 
         // 2. Filter the documents
         final filteredDocs = _selectedFilter == null
-            ? docs
-            : docs.where((doc) {
+            ? sortedDocs
+            : sortedDocs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 return data['parameter'] == _selectedFilter;
               }).toList();
@@ -126,6 +146,7 @@ class _MeasurementListViewState extends State<MeasurementListView> {
                       canEdit: widget.canEdit,
                       groupDocs: [filteredDocs[index]],
                       onEdit: () => widget.onEdit([filteredDocs[index]]),
+                      notes: data['notes'] as String?,
                     );
                   },
                 ),

@@ -24,6 +24,7 @@ class MonitoringRepository {
     required Map<String, double> pointValues,
     required Map<String, List<double>> replicateValues,
     required DateTime selectedDay,
+    String? notes,
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
@@ -46,6 +47,7 @@ class MonitoringRepository {
       'timeString': timeString,
       'pointValues': pointValues,
       'replicateValues': replicateValues,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
     };
 
     batch.set(measurementRef, measurementData);
@@ -61,6 +63,7 @@ class MonitoringRepository {
         'value': averageValue,
         'pointValues': pointValues,
         'replicateValues': replicateValues,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
       },
     );
 
@@ -138,6 +141,7 @@ class MonitoringRepository {
     required List<DocumentSnapshot> docs,
     required Map<String, Map<String, double>> updatedPointValues,
     required Map<String, Map<String, List<double>>> updatedReplicateValues,
+    Map<String, String?>? updatedNotes,
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
@@ -147,6 +151,7 @@ class MonitoringRepository {
       final data = doc.data() as Map<String, dynamic>;
       final newPointValues = updatedPointValues[doc.id];
       final newReplicateValues = updatedReplicateValues[doc.id];
+      final newNote = updatedNotes?[doc.id];
 
       if (newPointValues == null || newReplicateValues == null) continue;
 
@@ -155,13 +160,19 @@ class MonitoringRepository {
             .toStringAsFixed(2),
       );
 
-      batch.update(doc.reference, {
+      final updateData = {
         'pointValues': newPointValues,
         'replicateValues': newReplicateValues,
         'value': avg,
         'editedAt': FieldValue.serverTimestamp(),
         'editedBy': currentUser?.uid,
-      });
+      };
+
+      if (newNote != null) {
+        updateData['notes'] = newNote;
+      }
+
+      batch.update(doc.reference, updateData);
 
       _logHistory(
         batch: batch,
@@ -173,11 +184,13 @@ class MonitoringRepository {
           'value': data['value'],
           'pointValues': data['pointValues'],
           'replicateValues': data['replicateValues'],
+          'notes': data['notes'],
         },
         after: {
           'value': avg,
           'pointValues': newPointValues,
           'replicateValues': newReplicateValues,
+          if (newNote != null) 'notes': newNote,
         },
       );
     }
@@ -270,7 +283,6 @@ class MonitoringRepository {
   Stream<QuerySnapshot<Map<String, dynamic>>> getExpensesStream(String pondId) {
     return FirestoreHelper.expensesCollection
         .where('pondId', isEqualTo: pondId)
-        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 

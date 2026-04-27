@@ -19,6 +19,7 @@ class RecordDataSheet extends StatefulWidget {
     required String type,
     required Map<String, double> pointValues,
     required Map<String, List<double>> replicateValues,
+    String? notes,
   })
   onSave;
 
@@ -42,6 +43,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   final List<int> replicates = const [1, 2, 3];
   late final Map<String, TextEditingController> valueControllers;
   late final Map<String, FocusNode> focusNodes;
+  final TextEditingController _notesController = TextEditingController();
 
   bool _isSaving = false;
   final MonitoringRepository _repository = MonitoringRepository();
@@ -81,6 +83,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     for (var node in focusNodes.values) {
       node.dispose();
     }
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -183,6 +186,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         type: type,
         pointValues: pointValues,
         replicateValues: replicateValues,
+        notes: _notesController.text.trim(),
       );
 
       HapticFeedback.heavyImpact();
@@ -568,6 +572,14 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         _buildDataPointsHeader(hasRange, themeColor),
         const SizedBox(height: 16),
         _buildDataPointInputs(themeColor),
+        const SizedBox(height: 24),
+        PondStatTextField(
+          controller: _notesController,
+          label: "Notes or Findings (Optional)",
+          hint: "e.g., Water looks slightly cloudy today",
+          prefixIcon: Icons.notes_rounded,
+          maxLines: 3,
+        ),
         const SizedBox(height: 32),
 
         Theme(

@@ -35,9 +35,13 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   final Color primaryBlue = const Color(0xFF0A74DA);
   final Color secondaryBlue = const Color(0xFF4FA0F0);
 
+  late Stream<QuerySnapshot> _userPondsStream;
+
   @override
   void initState() {
     super.initState();
+
+    _userPondsStream = DashboardRepository().getUserPondsStream(AuthRepository().currentUser!.uid);
 
     _shimmerController = AnimationController(
       vsync: this,
@@ -528,7 +532,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
               children: [
                 const PondBackground(),
                 StreamBuilder<QuerySnapshot>(
-                  stream: DashboardRepository().getUserPondsStream(user.uid),
+                  stream: _userPondsStream,
                   builder: (context, snapshot) {
                     if (!snapshot.hasData &&
                         snapshot.connectionState == ConnectionState.waiting) {
@@ -544,6 +548,16 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                     if (ponds.isEmpty) {
                       return _buildEmptyState(context);
                     }
+
+                    // Sort client-side by createdAt descending
+                    ponds.sort((a, b) {
+                      final dataA = a.data() as Map<String, dynamic>;
+                      final dataB = b.data() as Map<String, dynamic>;
+                      final tA = dataA['createdAt'] as Timestamp?;
+                      final tB = dataB['createdAt'] as Timestamp?;
+                      if (tA == null || tB == null) return 0;
+                      return tB.compareTo(tA);
+                    });
 
                     return NotificationListener<ScrollNotification>(
                       onNotification: (ScrollNotification notification) {
