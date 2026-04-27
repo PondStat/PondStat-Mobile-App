@@ -30,10 +30,14 @@ class GrowthDataService {
 
     final measurementsSnapshot = await FirestoreHelper.measurementsCollection
         .where('pondId', isEqualTo: pondId)
-        .orderBy('timestamp', descending: false)
         .get();
 
-    final allDocs = measurementsSnapshot.docs;
+    final allDocs = measurementsSnapshot.docs.toList()..sort((a, b) {
+      final tA = a.data()['timestamp'] as Timestamp?;
+      final tB = b.data()['timestamp'] as Timestamp?;
+      if (tA == null || tB == null) return 0;
+      return tA.compareTo(tB);
+    });
 
     final weightDocs = allDocs.where((doc) {
       final data = doc.data();

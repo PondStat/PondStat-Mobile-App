@@ -50,7 +50,6 @@ class _MeasurementListViewState extends State<MeasurementListView> {
         .where('pondId', isEqualTo: widget.pondId)
         .where('type', isEqualTo: widget.type)
         .where('dateKey', isEqualTo: widget.dateKey)
-        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 
@@ -76,10 +75,19 @@ class _MeasurementListViewState extends State<MeasurementListView> {
 
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) return _buildEmptyState();
+        
+        final sortedDocs = docs.toList()..sort((a, b) {
+          final dataA = a.data() as Map<String, dynamic>;
+          final dataB = b.data() as Map<String, dynamic>;
+          final tA = dataA['timestamp'] as Timestamp?;
+          final tB = dataB['timestamp'] as Timestamp?;
+          if (tA == null || tB == null) return 0;
+          return tB.compareTo(tA); // Descending
+        });
 
         // 1. Extract Unique Parameters
         final Set<String> uniqueParams = {};
-        for (var doc in docs) {
+        for (var doc in sortedDocs) {
           final data = doc.data() as Map<String, dynamic>;
           final param = data['parameter'] as String?;
           if (param != null) uniqueParams.add(param);
@@ -88,8 +96,8 @@ class _MeasurementListViewState extends State<MeasurementListView> {
 
         // 2. Filter the documents
         final filteredDocs = _selectedFilter == null
-            ? docs
-            : docs.where((doc) {
+            ? sortedDocs
+            : sortedDocs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 return data['parameter'] == _selectedFilter;
               }).toList();

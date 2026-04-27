@@ -283,7 +283,6 @@ class MonitoringRepository {
   Stream<QuerySnapshot<Map<String, dynamic>>> getExpensesStream(String pondId) {
     return FirestoreHelper.expensesCollection
         .where('pondId', isEqualTo: pondId)
-        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 

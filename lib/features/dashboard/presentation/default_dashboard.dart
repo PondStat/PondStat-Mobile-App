@@ -549,6 +549,16 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                       return _buildEmptyState(context);
                     }
 
+                    // Sort client-side by createdAt descending
+                    ponds.sort((a, b) {
+                      final dataA = a.data() as Map<String, dynamic>;
+                      final dataB = b.data() as Map<String, dynamic>;
+                      final tA = dataA['createdAt'] as Timestamp?;
+                      final tB = dataB['createdAt'] as Timestamp?;
+                      if (tA == null || tB == null) return 0;
+                      return tB.compareTo(tA);
+                    });
+
                     return NotificationListener<ScrollNotification>(
                       onNotification: (ScrollNotification notification) {
                         if (notification is ScrollStartNotification ||

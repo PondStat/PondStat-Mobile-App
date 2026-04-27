@@ -80,7 +80,13 @@ class _ExpensesTabState extends State<ExpensesTab> {
               );
             }
 
-            final docs = expenseSnapshot.data?.docs ?? [];
+            final unsortedDocs = expenseSnapshot.data?.docs ?? [];
+            final docs = unsortedDocs.toList()..sort((a, b) {
+              final tA = a.data()['timestamp'] as Timestamp?;
+              final tB = b.data()['timestamp'] as Timestamp?;
+              if (tA == null || tB == null) return 0;
+              return tB.compareTo(tA);
+            });
             double totalGroupSpend = 0;
             for (var doc in docs) {
               totalGroupSpend +=

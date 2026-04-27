@@ -9,7 +9,6 @@ class DashboardRepository {
   Stream<QuerySnapshot> getUserPondsStream(String userId) {
     return FirestoreHelper.pondsCollection
         .where('memberIds', arrayContains: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
