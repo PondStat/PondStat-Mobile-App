@@ -41,11 +41,11 @@ class ParameterStats {
 }
 
 class TrendsDataService {
-  static Map<String, List<NormalizedTrendPoint>> getNormalizedPhysicalParameters(
+  static Map<String, List<NormalizedTrendPoint>> getNormalizedParameters(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
     String species,
+    List<String> targetParams,
   ) {
-    final targetParams = ['Temperature', 'Salinity', 'Transparency'];
     final Map<String, List<TrendDataPoint>> rawData = {};
 
     for (var doc in docs) {

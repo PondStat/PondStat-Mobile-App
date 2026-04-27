@@ -16,10 +16,26 @@ class _GrowthTabState extends State<GrowthTab> {
   final Color textDark = const Color(0xFF1E293B);
   final Color textMuted = const Color(0xFF64748B);
 
+  late Future<List<GrowthMetrics>> _growthMetricsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _growthMetricsFuture = GrowthDataService.calculateGrowthMetrics(widget.pondId);
+  }
+
+  @override
+  void didUpdateWidget(covariant GrowthTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pondId != widget.pondId) {
+      _growthMetricsFuture = GrowthDataService.calculateGrowthMetrics(widget.pondId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<GrowthMetrics>>(
-      future: GrowthDataService.calculateGrowthMetrics(widget.pondId),
+      future: _growthMetricsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -37,15 +53,36 @@ class _GrowthTabState extends State<GrowthTab> {
 
         final latest = metrics.first;
 
-        return ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          children: [
-            _buildSummaryGrid(latest),
-            const SizedBox(height: 24),
-            _buildSectionHeader("Growth History"),
-            const SizedBox(height: 12),
-            ...metrics.map((m) => _buildGrowthCard(m)),
-            const SizedBox(height: 100), // Spacing for FAB
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSummaryGrid(latest),
+                    const SizedBox(height: 24),
+                    _buildSectionHeader("Growth History"),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    return _buildGrowthCard(metrics[index]);
+                  },
+                  childCount: metrics.length,
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 100), // Spacing for FAB
+            ),
           ],
         );
       },

@@ -4,18 +4,41 @@ import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
-class ExpensesTab extends StatelessWidget {
+class ExpensesTab extends StatefulWidget {
   final String pondId;
   final bool canAdd;
 
   const ExpensesTab({super.key, required this.pondId, required this.canAdd});
 
   @override
-  Widget build(BuildContext context) {
-    final repository = MonitoringRepository();
+  State<ExpensesTab> createState() => _ExpensesTabState();
+}
 
+class _ExpensesTabState extends State<ExpensesTab> {
+  final MonitoringRepository repository = MonitoringRepository();
+  late Stream<DocumentSnapshot> _pondStream;
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _expensesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _pondStream = FirestoreHelper.pondsCollection.doc(widget.pondId).snapshots();
+    _expensesStream = repository.getExpensesStream(widget.pondId);
+  }
+
+  @override
+  void didUpdateWidget(covariant ExpensesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pondId != widget.pondId) {
+      _pondStream = FirestoreHelper.pondsCollection.doc(widget.pondId).snapshots();
+      _expensesStream = repository.getExpensesStream(widget.pondId);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirestoreHelper.pondsCollection.doc(pondId).snapshots(),
+      stream: _pondStream,
       builder: (context, pondSnapshot) {
         // Only show loader if we have NO data yet
         if (!pondSnapshot.hasData &&
@@ -36,7 +59,7 @@ class ExpensesTab extends StatelessWidget {
             : 1; // Avoid divide by zero
 
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: repository.getExpensesStream(pondId),
+          stream: _expensesStream,
           builder: (context, expenseSnapshot) {
             // Only show loader if we have NO data yet
             if (!expenseSnapshot.hasData &&
@@ -305,7 +328,7 @@ class ExpensesTab extends StatelessWidget {
                   ],
                 ),
               ),
-              if (canAdd)
+              if (widget.canAdd)
                 IconButton(
                   icon: Icon(
                     Icons.delete_outline_rounded,

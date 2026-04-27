@@ -24,28 +24,40 @@ class MeasurementListView extends StatefulWidget {
   @override
   State<MeasurementListView> createState() => _MeasurementListViewState();
 }
-
 class _MeasurementListViewState extends State<MeasurementListView> {
   String? _selectedFilter;
+  late Stream<QuerySnapshot> _measurementsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _initStream();
+  }
 
   @override
   void didUpdateWidget(covariant MeasurementListView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reset filter when changing tabs or dates
-    if (oldWidget.type != widget.type || oldWidget.dateKey != widget.dateKey) {
+    if (oldWidget.pondId != widget.pondId || 
+        oldWidget.type != widget.type || 
+        oldWidget.dateKey != widget.dateKey) {
+      _initStream();
       setState(() => _selectedFilter = null);
     }
+  }
+
+  void _initStream() {
+    _measurementsStream = FirestoreHelper.measurementsCollection
+        .where('pondId', isEqualTo: widget.pondId)
+        .where('type', isEqualTo: widget.type)
+        .where('dateKey', isEqualTo: widget.dateKey)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirestoreHelper.measurementsCollection
-          .where('pondId', isEqualTo: widget.pondId)
-          .where('type', isEqualTo: widget.type)
-          .where('dateKey', isEqualTo: widget.dateKey)
-          .orderBy('recordedAt', descending: true)
-          .snapshots(includeMetadataChanges: true),
+      stream: _measurementsStream,
       builder: (context, snapshot) {
         // Only show loader if we have NO data yet AND we are waiting
         if (!snapshot.hasData &&
