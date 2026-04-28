@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/monitoring_header.dart';
+import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
+import 'package:pondstat/features/monitoring/presentation/edit_history_sheet.dart';
+
 import 'overview_tab.dart';
 import 'water_quality_page.dart';
 import 'growth_page.dart';
@@ -44,6 +50,38 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
     _selectedDay = DateTime.utc(now.year, now.month, now.day);
   }
 
+  void _showProfileSheet() {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ProfileBottomSheet(
+        currentPondId: widget.pondId,
+        currentPondName: widget.pondName,
+        currentUserRole: widget.userRole,
+      ),
+    );
+  }
+
+  void _showEditHistory() {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => EditHistorySheet(
+          pondId: widget.pondId,
+          scrollController: scrollController,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
@@ -74,7 +112,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
           selectedDay: _selectedDay!,
         )
       else
-        const Scaffold(body: Center(child: Text("Please select a day from the Overview tab to view Water Quality"))),
+        const Scaffold(backgroundColor: Colors.transparent, body: Center(child: Text("Please select a day from the Overview tab"))),
       GrowthPage(
         pondId: widget.pondId,
         canEdit: canEdit,
@@ -91,9 +129,30 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: pages,
+      body: Stack(
+        children: [
+          const PondBackground(),
+          SafeArea(
+            child: Column(
+              children: [
+                MonitoringHeader(
+                  pondId: widget.pondId,
+                  onBackTap: () => Navigator.pop(context),
+                  onHistoryTap: _showEditHistory,
+                  onProfileTap: _showProfileSheet,
+                  primaryBlue: primaryBlue,
+                  secondaryBlue: secondaryBlue,
+                ),
+                Expanded(
+                  child: IndexedStack(
+                    index: _currentIndex,
+                    children: pages,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

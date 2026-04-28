@@ -20,7 +20,7 @@ class ExpensesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Expenses Management")),
+      backgroundColor: Colors.transparent,
       body: ExpensesTab(pondId: pondId, canAdd: canEdit),
       floatingActionButton: canEdit
           ? FloatingActionButton.extended(

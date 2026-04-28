@@ -15,16 +15,23 @@ class TrendsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Trends & Analysis"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share_rounded),
-            onPressed: () => _exportReport(context),
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          TrendsTab(pondId: pondId, species: species),
+          Positioned(
+            top: 8,
+            right: 20,
+            child: FloatingActionButton.small(
+              heroTag: 'export_btn',
+              backgroundColor: Colors.red.shade50,
+              elevation: 0,
+              onPressed: () => _exportReport(context),
+              child: Icon(Icons.ios_share_rounded, color: Colors.red.shade400),
+            ),
           ),
         ],
       ),
-      body: TrendsTab(pondId: pondId, species: species),
     );
   }
 }
