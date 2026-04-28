@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pondstat/features/monitoring/presentation/periodic_parameters_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/measurement_list_view.dart';
 import 'package:pondstat/features/monitoring/presentation/record_data_sheet.dart';
 import 'package:pondstat/core/utils/helpers.dart';
@@ -421,14 +420,6 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
   Widget _buildTabContent(String type, String dateKey) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 20, bottom: 8),
-          child: PeriodicParametersChart(
-            pondId: widget.pondId,
-            species: widget.species,
-            type: type,
-          ),
-        ),
         Expanded(
           child: MeasurementListView(
             pondId: widget.pondId,

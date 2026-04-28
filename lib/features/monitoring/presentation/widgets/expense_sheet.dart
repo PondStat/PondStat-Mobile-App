@@ -78,6 +78,10 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
       padding: EdgeInsets.only(
         top: 12,
         left: 24,
@@ -167,6 +171,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                       hint: "1",
                       prefixIcon: Icons.production_quantity_limits_rounded,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       onChanged: (_) => setState(() {}),
                       validator: (v) =>
                           int.tryParse(v ?? '') == null ? "Invalid" : null,
@@ -183,6 +188,9 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                      ],
                       onChanged: (_) => setState(() {}),
                       validator: (v) =>
                           double.tryParse(v ?? '') == null ? "Invalid" : null,

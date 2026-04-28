@@ -104,13 +104,24 @@ class TrendsDataService {
   ) {
     final Map<String, List<TrendDataPoint>> groupedData = {};
 
+    final excludedParams = [
+      'Feeding rate',
+      'Total feed consumed',
+      'Total weight gained',
+      'Total weight of fish sampled',
+      'Number of fish sampled',
+    ];
+
     for (var doc in docs) {
       final data = doc.data();
       final parameter = data['parameter'] as String?;
+      
+      if (parameter == null || excludedParams.contains(parameter)) continue;
+
       final value = (data['value'] as num?)?.toDouble();
       final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
 
-      if (parameter != null && value != null && timestamp != null) {
+      if (value != null && timestamp != null) {
         groupedData
             .putIfAbsent(parameter, () => [])
             .add(TrendDataPoint(timestamp, value));

@@ -5,10 +5,10 @@ import 'package:pondstat/features/monitoring/presentation/widgets/monitoring_hea
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_history_sheet.dart';
 
+import 'operations_page.dart';
 import 'overview_tab.dart';
 import 'water_quality_page.dart';
 import 'growth_page.dart';
-import 'expenses_page.dart';
 import 'trends_page.dart';
 
 class PondMonitoringScaffold extends StatefulWidget {
@@ -85,6 +85,20 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
+      OperationsPage(
+        pondId: widget.pondId,
+        pondName: widget.pondName,
+        userRole: widget.userRole,
+        canEdit: widget.userRole == 'owner',
+      ),
+      TrendsPage(
+        pondId: widget.pondId,
+        species: widget.species,
+      ),
+      GrowthPage(
+        pondId: widget.pondId,
+        canEdit: canEdit,
+      ),
       OverviewTab(
         pondId: widget.pondId,
         pondName: widget.pondName,
@@ -113,18 +127,6 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
         )
       else
         const Scaffold(backgroundColor: Colors.transparent, body: Center(child: Text("Please select a day from the Overview tab"))),
-      GrowthPage(
-        pondId: widget.pondId,
-        canEdit: canEdit,
-      ),
-      ExpensesPage(
-        pondId: widget.pondId,
-        canEdit: canEdit,
-      ),
-      TrendsPage(
-        pondId: widget.pondId,
-        species: widget.species,
-      ),
     ];
 
     return Scaffold(
@@ -180,24 +182,24 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
           elevation: 0,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_rounded),
-              label: "Overview",
+              icon: Icon(Icons.receipt_long_rounded),
+              label: "Operations",
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.water_drop_rounded),
-              label: "Water",
+              icon: Icon(Icons.analytics_rounded),
+              label: "Trends",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.trending_up_rounded),
               label: "Growth",
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_rounded),
-              label: "Expenses",
+              icon: Icon(Icons.dashboard_rounded),
+              label: "Overview",
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.analytics_rounded),
-              label: "Trends",
+              icon: Icon(Icons.water_drop_rounded),
+              label: "Water",
             ),
           ],
         ),
