@@ -141,6 +141,7 @@ class _FinancesTabState extends State<FinancesTab> {
       ),
       floatingActionButton: widget.canEdit
           ? FloatingActionButton.extended(
+              heroTag: 'finances_fab',
               onPressed: _handleFabPressed,
               backgroundColor: _selectedFilterIndex == 0 ? Colors.teal : Colors.grey.shade400,
               icon: Icon(
