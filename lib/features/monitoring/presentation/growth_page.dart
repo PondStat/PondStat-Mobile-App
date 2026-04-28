@@ -19,6 +19,7 @@ class GrowthPage extends StatelessWidget {
       body: GrowthTab(pondId: pondId),
       floatingActionButton: canEdit
           ? FloatingActionButton.extended(
+              heroTag: 'growth_fab',
               onPressed: () => _showRecordGrowth(context),
               backgroundColor: Colors.indigo.shade400,
               icon: const Icon(Icons.add_rounded, color: Colors.white),

@@ -129,6 +129,7 @@ class _SchedulesTabState extends State<SchedulesTab> {
       ),
       floatingActionButton: widget.canEdit
           ? FloatingActionButton.extended(
+              heroTag: 'schedules_fab',
               onPressed: _showAssignSheet,
               backgroundColor: primaryBlue,
               icon: const Icon(Icons.group_add_rounded, color: Colors.white),

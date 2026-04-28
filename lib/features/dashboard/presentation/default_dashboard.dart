@@ -739,6 +739,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
               ],
             ),
             child: FloatingActionButton.extended(
+              heroTag: 'dashboard_fab',
               onPressed: () {
                 HapticFeedback.mediumImpact();
                 _showCreatePondSheet(context);

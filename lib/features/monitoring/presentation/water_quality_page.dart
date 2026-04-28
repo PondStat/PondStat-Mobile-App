@@ -576,6 +576,7 @@ class _WaterQualityPageState extends State<WaterQualityPage>
       ),
       floatingActionButton: widget.canEdit
           ? FloatingActionButton.extended(
+              heroTag: 'water_quality_fab',
               onPressed: _showAddDataOverlay,
               icon: const Icon(Icons.add),
               label: const Text("Record Data"),
