@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/utils/helpers.dart';
-import 'package:pondstat/features/monitoring/presentation/unified_schedule_sheet.dart';
 
 class ManageCollaboratorsPage extends StatefulWidget {
   final String pondId;
@@ -486,39 +485,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                         color: textDark,
                       ),
                     ),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => UnifiedScheduleSheet(
-                            pondId: widget.pondId,
-                            pondName: widget.pondName,
-                            canEdit: true,
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.event_note_rounded, size: 16),
-                      label: const Text(
-                        "Schedule",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        foregroundColor: primaryBlue,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
+
                   ],
                 ),
               ),
