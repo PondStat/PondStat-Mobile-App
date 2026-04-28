@@ -555,7 +555,9 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                       final dataB = b.data() as Map<String, dynamic>;
                       final tA = dataA['createdAt'] as Timestamp?;
                       final tB = dataB['createdAt'] as Timestamp?;
-                      if (tA == null || tB == null) return 0;
+                      if (tA == null && tB == null) return 0;
+                      if (tA == null) return 1;
+                      if (tB == null) return -1;
                       return tB.compareTo(tA);
                     });
 

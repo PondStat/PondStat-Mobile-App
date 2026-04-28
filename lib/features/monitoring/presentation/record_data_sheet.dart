@@ -713,6 +713,16 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+            ] else if (selectedParameter!.maxVal != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                "Maximum: ${selectedParameter!.maxVal}",
+                style: TextStyle(
+                  color: textMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ],
         ),
