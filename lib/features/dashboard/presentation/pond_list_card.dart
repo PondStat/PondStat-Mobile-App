@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pondstat/features/monitoring/presentation/data_monitoring.dart';
+import 'package:pondstat/features/monitoring/presentation/pond_monitoring_scaffold.dart';
 
 class PondListCard extends StatefulWidget {
   final String pondId;
@@ -42,7 +42,7 @@ class _PondListCardState extends State<PondListCard> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MonitoringPage(
+        builder: (_) => PondMonitoringScaffold(
           pondId: widget.pondId,
           pondName: widget.pondName,
           userRole: widget.userRole,
