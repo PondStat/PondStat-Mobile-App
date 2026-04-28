@@ -149,7 +149,14 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                   );
                 }
 
-                final docs = snapshot.data?.docs ?? [];
+                var docs = snapshot.data?.docs.toList() ?? [];
+                docs.sort((a, b) {
+                  final tA = a.data()['editedAt'] as Timestamp?;
+                  final tB = b.data()['editedAt'] as Timestamp?;
+                  if (tA == null || tB == null) return 0;
+                  return tB.compareTo(tA);
+                });
+
                 if (docs.isEmpty) {
                   return Center(
                     child: Column(

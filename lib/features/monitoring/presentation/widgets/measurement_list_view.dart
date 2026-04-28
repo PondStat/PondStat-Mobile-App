@@ -94,12 +94,21 @@ class _MeasurementListViewState extends State<MeasurementListView> {
         }
         final filterOptions = uniqueParams.toList()..sort();
 
+        // Ensure selected filter is still valid after data changes (e.g. deletion)
+        if (_selectedFilter != null && !filterOptions.contains(_selectedFilter)) {
+           // Schedule the state change to avoid calling setState during build
+           WidgetsBinding.instance.addPostFrameCallback((_) {
+             if (mounted) setState(() => _selectedFilter = null);
+           });
+        }
+
         // 2. Filter the documents
-        final filteredDocs = _selectedFilter == null
+        final activeFilter = _selectedFilter != null && filterOptions.contains(_selectedFilter) ? _selectedFilter : null;
+        final filteredDocs = activeFilter == null
             ? sortedDocs
             : sortedDocs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
-                return data['parameter'] == _selectedFilter;
+                return data['parameter'] == activeFilter;
               }).toList();
 
         return Column(
@@ -159,6 +168,7 @@ class _MeasurementListViewState extends State<MeasurementListView> {
   }
 
   Widget _buildFilterChip(String label, String? filterValue) {
+    // We know filterValue might be null (for 'All') or a string.
     final isSelected = _selectedFilter == filterValue;
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),

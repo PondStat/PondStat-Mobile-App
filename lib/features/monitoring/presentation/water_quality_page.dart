@@ -127,7 +127,8 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
               style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
     if (confirm != true) return;
@@ -239,6 +240,7 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
     List<String> points,
     List<int> replicates, {
     bool isSinglePoint = false,
+    required void Function(VoidCallback) setDialogState,
   }) {
     final data = doc.data() as Map<String, dynamic>;
     return Padding(
@@ -259,6 +261,7 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
                   Expanded(
                     child: TextField(
                       controller: controllers['A-1'],
+                      onChanged: (_) => setDialogState(() {}),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(
                         labelText: 'Value',
@@ -292,6 +295,7 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
                               padding: EdgeInsets.only(right: rIdx < replicates.length - 1 ? 8 : 0),
                               child: TextField(
                                 controller: controllers['${points[pIdx]}-${replicates[rIdx]}'],
+                                onChanged: (_) => setDialogState(() {}),
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(fontWeight: FontWeight.w600),
@@ -343,7 +347,8 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -374,26 +379,28 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Edit Measurements', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final paramItem = MonitoringParameters.getParameterByLabel(data['parameter'], widget.species);
-            return _buildEditReplicateGroup(
-              doc,
-              groupControllers[doc.id]!,
-              notesControllers[doc.id]!,
-              points,
-              replicates,
-              isSinglePoint: paramItem?.isSinglePoint ?? false,
-            );
-          }).toList(),
-        ),
-        actions: [
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          scrollable: true,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Edit Measurements', style: TextStyle(fontWeight: FontWeight.w800)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final paramItem = MonitoringParameters.getParameterByLabel(data['parameter'], widget.species);
+              return _buildEditReplicateGroup(
+                doc,
+                groupControllers[doc.id]!,
+                notesControllers[doc.id]!,
+                points,
+                replicates,
+                isSinglePoint: paramItem?.isSinglePoint ?? false,
+                setDialogState: setDialogState,
+              );
+            }).toList(),
+          ),
+          actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
@@ -412,7 +419,8 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
             onPressed: () => _handleBatchUpdateWithReplicates(docs, groupControllers, notesControllers, points, replicates),
             child: const Text("Update", style: TextStyle(fontWeight: FontWeight.bold)),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
