@@ -44,7 +44,7 @@ class PondStatDropdownField<T> extends StatelessWidget {
           ),
         ),
         DropdownButtonFormField<T>(
-          value: value,
+          initialValue: value,
           isExpanded: true,
           icon: Icon(
             Icons.keyboard_arrow_down_rounded,

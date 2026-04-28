@@ -190,7 +190,7 @@ class MonitoringRepository {
           'value': avg,
           'pointValues': newPointValues,
           'replicateValues': newReplicateValues,
-          if (newNote != null) 'notes': newNote,
+          'notes': ?newNote,
         },
       );
     }
