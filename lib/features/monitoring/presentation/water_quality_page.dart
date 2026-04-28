@@ -27,7 +27,8 @@ class WaterQualityPage extends StatefulWidget {
   State<WaterQualityPage> createState() => _WaterQualityPageState();
 }
 
-class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerProviderStateMixin {
+class _WaterQualityPageState extends State<WaterQualityPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final MonitoringRepository _repository = MonitoringRepository();
   final SafetyService _safetyService = SafetyService();
@@ -70,7 +71,10 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
         notes: notes,
       );
 
-      final parameterItem = MonitoringParameters.getParameterByLabel(label, widget.species);
+      final parameterItem = MonitoringParameters.getParameterByLabel(
+        label,
+        widget.species,
+      );
       if (parameterItem != null) {
         await _safetyService.checkAndNotify(
           parameter: parameterItem,
@@ -80,7 +84,11 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
       }
 
       if (mounted) {
-        SnackbarHelper.show(context, "Data recorded", backgroundColor: Colors.green);
+        SnackbarHelper.show(
+          context,
+          "Data recorded",
+          backgroundColor: Colors.green,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -127,10 +135,10 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
               style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
           ),
-          ],
-        ),
+        ],
       ),
     );
+
     if (confirm != true) return;
 
     try {
@@ -167,7 +175,9 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
       Map<String, List<double>> newReplicateValues = {};
 
       final newNote = notesControllers[doc.id]?.text.trim();
-      updatedNotes[doc.id] = newNote != null && newNote.isNotEmpty ? newNote : null;
+      updatedNotes[doc.id] = newNote != null && newNote.isNotEmpty
+          ? newNote
+          : null;
 
       for (var p in points) {
         final replicatesList = <double>[];
@@ -182,7 +192,8 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
         if (replicatesList.isNotEmpty) {
           newReplicateValues[p] = replicatesList;
           final avg = double.parse(
-            (replicatesList.reduce((a, b) => a + b) / replicatesList.length).toStringAsFixed(2),
+            (replicatesList.reduce((a, b) => a + b) / replicatesList.length)
+                .toStringAsFixed(2),
           );
           newPointValues[p] = avg;
         }
@@ -204,10 +215,16 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
       );
       if (mounted) {
         Navigator.pop(context);
-        SnackbarHelper.show(context, "Measurements updated", backgroundColor: Colors.green);
+        SnackbarHelper.show(
+          context,
+          "Measurements updated",
+          backgroundColor: Colors.green,
+        );
       }
     } catch (e) {
-      if (mounted) SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+      if (mounted) {
+        SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+      }
     }
   }
 
@@ -250,7 +267,11 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
         children: [
           Text(
             "${data['parameter']} (${data['unit'] ?? ''})",
-            style: TextStyle(fontWeight: FontWeight.bold, color: primaryBlue, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: primaryBlue,
+              fontSize: 16,
+            ),
           ),
           const SizedBox(height: 16),
           if (isSinglePoint)
@@ -262,11 +283,16 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
                     child: TextField(
                       controller: controllers['A-1'],
                       onChanged: (_) => setDialogState(() {}),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: const InputDecoration(
                         labelText: 'Value',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ),
@@ -276,7 +302,9 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
           else
             for (int pIdx = 0; pIdx < points.length; pIdx++)
               Padding(
-                padding: EdgeInsets.only(bottom: pIdx < points.length - 1 ? 20 : 0),
+                padding: EdgeInsets.only(
+                  bottom: pIdx < points.length - 1 ? 20 : 0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -284,7 +312,11 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Text(
                         "Point ${points[pIdx]}",
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.grey.shade700),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                        ),
                       ),
                     ),
                     Row(
@@ -292,13 +324,21 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
                         for (int rIdx = 0; rIdx < replicates.length; rIdx++)
                           Expanded(
                             child: Padding(
-                              padding: EdgeInsets.only(right: rIdx < replicates.length - 1 ? 8 : 0),
+                              padding: EdgeInsets.only(
+                                right: rIdx < replicates.length - 1 ? 8 : 0,
+                              ),
                               child: TextField(
-                                controller: controllers['${points[pIdx]}-${replicates[rIdx]}'],
+                                controller:
+                                    controllers['${points[pIdx]}-${replicates[rIdx]}'],
                                 onChanged: (_) => setDialogState(() {}),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                                 decoration: InputDecoration(
                                   labelText: "R${replicates[rIdx]}",
                                   isDense: true,
@@ -306,7 +346,9 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
                                   fillColor: Colors.grey.shade50,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(color: Colors.grey.shade200),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade200,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -316,19 +358,39 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: primaryBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: primaryBlue.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: primaryBlue.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text("Avg:", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey.shade600)),
                           Text(
-                            _calculateEditReplicateAverage(controllers, points[pIdx], replicates),
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: primaryBlue),
+                            "Avg:",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          Text(
+                            _calculateEditReplicateAverage(
+                              controllers,
+                              points[pIdx],
+                              replicates,
+                            ),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: primaryBlue,
+                            ),
                           ),
                         ],
                       ),
@@ -344,11 +406,13 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
               labelText: 'Notes or Findings (Optional)',
               alignLabelWithHint: true,
               border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
             ),
           ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -363,15 +427,20 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
 
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final replicateValuesMap = data['replicateValues'] as Map<String, dynamic>? ?? {};
+      final replicateValuesMap =
+          data['replicateValues'] as Map<String, dynamic>? ?? {};
       groupControllers[doc.id] = {};
-      notesControllers[doc.id] = TextEditingController(text: data['notes'] as String? ?? '');
+      notesControllers[doc.id] = TextEditingController(
+        text: data['notes'] as String? ?? '',
+      );
 
       for (var p in points) {
         for (var r in replicates) {
           final key = '$p-$r';
           final replicatesList = replicateValuesMap[p] as List<dynamic>? ?? [];
-          final value = r <= replicatesList.length ? replicatesList[r - 1].toString() : '';
+          final value = r <= replicatesList.length
+              ? replicatesList[r - 1].toString()
+              : '';
           groupControllers[doc.id]![key] = TextEditingController(text: value);
         }
       }
@@ -382,13 +451,21 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           scrollable: true,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Edit Measurements', style: TextStyle(fontWeight: FontWeight.w800)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: const Text(
+            'Edit Measurements',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: docs.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
-              final paramItem = MonitoringParameters.getParameterByLabel(data['parameter'], widget.species);
+              final paramItem = MonitoringParameters.getParameterByLabel(
+                data['parameter'],
+                widget.species,
+              );
               return _buildEditReplicateGroup(
                 doc,
                 groupControllers[doc.id]!,
@@ -401,24 +478,47 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
             }).toList(),
           ),
           actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-          ),
-          TextButton(
-            onPressed: () => _handleBatchDelete(docs),
-            child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 0,
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-            onPressed: () => _handleBatchUpdateWithReplicates(docs, groupControllers, notesControllers, points, replicates),
-            child: const Text("Update", style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
+            TextButton(
+              onPressed: () => _handleBatchDelete(docs),
+              child: const Text(
+                "Delete",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () => _handleBatchUpdateWithReplicates(
+                docs,
+                groupControllers,
+                notesControllers,
+                points,
+                replicates,
+              ),
+              child: const Text(
+                "Update",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
       ),
@@ -444,7 +544,8 @@ class _WaterQualityPageState extends State<WaterQualityPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final dateKey = "${widget.selectedDay.year}-${widget.selectedDay.month}-${widget.selectedDay.day}";
+    final dateKey =
+        "${widget.selectedDay.year}-${widget.selectedDay.month}-${widget.selectedDay.day}";
 
     return Scaffold(
       backgroundColor: Colors.transparent,
