@@ -4,27 +4,25 @@ import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/presentation/trends_data_service.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
-class ChemicalParametersChartTwo extends StatefulWidget {
+class BiologicalParametersChart extends StatefulWidget {
   final Map<String, List<NormalizedTrendPoint>> normalizedData;
   final String species;
 
-  const ChemicalParametersChartTwo({
+  const BiologicalParametersChart({
     super.key,
     required this.normalizedData,
     required this.species,
   });
 
   @override
-  State<ChemicalParametersChartTwo> createState() =>
-      _ChemicalParametersChartTwoState();
+  State<BiologicalParametersChart> createState() =>
+      _BiologicalParametersChartState();
 }
 
-class _ChemicalParametersChartTwoState
-    extends State<ChemicalParametersChartTwo> {
+class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
   final Map<String, bool> _visibleParameters = {
-    'Magnesium': true,
-    'Calcium': true,
-    'Total Alkalinity': true,
+    'Phytoplankton': true,
+    'Bacterial': true,
   };
 
   @override
@@ -57,21 +55,12 @@ class _ChemicalParametersChartTwoState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "CHEMICAL PARAMETERS",
+            "BIOLOGICAL PARAMETERS",
             style: TextStyle(
               color: Colors.blueGrey,
               fontWeight: FontWeight.w900,
               fontSize: 12,
               letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "Minerals & Alkalinity",
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.grey.shade800,
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
             ),
           ),
           const SizedBox(height: 24),

@@ -4,23 +4,22 @@ import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/presentation/trends_data_service.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
-class ChemicalParametersChartOne extends StatefulWidget {
+class ChemicalParametersChart extends StatefulWidget {
   final Map<String, List<NormalizedTrendPoint>> normalizedData;
   final String species;
 
-  const ChemicalParametersChartOne({
+  const ChemicalParametersChart({
     super.key,
     required this.normalizedData,
     required this.species,
   });
 
   @override
-  State<ChemicalParametersChartOne> createState() =>
-      _ChemicalParametersChartOneState();
+  State<ChemicalParametersChart> createState() =>
+      _ChemicalParametersChartState();
 }
 
-class _ChemicalParametersChartOneState
-    extends State<ChemicalParametersChartOne> {
+class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
   final Map<String, bool> _visibleParameters = {
     'pH Level': true,
     'Dissolved Oxygen': true,
@@ -28,6 +27,9 @@ class _ChemicalParametersChartOneState
     'Nitrite': true,
     'Ammonia': true,
     'Carbon dioxide': true,
+    'Magnesium': true,
+    'Calcium': true,
+    'Total Alkalinity': true,
   };
 
   @override
@@ -66,15 +68,6 @@ class _ChemicalParametersChartOneState
               fontWeight: FontWeight.w900,
               fontSize: 12,
               letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "pH, DO, Nitrogen & CO2",
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.grey.shade800,
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
             ),
           ),
           const SizedBox(height: 24),
