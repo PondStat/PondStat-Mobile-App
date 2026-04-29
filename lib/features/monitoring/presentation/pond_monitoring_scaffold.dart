@@ -96,7 +96,6 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
         species: widget.species,
         userRole: widget.userRole,
       ),
-      GrowthPage(pondId: widget.pondId, canEdit: canEdit),
       OverviewTab(
         pondId: widget.pondId,
         pondName: widget.pondName,
@@ -119,6 +118,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
         primaryBlue: primaryBlue,
         secondaryBlue: secondaryBlue,
       ),
+      GrowthPage(pondId: widget.pondId, canEdit: canEdit),
       if (_selectedDay != null)
         WaterQualityPage(
           pondId: widget.pondId,
@@ -200,12 +200,12 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
               label: "Trends",
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.trending_up_rounded),
-              label: "Growth",
-            ),
-            BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_rounded),
               label: "Overview",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.trending_up_rounded),
+              label: "Growth",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.water_drop_rounded),
