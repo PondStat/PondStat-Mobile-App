@@ -20,7 +20,7 @@ class DashboardRepository {
     required String userId,
   }) async {
     final newPondRef = FirestoreHelper.pondsCollection.doc();
-    
+
     await newPondRef.set({
       'name': name,
       'species': species,
@@ -41,7 +41,7 @@ class DashboardRepository {
     required int targetCulturePeriodDays,
   }) async {
     final pondRef = FirestoreHelper.pondsCollection.doc(pondId);
-    
+
     await pondRef.update({
       'name': name,
       'species': species,

@@ -1,5 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:csv/csv.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/features/monitoring/presentation/trends_tab.dart';
 import 'package:pondstat/features/monitoring/presentation/periodic_parameters_chart.dart';
 import 'package:pondstat/core/utils/helpers.dart';
@@ -34,7 +40,11 @@ class _TrendsPageState extends State<TrendsPage> {
 
   Future<void> _selectDateRange(BuildContext context) async {
     if (widget.userRole != 'owner') {
-      SnackbarHelper.show(context, "Only the owner can set the date range.", backgroundColor: Colors.orange.shade600);
+      SnackbarHelper.show(
+        context,
+        "Only the owner can set the date range.",
+        backgroundColor: Colors.orange.shade600,
+      );
       return;
     }
 
@@ -58,7 +68,7 @@ class _TrendsPageState extends State<TrendsPage> {
       },
     );
 
-    if (picked != null && 
+    if (picked != null &&
         (picked.start != _startDate || picked.end != _endDate)) {
       setState(() {
         _startDate = picked.start;
@@ -67,8 +77,75 @@ class _TrendsPageState extends State<TrendsPage> {
     }
   }
 
-  void _exportReport(BuildContext context) {
-    SnackbarHelper.show(context, "Export functionality coming soon", backgroundColor: Colors.red.shade400);
+  Future<void> _exportReport(BuildContext context) async {
+    try {
+      SnackbarHelper.show(context, "Generating report...");
+
+      final querySnapshot = await FirestoreHelper.getMeasurementsByDateRange(
+        widget.pondId,
+        _startDate,
+        _endDate,
+      ).get();
+
+      if (querySnapshot.docs.isEmpty) {
+        if (!context.mounted) return;
+        SnackbarHelper.show(
+          context,
+          "No data to export for this date range.",
+          backgroundColor: Colors.orange.shade600,
+        );
+        return;
+      }
+
+      List<List<dynamic>> rows = [
+        ["Date", "Time", "Type", "Parameter", "Value", "Unit"],
+      ];
+
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data();
+        final ts =
+            (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final dateStr = DateFormat('yyyy-MM-dd').format(ts);
+        final timeStr = DateFormat('HH:mm').format(ts);
+        final type = data['type']?.toString() ?? 'N/A';
+        final parameter = data['parameter']?.toString() ?? 'N/A';
+        final value = data['value']?.toString() ?? 'N/A';
+        final unit = data['unit']?.toString() ?? '';
+
+        rows.add([dateStr, timeStr, type, parameter, value, unit]);
+      }
+
+      String csvData = csv.encode(rows);
+
+      final directory = await getTemporaryDirectory();
+      final path =
+          '${directory.path}/PondStat_Report_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv';
+      final file = File(path);
+      await file.writeAsString(csvData);
+
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(path)],
+          text: 'PondStat Water Quality Report',
+        ),
+      );
+
+      if (result.status == ShareResultStatus.success) {
+        if (!context.mounted) return;
+        SnackbarHelper.show(
+          context,
+          "Report exported successfully!",
+          backgroundColor: Colors.green,
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      SnackbarHelper.show(
+        context,
+        "Failed to export report: $e",
+        backgroundColor: Colors.red.shade600,
+      );
+    }
   }
 
   Widget _buildDateRangeSelector(BuildContext context) {
@@ -87,23 +164,25 @@ class _TrendsPageState extends State<TrendsPage> {
             color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isOwner 
+              color: isOwner
                   ? const Color(0xFF0A74DA).withValues(alpha: 0.3)
                   : Colors.grey.withValues(alpha: 0.2),
             ),
-            boxShadow: isDark ? [] : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow: isDark
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.date_range_rounded, 
+                Icons.date_range_rounded,
                 color: isOwner ? const Color(0xFF0A74DA) : Colors.grey,
                 size: 20,
               ),
@@ -113,7 +192,9 @@ class _TrendsPageState extends State<TrendsPage> {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
-                  color: isOwner ? (isDark ? Colors.white : Colors.black87) : Colors.grey,
+                  color: isOwner
+                      ? (isDark ? Colors.white : Colors.black87)
+                      : Colors.grey,
                 ),
               ),
               if (!isOwner) ...[
@@ -136,8 +217,7 @@ class _TrendsPageState extends State<TrendsPage> {
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight),
           child: TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
+            isScrollable: false,
             labelColor: const Color(0xFF0A74DA),
             unselectedLabelColor: Colors.grey.shade400,
             indicatorColor: const Color(0xFF0A74DA),
@@ -145,7 +225,7 @@ class _TrendsPageState extends State<TrendsPage> {
               Tab(text: "Daily"),
               Tab(text: "Weekly"),
               Tab(text: "Biweekly"),
-              Tab(text: "Historical"),
+              Tab(text: "Final"),
             ],
           ),
         ),
@@ -160,39 +240,62 @@ class _TrendsPageState extends State<TrendsPage> {
                       SingleChildScrollView(
                         child: Padding(
                           padding: const EdgeInsets.only(top: 12),
-                          child: PeriodicParametersChart(pondId: widget.pondId, species: widget.species, type: 'daily', startDate: _startDate, endDate: _endDate),
+                          child: PeriodicParametersChart(
+                            pondId: widget.pondId,
+                            species: widget.species,
+                            type: 'daily',
+                            startDate: _startDate,
+                            endDate: _endDate,
+                          ),
                         ),
                       ),
                       SingleChildScrollView(
                         child: Padding(
                           padding: const EdgeInsets.only(top: 12),
-                          child: PeriodicParametersChart(pondId: widget.pondId, species: widget.species, type: 'weekly', startDate: _startDate, endDate: _endDate),
+                          child: PeriodicParametersChart(
+                            pondId: widget.pondId,
+                            species: widget.species,
+                            type: 'weekly',
+                            startDate: _startDate,
+                            endDate: _endDate,
+                          ),
                         ),
                       ),
                       SingleChildScrollView(
                         child: Padding(
                           padding: const EdgeInsets.only(top: 12),
-                          child: PeriodicParametersChart(pondId: widget.pondId, species: widget.species, type: 'biweekly', startDate: _startDate, endDate: _endDate),
+                          child: PeriodicParametersChart(
+                            pondId: widget.pondId,
+                            species: widget.species,
+                            type: 'biweekly',
+                            startDate: _startDate,
+                            endDate: _endDate,
+                          ),
                         ),
                       ),
-                      TrendsTab(pondId: widget.pondId, species: widget.species, userRole: widget.userRole, startDate: _startDate, endDate: _endDate),
+                      TrendsTab(
+                        pondId: widget.pondId,
+                        species: widget.species,
+                        userRole: widget.userRole,
+                        startDate: _startDate,
+                        endDate: _endDate,
+                      ),
                     ],
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 20,
-                    child: FloatingActionButton.small(
-                      heroTag: 'export_btn',
-                      backgroundColor: Colors.red.shade50,
-                      elevation: 0,
-                      onPressed: () => _exportReport(context),
-                      child: Icon(Icons.ios_share_rounded, color: Colors.red.shade400),
-                    ),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          heroTag: 'export_btn',
+          onPressed: () => _exportReport(context),
+          backgroundColor: const Color(0xFF0A74DA),
+          icon: const Icon(Icons.ios_share_rounded, color: Colors.white),
+          label: const Text(
+            "Export CSV",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );

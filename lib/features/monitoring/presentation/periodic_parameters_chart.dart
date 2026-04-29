@@ -32,7 +32,8 @@ class PeriodicParametersChart extends StatefulWidget {
   });
 
   @override
-  State<PeriodicParametersChart> createState() => _PeriodicParametersChartState();
+  State<PeriodicParametersChart> createState() =>
+      _PeriodicParametersChartState();
 }
 
 class _PeriodicParametersChartState extends State<PeriodicParametersChart>
@@ -42,7 +43,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
 
   // Cache the active stream so it is not recreated on every build/setState.
   Stream<List<_DailyRecord>>? _cachedStream;
-  String? _cachedStreamParamLabel; // tracks which param the cached stream belongs to
+  String?
+  _cachedStreamParamLabel; // tracks which param the cached stream belongs to
 
   @override
   void initState() {
@@ -55,7 +57,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     } else {
       paramsToUse = MonitoringParameters.getDailyParameters(widget.species);
     }
-    
+
     final excludedParams = [
       'Feeding rate',
       'Total feed consumed',
@@ -64,7 +66,9 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
       'Number of fish sampled',
     ];
 
-    _baseParams = paramsToUse.where((p) => !excludedParams.contains(p.label)).toList();
+    _baseParams = paramsToUse
+        .where((p) => !excludedParams.contains(p.label))
+        .toList();
     final firstRangeIdx = _baseParams.indexWhere((p) => !p.isSinglePoint);
     if (firstRangeIdx != -1) _selectedIndex = firstRangeIdx;
   }
@@ -72,7 +76,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
   @override
   void didUpdateWidget(covariant PeriodicParametersChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.startDate != widget.startDate || oldWidget.endDate != widget.endDate) {
+    if (oldWidget.startDate != widget.startDate ||
+        oldWidget.endDate != widget.endDate) {
       _cachedStream = null;
       _cachedStreamParamLabel = null;
     }
@@ -85,22 +90,33 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     }
 
     _cachedStreamParamLabel = param.label;
-    final endOfDay = DateTime(widget.endDate.year, widget.endDate.month, widget.endDate.day, 23, 59, 59);
+    final endOfDay = DateTime(
+      widget.endDate.year,
+      widget.endDate.month,
+      widget.endDate.day,
+      23,
+      59,
+      59,
+    );
 
     _cachedStream = FirestoreHelper.measurementsCollection
         .where('pondId', isEqualTo: widget.pondId)
         .where('type', isEqualTo: widget.type)
         .where('parameter', isEqualTo: param.label)
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(widget.startDate))
+        .where(
+          'timestamp',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(widget.startDate),
+        )
         .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
         .snapshots()
         .map((snap) {
-          final sortedDocs = snap.docs.toList()..sort((a, b) {
-            final tA = a.data()['timestamp'] as Timestamp?;
-            final tB = b.data()['timestamp'] as Timestamp?;
-            if (tA == null || tB == null) return 0;
-            return tB.compareTo(tA); // descending
-          });
+          final sortedDocs = snap.docs.toList()
+            ..sort((a, b) {
+              final tA = a.data()['timestamp'] as Timestamp?;
+              final tB = b.data()['timestamp'] as Timestamp?;
+              if (tA == null || tB == null) return 0;
+              return tB.compareTo(tA); // descending
+            });
 
           // Show all items from this date range (in chronological order for the chart)
           final limitedDocs = sortedDocs.reversed.toList();
@@ -112,8 +128,9 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
             final avg = (data['value'] as num?)?.toDouble() ?? 0.0;
             final rawPoints =
                 (data['pointValues'] as Map<String, dynamic>?) ?? {};
-            final points = rawPoints
-                .map((k, v) => MapEntry(k, (v as num).toDouble()));
+            final points = rawPoints.map(
+              (k, v) => MapEntry(k, (v as num).toDouble()),
+            );
             return _DailyRecord(
               timestamp: ts,
               averageValue: avg,
@@ -128,7 +145,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('pondstat-app-v1')
@@ -138,16 +155,18 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           .snapshots(),
       builder: (context, snapshot) {
         List<ParameterItem> allParams = List.from(_baseParams);
-        
+
         if (snapshot.hasData) {
           for (var doc in snapshot.data!.docs) {
             final data = doc.data() as Map<String, dynamic>;
-            allParams.add(ParameterItem(
-              label: data['label'],
-              unit: data['unit'] ?? '',
-              icon: Icons.dashboard_customize_rounded,
-              color: Colors.blueGrey,
-            ));
+            allParams.add(
+              ParameterItem(
+                label: data['label'],
+                unit: data['unit'] ?? '',
+                icon: Icons.dashboard_customize_rounded,
+                color: Colors.blueGrey,
+              ),
+            );
           }
         }
 
@@ -186,16 +205,19 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               color: theme.colorScheme.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.show_chart_rounded,
-                color: theme.colorScheme.primary, size: 20),
+            child: Icon(
+              Icons.show_chart_rounded,
+              color: theme.colorScheme.primary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Text(
             widget.type == 'daily'
                 ? 'Daily Trends'
                 : widget.type == 'weekly'
-                    ? 'Weekly Trends'
-                    : 'Biweekly Trends',
+                ? 'Weekly Trends'
+                : 'Biweekly Trends',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -203,28 +225,16 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               color: theme.colorScheme.onSurface,
             ),
           ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Last 30 readings',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildParamTabBar(ThemeData theme, bool isDark, List<ParameterItem> params) {
+  Widget _buildParamTabBar(
+    ThemeData theme,
+    bool isDark,
+    List<ParameterItem> params,
+  ) {
     return SizedBox(
       height: 42,
       child: ListView.separated(
@@ -248,14 +258,13 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: selected
                     ? param.color
                     : (isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.grey.shade100),
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.grey.shade100),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: selected
                     ? [
@@ -263,20 +272,20 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                           color: param.color.withValues(alpha: 0.35),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
-                        )
+                        ),
                       ]
                     : [],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(param.icon,
-                      size: 14,
-                      color: selected
-                          ? Colors.white
-                          : (isDark
-                              ? Colors.white54
-                              : Colors.grey.shade600)),
+                  Icon(
+                    param.icon,
+                    size: 14,
+                    color: selected
+                        ? Colors.white
+                        : (isDark ? Colors.white54 : Colors.grey.shade600),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     param.label,
@@ -285,9 +294,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                       fontWeight: FontWeight.w700,
                       color: selected
                           ? Colors.white
-                          : (isDark
-                              ? Colors.white54
-                              : Colors.grey.shade700),
+                          : (isDark ? Colors.white54 : Colors.grey.shade700),
                     ),
                   ),
                 ],
@@ -299,7 +306,11 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     );
   }
 
-  Widget _buildChartArea(ThemeData theme, bool isDark, List<ParameterItem> params) {
+  Widget _buildChartArea(
+    ThemeData theme,
+    bool isDark,
+    List<ParameterItem> params,
+  ) {
     if (params.isEmpty) return const SizedBox.shrink();
     final param = params[_selectedIndex];
     return StreamBuilder<List<_DailyRecord>>(
@@ -309,7 +320,9 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         if (snap.connectionState == ConnectionState.waiting) {
           return _buildLoadingCard(isDark, param.color);
         }
-        if (snap.hasError) return _buildErrorCard(snap.error.toString(), isDark);
+        if (snap.hasError) {
+          return _buildErrorCard(snap.error.toString(), isDark);
+        }
         final records = snap.data ?? [];
         if (records.isEmpty) return _buildEmptyCard(param, isDark);
         return Padding(
@@ -319,9 +332,10 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               _buildStatRow(records, param, theme, isDark),
               const SizedBox(height: 16),
               _buildCard(
-                  isDark: isDark,
-                  color: param.color,
-                  child: _buildLineChart(records, param, isDark)),
+                isDark: isDark,
+                color: param.color,
+                child: _buildLineChart(records, param, isDark),
+              ),
               if (!param.isSinglePoint &&
                   (param.minVal != null || param.maxVal != null)) ...[
                 const SizedBox(height: 8),
@@ -334,8 +348,12 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     );
   }
 
-  Widget _buildStatRow(List<_DailyRecord> records, ParameterItem param,
-      ThemeData theme, bool isDark) {
+  Widget _buildStatRow(
+    List<_DailyRecord> records,
+    ParameterItem param,
+    ThemeData theme,
+    bool isDark,
+  ) {
     final values = records.map((r) => r.averageValue).toList();
     final latest = values.last;
     final min = values.reduce((a, b) => a < b ? a : b);
@@ -345,29 +363,33 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     return Row(
       children: [
         _buildStatChip(
-            label: 'Latest',
-            value: '${latest.toStringAsFixed(2)}$unit',
-            color: param.color,
-            isDark: isDark,
-            isHighlighted: true),
+          label: 'Latest',
+          value: '${latest.toStringAsFixed(2)}$unit',
+          color: param.color,
+          isDark: isDark,
+          isHighlighted: true,
+        ),
         const SizedBox(width: 8),
         _buildStatChip(
-            label: 'Avg',
-            value: '${avg.toStringAsFixed(2)}$unit',
-            color: param.color,
-            isDark: isDark),
+          label: 'Avg',
+          value: '${avg.toStringAsFixed(2)}$unit',
+          color: param.color,
+          isDark: isDark,
+        ),
         const SizedBox(width: 8),
         _buildStatChip(
-            label: 'Min',
-            value: '${min.toStringAsFixed(2)}$unit',
-            color: param.color,
-            isDark: isDark),
+          label: 'Min',
+          value: '${min.toStringAsFixed(2)}$unit',
+          color: param.color,
+          isDark: isDark,
+        ),
         const SizedBox(width: 8),
         _buildStatChip(
-            label: 'Max',
-            value: '${max.toStringAsFixed(2)}$unit',
-            color: param.color,
-            isDark: isDark),
+          label: 'Max',
+          value: '${max.toStringAsFixed(2)}$unit',
+          color: param.color,
+          isDark: isDark,
+        ),
       ],
     );
   }
@@ -386,8 +408,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           color: isHighlighted
               ? color.withValues(alpha: 0.12)
               : (isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.grey.shade50),
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey.shade50),
           borderRadius: BorderRadius.circular(14),
           border: isHighlighted
               ? Border.all(color: color.withValues(alpha: 0.3), width: 1.5)
@@ -395,24 +417,30 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         ),
         child: Column(
           children: [
-            Text(label,
-                style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: isHighlighted
-                        ? color
-                        : (isDark ? Colors.white38 : Colors.grey.shade500),
-                    letterSpacing: 0.5)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: isHighlighted
+                    ? color
+                    : (isDark ? Colors.white38 : Colors.grey.shade500),
+                letterSpacing: 0.5,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: isHighlighted
-                        ? color
-                        : (isDark ? Colors.white70 : Colors.grey.shade800)),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: isHighlighted
+                    ? color
+                    : (isDark ? Colors.white70 : Colors.grey.shade800),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),
@@ -420,7 +448,10 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
   }
 
   Widget _buildLineChart(
-      List<_DailyRecord> records, ParameterItem param, bool isDark) {
+    List<_DailyRecord> records,
+    ParameterItem param,
+    bool isDark,
+  ) {
     final spots = records
         .asMap()
         .entries
@@ -441,157 +472,176 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
 
     List<HorizontalLine> extraLines = [];
     if (param.minVal != null) {
-      extraLines.add(HorizontalLine(
-        y: param.minVal!,
-        color: Colors.green.withValues(alpha: 0.6),
-        strokeWidth: 1.5,
-        dashArray: [6, 4],
-        label: HorizontalLineLabel(
-          show: true,
-          alignment: Alignment.topRight,
-          padding: const EdgeInsets.only(right: 4, bottom: 2),
-          style: TextStyle(
+      extraLines.add(
+        HorizontalLine(
+          y: param.minVal!,
+          color: Colors.green.withValues(alpha: 0.6),
+          strokeWidth: 1.5,
+          dashArray: [6, 4],
+          label: HorizontalLineLabel(
+            show: true,
+            alignment: Alignment.topRight,
+            padding: const EdgeInsets.only(right: 4, bottom: 2),
+            style: TextStyle(
               color: Colors.green.shade600,
               fontWeight: FontWeight.w700,
-              fontSize: 10),
-          labelResolver: (line) => 'Min ${line.y}',
+              fontSize: 10,
+            ),
+            labelResolver: (line) => 'Min ${line.y}',
+          ),
         ),
-      ));
+      );
     }
     if (param.maxVal != null) {
-      extraLines.add(HorizontalLine(
-        y: param.maxVal!,
-        color: Colors.red.withValues(alpha: 0.6),
-        strokeWidth: 1.5,
-        dashArray: [6, 4],
-        label: HorizontalLineLabel(
-          show: true,
-          alignment: Alignment.topRight,
-          padding: const EdgeInsets.only(right: 4, bottom: 2),
-          style: TextStyle(
+      extraLines.add(
+        HorizontalLine(
+          y: param.maxVal!,
+          color: Colors.red.withValues(alpha: 0.6),
+          strokeWidth: 1.5,
+          dashArray: [6, 4],
+          label: HorizontalLineLabel(
+            show: true,
+            alignment: Alignment.topRight,
+            padding: const EdgeInsets.only(right: 4, bottom: 2),
+            style: TextStyle(
               color: Colors.red.shade400,
               fontWeight: FontWeight.w700,
-              fontSize: 10),
-          labelResolver: (line) => 'Max ${line.y}',
+              fontSize: 10,
+            ),
+            labelResolver: (line) => 'Max ${line.y}',
+          ),
         ),
-      ));
+      );
     }
 
     return SizedBox(
       height: 220,
-      child: LineChart(LineChartData(
-        minX: 0,
-        maxX: records.length > 1 ? (records.length - 1).toDouble() : 1.0,
-        minY: minY,
-        maxY: maxY,
-        clipData: const FlClipData.all(),
-        extraLinesData: ExtraLinesData(horizontalLines: extraLines),
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) =>
-              FlLine(color: gridColor, strokeWidth: 1),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 42,
-              getTitlesWidget: (value, meta) {
-                if (value == meta.min || value == meta.max) {
-                  return const SizedBox.shrink();
-                }
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Text(_formatAxisValue(value),
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: records.length > 1 ? (records.length - 1).toDouble() : 1.0,
+          minY: minY,
+          maxY: maxY,
+          clipData: const FlClipData.all(),
+          extraLinesData: ExtraLinesData(horizontalLines: extraLines),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            getDrawingHorizontalLine: (_) =>
+                FlLine(color: gridColor, strokeWidth: 1),
+          ),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 42,
+                getTitlesWidget: (value, meta) {
+                  if (value == meta.min || value == meta.max) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(
+                      _formatAxisValue(value),
                       style: TextStyle(
-                          color: labelColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600),
-                      textAlign: TextAlign.right),
-                );
-              },
+                        color: labelColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  );
+                },
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 28,
+                interval: _xInterval(records.length),
+                getTitlesWidget: (value, meta) {
+                  final idx = value.toInt();
+                  if (idx < 0 || idx >= records.length) {
+                    return const SizedBox.shrink();
+                  }
+                  final dt = records[idx].timestamp;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '${dt.month}/${dt.day}',
+                      style: TextStyle(
+                        color: labelColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
             ),
           ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 28,
-              interval: _xInterval(records.length),
-              getTitlesWidget: (value, meta) {
-                final idx = value.toInt();
-                if (idx < 0 || idx >= records.length) {
-                  return const SizedBox.shrink();
-                }
-                final dt = records[idx].timestamp;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text('${dt.month}/${dt.day}',
-                      style: TextStyle(
-                          color: labelColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600)),
-                );
-              },
-            ),
-          ),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) =>
-                isDark ? const Color(0xFF1E293B) : Colors.white,
-            tooltipBorder:
-                BorderSide(color: param.color.withValues(alpha: 0.3)),
-            tooltipBorderRadius: BorderRadius.circular(12),
-            getTooltipItems: (spots) => spots.map((s) {
-              final record = records[s.spotIndex];
-              final dt = record.timestamp;
-              final unit = param.unit.isEmpty ? '' : ' ${param.unit}';
-              return LineTooltipItem(
-                '${dt.month}/${dt.day}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}\n${s.y.toStringAsFixed(2)}$unit',
-                TextStyle(
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (_) =>
+                  isDark ? const Color(0xFF1E293B) : Colors.white,
+              tooltipBorder: BorderSide(
+                color: param.color.withValues(alpha: 0.3),
+              ),
+              tooltipBorderRadius: BorderRadius.circular(12),
+              getTooltipItems: (spots) => spots.map((s) {
+                final record = records[s.spotIndex];
+                final dt = record.timestamp;
+                final unit = param.unit.isEmpty ? '' : ' ${param.unit}';
+                return LineTooltipItem(
+                  '${dt.month}/${dt.day}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}\n${s.y.toStringAsFixed(2)}$unit',
+                  TextStyle(
                     color: param.color,
                     fontWeight: FontWeight.w800,
-                    fontSize: 12),
-              );
-            }).toList(),
+                    fontSize: 12,
+                  ),
+                );
+              }).toList(),
+            ),
           ),
-        ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            curveSmoothness: 0.35,
-            color: param.color,
-            barWidth: 2.5,
-            isStrokeCapRound: true,
-            dotData: FlDotData(
-              show: records.length <= 15,
-              getDotPainter: (spot, _, _, _) => FlDotCirclePainter(
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              curveSmoothness: 0.35,
+              color: param.color,
+              barWidth: 2.5,
+              isStrokeCapRound: true,
+              dotData: FlDotData(
+                show: records.length <= 15,
+                getDotPainter: (spot, _, _, _) => FlDotCirclePainter(
                   radius: 3.5,
                   color: Colors.white,
                   strokeWidth: 2,
-                  strokeColor: param.color),
-            ),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: [
-                  param.color.withValues(alpha: 0.22),
-                  param.color.withValues(alpha: 0.0)
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                  strokeColor: param.color,
+                ),
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  colors: [
+                    param.color.withValues(alpha: 0.22),
+                    param.color.withValues(alpha: 0.0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
-        ],
-      )),
+          ],
+        ),
+      ),
     );
   }
 
@@ -603,105 +653,129 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           _legendDash(Colors.green),
           const SizedBox(width: 4),
           Text(
-              'Min ${param.minVal}${param.unit.isEmpty ? '' : ' ${param.unit}'}',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white54 : Colors.grey.shade600)),
+            'Min ${param.minVal}${param.unit.isEmpty ? '' : ' ${param.unit}'}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white54 : Colors.grey.shade600,
+            ),
+          ),
           const SizedBox(width: 16),
         ],
         if (param.maxVal != null) ...[
           _legendDash(Colors.red),
           const SizedBox(width: 4),
           Text(
-              'Max ${param.maxVal}${param.unit.isEmpty ? '' : ' ${param.unit}'}',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white54 : Colors.grey.shade600)),
+            'Max ${param.maxVal}${param.unit.isEmpty ? '' : ' ${param.unit}'}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white54 : Colors.grey.shade600,
+            ),
+          ),
         ],
       ],
     );
   }
 
   Widget _legendDash(Color color) => Container(
-      width: 20,
-      height: 2,
-      decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(2)));
+    width: 20,
+    height: 2,
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.7),
+      borderRadius: BorderRadius.circular(2),
+    ),
+  );
 
   Widget _buildLoadingCard(bool isDark, Color color) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: _buildCard(
-          isDark: isDark,
-          color: color,
-          child: const SizedBox(
-              height: 220,
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)))));
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: _buildCard(
+      isDark: isDark,
+      color: color,
+      child: const SizedBox(
+        height: 220,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+    ),
+  );
 
   Widget _buildEmptyCard(ParameterItem param, bool isDark) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: _buildCard(
-        isDark: isDark,
-        color: param.color,
-        child: SizedBox(
-          height: 220,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.bar_chart_rounded,
-                  size: 48, color: param.color.withValues(alpha: 0.3)),
-              const SizedBox(height: 12),
-              Text('No data recorded yet',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: isDark ? Colors.white54 : Colors.grey.shade600)),
-              const SizedBox(height: 6),
-              Text(
-                  'Record your first ${param.label} measurement\nto see the trend here.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.white38 : Colors.grey.shade400,
-                      height: 1.4)),
-            ],
-          ),
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: _buildCard(
+      isDark: isDark,
+      color: param.color,
+      child: SizedBox(
+        height: 220,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.bar_chart_rounded,
+              size: 48,
+              color: param.color.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No data recorded yet',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: isDark ? Colors.white54 : Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Record your first ${param.label} measurement\nto see the trend here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white38 : Colors.grey.shade400,
+                height: 1.4,
+              ),
+            ),
+          ],
         ),
-      ));
+      ),
+    ),
+  );
 
   Widget _buildErrorCard(String error, bool isDark) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        height: 120,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-            color: Colors.red.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(20)),
-        child: Text('Failed to load data:\n$error',
-            style: const TextStyle(color: Colors.red, fontSize: 13),
-            textAlign: TextAlign.center),
-      ));
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: Container(
+      height: 120,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'Failed to load data:\n$error',
+        style: const TextStyle(color: Colors.red, fontSize: 13),
+        textAlign: TextAlign.center,
+      ),
+    ),
+  );
 
-  Widget _buildCard(
-          {required bool isDark,
-          required Color color,
-          required Widget child}) =>
-      Container(
-          padding: const EdgeInsets.fromLTRB(12, 20, 12, 12),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: isDark ? Border.all(color: Colors.white12) : null,
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6))
-            ],
-          ),
-          child: child);
+  Widget _buildCard({
+    required bool isDark,
+    required Color color,
+    required Widget child,
+  }) => Container(
+    padding: const EdgeInsets.fromLTRB(12, 20, 12, 12),
+    decoration: BoxDecoration(
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      border: isDark ? Border.all(color: Colors.white12) : null,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 20,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: child,
+  );
 
   String _formatAxisValue(double v) {
     if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';

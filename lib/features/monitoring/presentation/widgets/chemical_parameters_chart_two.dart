@@ -15,10 +15,12 @@ class ChemicalParametersChartTwo extends StatefulWidget {
   });
 
   @override
-  State<ChemicalParametersChartTwo> createState() => _ChemicalParametersChartTwoState();
+  State<ChemicalParametersChartTwo> createState() =>
+      _ChemicalParametersChartTwoState();
 }
 
-class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo> {
+class _ChemicalParametersChartTwoState
+    extends State<ChemicalParametersChartTwo> {
   final Map<String, bool> _visibleParameters = {
     'Magnesium': true,
     'Calcium': true,
@@ -41,13 +43,15 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: isDark ? Border.all(color: Colors.white12) : null,
-        boxShadow: isDark ? [] : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,10 +75,7 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            height: 220,
-            child: LineChart(_buildChartData(isDark)),
-          ),
+          SizedBox(height: 220, child: LineChart(_buildChartData(isDark))),
           const SizedBox(height: 24),
           _buildLegend(isDark),
         ],
@@ -84,7 +85,7 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
 
   LineChartData _buildChartData(bool isDark) {
     List<LineChartBarData> lineBars = [];
-    
+
     final Set<DateTime> allTimestamps = {};
     for (var list in widget.normalizedData.values) {
       allTimestamps.addAll(list.map((p) => p.timestamp));
@@ -102,7 +103,10 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
 
       if (_visibleParameters[parameterName] != true) continue;
 
-      final paramItem = MonitoringParameters.getParameterByLabel(parameterName, widget.species);
+      final paramItem = MonitoringParameters.getParameterByLabel(
+        parameterName,
+        widget.species,
+      );
       final color = paramItem?.color ?? Colors.grey;
 
       final spots = points.map((p) {
@@ -128,13 +132,17 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
         show: true,
         drawVerticalLine: false,
         getDrawingHorizontalLine: (value) => FlLine(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100, 
-          strokeWidth: 1
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.grey.shade100,
+          strokeWidth: 1,
         ),
       ),
       titlesData: FlTitlesData(
         show: true,
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
@@ -142,7 +150,8 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
             reservedSize: 30,
             interval: _calculateInterval(sortedTimestamps.length),
             getTitlesWidget: (value, meta) {
-              if (value.toInt() < 0 || value.toInt() >= sortedTimestamps.length) {
+              if (value.toInt() < 0 ||
+                  value.toInt() >= sortedTimestamps.length) {
                 return const SizedBox.shrink();
               }
               final date = sortedTimestamps[value.toInt()];
@@ -184,13 +193,14 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
       lineBarsData: lineBars,
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (touchedSpot) => 
-            isDark ? Colors.black87 : Colors.blueGrey.shade900.withValues(alpha: 0.9),
+          getTooltipColor: (touchedSpot) => isDark
+              ? Colors.black87
+              : Colors.blueGrey.shade900.withValues(alpha: 0.9),
           tooltipBorderRadius: BorderRadius.circular(8),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((barSpot) {
               final timestamp = sortedTimestamps[barSpot.x.toInt()];
-              
+
               String? matchedParam;
               int visibleIndex = 0;
               for (var key in widget.normalizedData.keys) {
@@ -204,16 +214,25 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
               }
 
               if (matchedParam != null) {
-                 final paramItem = MonitoringParameters.getParameterByLabel(matchedParam, widget.species);
-                 final unit = paramItem?.unit ?? '';
-                 final color = paramItem?.color ?? Colors.white;
-                 
-                 final point = widget.normalizedData[matchedParam]!.firstWhere((p) => p.timestamp == timestamp);
+                final paramItem = MonitoringParameters.getParameterByLabel(
+                  matchedParam,
+                  widget.species,
+                );
+                final unit = paramItem?.unit ?? '';
+                final color = paramItem?.color ?? Colors.white;
 
-                 return LineTooltipItem(
-                    "$matchedParam\n${point.actualValue} $unit",
-                    TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
-                 );
+                final point = widget.normalizedData[matchedParam]!.firstWhere(
+                  (p) => p.timestamp == timestamp,
+                );
+
+                return LineTooltipItem(
+                  "$matchedParam\n${point.actualValue} $unit",
+                  TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                );
               }
               return null;
             }).toList();
@@ -234,7 +253,10 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
       spacing: 12,
       runSpacing: 8,
       children: _visibleParameters.keys.map((param) {
-        final paramItem = MonitoringParameters.getParameterByLabel(param, widget.species);
+        final paramItem = MonitoringParameters.getParameterByLabel(
+          param,
+          widget.species,
+        );
         final color = paramItem?.color ?? Colors.grey;
         final isVisible = _visibleParameters[param]!;
 
@@ -251,7 +273,9 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: isVisible ? color : (isDark ? Colors.white24 : Colors.grey.shade300),
+                  color: isVisible
+                      ? color
+                      : (isDark ? Colors.white24 : Colors.grey.shade300),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -259,9 +283,9 @@ class _ChemicalParametersChartTwoState extends State<ChemicalParametersChartTwo>
               Text(
                 param,
                 style: TextStyle(
-                  color: isVisible 
-                    ? (isDark ? Colors.white70 : Colors.grey.shade800) 
-                    : (isDark ? Colors.white38 : Colors.grey.shade500),
+                  color: isVisible
+                      ? (isDark ? Colors.white70 : Colors.grey.shade800)
+                      : (isDark ? Colors.white38 : Colors.grey.shade500),
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                   decoration: isVisible ? null : TextDecoration.lineThrough,

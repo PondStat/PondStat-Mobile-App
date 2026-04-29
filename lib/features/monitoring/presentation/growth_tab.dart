@@ -21,14 +21,18 @@ class _GrowthTabState extends State<GrowthTab> {
   @override
   void initState() {
     super.initState();
-    _growthMetricsFuture = GrowthDataService.calculateGrowthMetrics(widget.pondId);
+    _growthMetricsFuture = GrowthDataService.calculateGrowthMetrics(
+      widget.pondId,
+    );
   }
 
   @override
   void didUpdateWidget(covariant GrowthTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pondId != widget.pondId) {
-      _growthMetricsFuture = GrowthDataService.calculateGrowthMetrics(widget.pondId);
+      _growthMetricsFuture = GrowthDataService.calculateGrowthMetrics(
+        widget.pondId,
+      );
     }
   }
 
@@ -72,12 +76,9 @@ class _GrowthTabState extends State<GrowthTab> {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return _buildGrowthCard(metrics[index]);
-                  },
-                  childCount: metrics.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  return _buildGrowthCard(metrics[index]);
+                }, childCount: metrics.length),
               ),
             ),
             const SliverToBoxAdapter(

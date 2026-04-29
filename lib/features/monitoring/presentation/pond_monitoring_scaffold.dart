@@ -96,10 +96,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
         species: widget.species,
         userRole: widget.userRole,
       ),
-      GrowthPage(
-        pondId: widget.pondId,
-        canEdit: canEdit,
-      ),
+      GrowthPage(pondId: widget.pondId, canEdit: canEdit),
       OverviewTab(
         pondId: widget.pondId,
         pondName: widget.pondName,
@@ -111,7 +108,11 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
         selectedDay: _selectedDay,
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
-            _selectedDay = DateTime.utc(selectedDay.year, selectedDay.month, selectedDay.day);
+            _selectedDay = DateTime.utc(
+              selectedDay.year,
+              selectedDay.month,
+              selectedDay.day,
+            );
             _focusedDay = focusedDay;
           });
         },
@@ -127,7 +128,12 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
           selectedDay: _selectedDay!,
         )
       else
-        const Scaffold(backgroundColor: Colors.transparent, body: Center(child: Text("Please select a day from the Overview tab"))),
+        const Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: Text("Please select a day from the Overview tab"),
+          ),
+        ),
     ];
 
     return Scaffold(
@@ -147,10 +153,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
                   secondaryBlue: secondaryBlue,
                 ),
                 Expanded(
-                  child: IndexedStack(
-                    index: _currentIndex,
-                    children: pages,
-                  ),
+                  child: IndexedStack(index: _currentIndex, children: pages),
                 ),
               ],
             ),
@@ -178,8 +181,14 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
           backgroundColor: Colors.white,
           selectedItemColor: primaryBlue,
           unselectedItemColor: Colors.grey.shade400,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 10),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 10,
+          ),
           elevation: 0,
           items: const [
             BottomNavigationBarItem(

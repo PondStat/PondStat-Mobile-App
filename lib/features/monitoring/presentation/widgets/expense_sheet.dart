@@ -189,7 +189,9 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                         decimal: true,
                       ),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}'),
+                        ),
                       ],
                       onChanged: (_) => setState(() {}),
                       validator: (v) =>

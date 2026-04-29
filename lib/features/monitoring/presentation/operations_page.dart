@@ -46,7 +46,9 @@ class OperationsPage extends StatelessWidget {
               labelColor: const Color(0xFF0A74DA),
               labelStyle: const TextStyle(fontWeight: FontWeight.bold),
               unselectedLabelColor: Colors.grey.shade600,
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
               dividerColor: Colors.transparent,
               padding: const EdgeInsets.all(4),
               tabs: const [

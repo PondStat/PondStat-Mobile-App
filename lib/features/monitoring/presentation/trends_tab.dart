@@ -28,7 +28,8 @@ class TrendsTab extends StatefulWidget {
 }
 
 class _TrendsTabState extends State<TrendsTab> {
-  late Stream<QuerySnapshot<Map<String, dynamic>>> _historicalMeasurementsStream;
+  late Stream<QuerySnapshot<Map<String, dynamic>>>
+  _historicalMeasurementsStream;
 
   @override
   void initState() {
@@ -58,77 +59,78 @@ class _TrendsTabState extends State<TrendsTab> {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _historicalMeasurementsStream,
-            builder: (context, snapshot) {
-              if (!snapshot.hasData &&
-                  snapshot.connectionState == ConnectionState.waiting) {
-                return _buildSkeletonLoader();
-              }
+      builder: (context, snapshot) {
+        if (!snapshot.hasData &&
+            snapshot.connectionState == ConnectionState.waiting) {
+          return _buildSkeletonLoader();
+        }
 
-              if (snapshot.hasError) {
-                return Center(child: Text("Error: ${snapshot.error}"));
-              }
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
 
-              final docs = snapshot.data?.docs ?? [];
-              if (docs.isEmpty) {
-                return _buildEmptyState();
-              }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return _buildEmptyState();
+        }
 
-              final physicalData = TrendsDataService.getNormalizedParameters(
-                docs,
-                widget.species,
-                ['Temperature', 'Salinity', 'Transparency'],
-              );
-              
-              final chemicalOneData = TrendsDataService.getNormalizedParameters(
-                docs,
-                widget.species,
-                ['pH Level', 'Dissolved Oxygen', 'Nitrate', 'Nitrite', 'Ammonia', 'Carbon dioxide'],
-              );
-              
-              final chemicalTwoData = TrendsDataService.getNormalizedParameters(
-                docs,
-                widget.species,
-                ['Magnesium', 'Calcium', 'Total Alkalinity'],
-              );
+        final physicalData = TrendsDataService.getNormalizedParameters(
+          docs,
+          widget.species,
+          ['Temperature', 'Salinity', 'Transparency'],
+        );
 
-              final statsList = TrendsDataService.processMeasurements(
-                docs,
-                widget.species,
-              );
+        final chemicalOneData =
+            TrendsDataService.getNormalizedParameters(docs, widget.species, [
+              'pH Level',
+              'Dissolved Oxygen',
+              'Nitrate',
+              'Nitrite',
+              'Ammonia',
+              'Carbon dioxide',
+            ]);
 
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                itemCount: statsList.length + 3,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return PhysicalParametersChart(
-                      normalizedData: physicalData,
-                      species: widget.species,
-                    );
-                  }
-                  if (index == 1) {
-                    return ChemicalParametersChartOne(
-                      normalizedData: chemicalOneData,
-                      species: widget.species,
-                    );
-                  }
-                  if (index == 2) {
-                    return ChemicalParametersChartTwo(
-                      normalizedData: chemicalTwoData,
-                      species: widget.species,
-                    );
-                  }
-                  
-                  return ParameterChartCard(
-                    stats: statsList[index - 3],
-                    species: widget.species,
-                  );
-                },
+        final chemicalTwoData = TrendsDataService.getNormalizedParameters(
+          docs,
+          widget.species,
+          ['Magnesium', 'Calcium', 'Total Alkalinity'],
+        );
+
+        final statsList = TrendsDataService.processMeasurements(
+          docs,
+          widget.species,
+        );
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          itemCount: statsList.length + 3,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return PhysicalParametersChart(
+                normalizedData: physicalData,
+                species: widget.species,
               );
-            },
+            }
+            if (index == 1) {
+              return ChemicalParametersChartOne(
+                normalizedData: chemicalOneData,
+                species: widget.species,
+              );
+            }
+            if (index == 2) {
+              return ChemicalParametersChartTwo(
+                normalizedData: chemicalTwoData,
+                species: widget.species,
+              );
+            }
+
+            return ParameterChartCard(
+              stats: statsList[index - 3],
+              species: widget.species,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -144,11 +146,7 @@ class _TrendsTabState extends State<TrendsTab> {
             color: Colors.grey.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(24),
           ),
-          child: const Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-            ),
-          ),
+          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         );
       },
     );
@@ -164,10 +162,16 @@ class _TrendsTabState extends State<TrendsTab> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueGrey.withValues(alpha: 0.05),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.blueGrey.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.analytics_outlined, size: 64, color: Colors.blueGrey.withValues(alpha: 0.4)),
+            child: Icon(
+              Icons.analytics_outlined,
+              size: 64,
+              color: Colors.blueGrey.withValues(alpha: 0.4),
+            ),
           ),
           const SizedBox(height: 24),
           Text(

@@ -9,7 +9,11 @@ class GrowthPage extends StatelessWidget {
   const GrowthPage({super.key, required this.pondId, required this.canEdit});
 
   void _showRecordGrowth(BuildContext context) {
-    SnackbarHelper.show(context, "Growth recording coming soon", backgroundColor: Colors.indigo.shade400);
+    SnackbarHelper.show(
+      context,
+      "Growth recording coming soon",
+      backgroundColor: Colors.indigo.shade400,
+    );
   }
 
   @override
@@ -23,7 +27,10 @@ class GrowthPage extends StatelessWidget {
               onPressed: () => _showRecordGrowth(context),
               backgroundColor: Colors.indigo.shade400,
               icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text("Record Sampling", style: TextStyle(color: Colors.white)),
+              label: const Text(
+                "Record Sampling",
+                style: TextStyle(color: Colors.white),
+              ),
             )
           : null,
     );

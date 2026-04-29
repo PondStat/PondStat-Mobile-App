@@ -69,7 +69,8 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
           backgroundColor: Colors.green,
         );
       }
-    } catch (e) {      debugPrint("Background sync error: $e");
+    } catch (e) {
+      debugPrint("Background sync error: $e");
       if (mounted) {
         setState(() => _isLoading = false);
         SnackbarHelper.show(

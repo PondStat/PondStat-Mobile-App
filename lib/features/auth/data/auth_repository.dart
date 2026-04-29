@@ -17,7 +17,8 @@ class AuthRepository {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: '624574025589-5390binsi9sh8plk6ii0h929dtq63dvu.apps.googleusercontent.com',
+    clientId:
+        '624574025589-5390binsi9sh8plk6ii0h929dtq63dvu.apps.googleusercontent.com',
   );
 
   User? get currentUser => _auth.currentUser;
@@ -25,23 +26,28 @@ class AuthRepository {
 
   Future<UserCredential?> signInWithGoogle() async {
     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    
+
     if (googleUser == null) {
       return null; // User canceled
     }
 
     if (!googleUser.email.endsWith('@up.edu.ph')) {
       await _googleSignIn.signOut();
-      throw AuthException('Only UP mail (@up.edu.ph) accounts are allowed to log in.');
+      throw AuthException(
+        'Only UP mail (@up.edu.ph) accounts are allowed to log in.',
+      );
     }
 
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
     final AuthCredential credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
 
-    final UserCredential userCredential = await _auth.signInWithCredential(credential);
+    final UserCredential userCredential = await _auth.signInWithCredential(
+      credential,
+    );
     final user = userCredential.user;
 
     if (user != null) {
@@ -62,9 +68,6 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
-    await Future.wait([
-      _auth.signOut(),
-      _googleSignIn.signOut(),
-    ]);
+    await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
   }
 }

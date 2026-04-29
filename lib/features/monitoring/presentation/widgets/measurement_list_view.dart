@@ -24,6 +24,7 @@ class MeasurementListView extends StatefulWidget {
   @override
   State<MeasurementListView> createState() => _MeasurementListViewState();
 }
+
 class _MeasurementListViewState extends State<MeasurementListView> {
   String? _selectedFilter;
   late Stream<QuerySnapshot> _measurementsStream;
@@ -37,8 +38,8 @@ class _MeasurementListViewState extends State<MeasurementListView> {
   @override
   void didUpdateWidget(covariant MeasurementListView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.pondId != widget.pondId || 
-        oldWidget.type != widget.type || 
+    if (oldWidget.pondId != widget.pondId ||
+        oldWidget.type != widget.type ||
         oldWidget.dateKey != widget.dateKey) {
       _initStream();
       setState(() => _selectedFilter = null);
@@ -75,15 +76,16 @@ class _MeasurementListViewState extends State<MeasurementListView> {
 
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) return _buildEmptyState();
-        
-        final sortedDocs = docs.toList()..sort((a, b) {
-          final dataA = a.data() as Map<String, dynamic>;
-          final dataB = b.data() as Map<String, dynamic>;
-          final tA = dataA['timestamp'] as Timestamp?;
-          final tB = dataB['timestamp'] as Timestamp?;
-          if (tA == null || tB == null) return 0;
-          return tB.compareTo(tA); // Descending
-        });
+
+        final sortedDocs = docs.toList()
+          ..sort((a, b) {
+            final dataA = a.data() as Map<String, dynamic>;
+            final dataB = b.data() as Map<String, dynamic>;
+            final tA = dataA['timestamp'] as Timestamp?;
+            final tB = dataB['timestamp'] as Timestamp?;
+            if (tA == null || tB == null) return 0;
+            return tB.compareTo(tA); // Descending
+          });
 
         // 1. Extract Unique Parameters
         final Set<String> uniqueParams = {};
@@ -95,15 +97,19 @@ class _MeasurementListViewState extends State<MeasurementListView> {
         final filterOptions = uniqueParams.toList()..sort();
 
         // Ensure selected filter is still valid after data changes (e.g. deletion)
-        if (_selectedFilter != null && !filterOptions.contains(_selectedFilter)) {
-           // Schedule the state change to avoid calling setState during build
-           WidgetsBinding.instance.addPostFrameCallback((_) {
-             if (mounted) setState(() => _selectedFilter = null);
-           });
+        if (_selectedFilter != null &&
+            !filterOptions.contains(_selectedFilter)) {
+          // Schedule the state change to avoid calling setState during build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _selectedFilter = null);
+          });
         }
 
         // 2. Filter the documents
-        final activeFilter = _selectedFilter != null && filterOptions.contains(_selectedFilter) ? _selectedFilter : null;
+        final activeFilter =
+            _selectedFilter != null && filterOptions.contains(_selectedFilter)
+            ? _selectedFilter
+            : null;
         final filteredDocs = activeFilter == null
             ? sortedDocs
             : sortedDocs.where((doc) {
