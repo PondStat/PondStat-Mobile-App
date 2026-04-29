@@ -22,14 +22,18 @@ class ParameterChartCard extends StatelessWidget {
     );
     final color = paramItem?.color ?? Colors.blue;
     final unit = paramItem?.unit ?? '';
+    
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
+        border: isDark ? Border.all(color: Colors.white12) : null,
+        boxShadow: isDark ? [] : [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
@@ -59,7 +63,7 @@ class ParameterChartCard extends StatelessWidget {
                   Text(
                     "Trend Analysis",
                     style: TextStyle(
-                      color: Colors.grey.shade800,
+                      color: isDark ? Colors.white70 : Colors.grey.shade800,
                       fontWeight: FontWeight.w800,
                       fontSize: 18,
                     ),
@@ -73,21 +77,21 @@ class ParameterChartCard extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.warning_amber_rounded,
-                        color: Colors.red,
+                        color: isDark ? Colors.red.shade300 : Colors.red,
                         size: 14,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         "${stats.outlierCount} Outliers",
-                        style: const TextStyle(
-                          color: Colors.red,
+                        style: TextStyle(
+                          color: isDark ? Colors.red.shade300 : Colors.red,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                         ),
@@ -106,8 +110,10 @@ class ParameterChartCard extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: 1,
-                  getDrawingHorizontalLine: (value) =>
-                      FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100, 
+                    strokeWidth: 1,
+                  ),
                 ),
                 titlesData: FlTitlesData(
                   show: true,
@@ -133,7 +139,7 @@ class ParameterChartCard extends StatelessWidget {
                           child: Text(
                             DateFormat('MM/dd').format(date),
                             style: TextStyle(
-                              color: Colors.grey.shade400,
+                              color: isDark ? Colors.white38 : Colors.grey.shade400,
                               fontWeight: FontWeight.w600,
                               fontSize: 10,
                             ),
@@ -152,7 +158,7 @@ class ParameterChartCard extends StatelessWidget {
                           child: Text(
                             value.toStringAsFixed(1),
                             style: TextStyle(
-                              color: Colors.grey.shade400,
+                              color: isDark ? Colors.white38 : Colors.grey.shade400,
                               fontWeight: FontWeight.w600,
                               fontSize: 10,
                             ),
@@ -179,7 +185,7 @@ class ParameterChartCard extends StatelessWidget {
                       getDotPainter: (spot, percent, barData, index) =>
                           FlDotCirclePainter(
                             radius: 4,
-                            color: Colors.white,
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
                             strokeWidth: 2,
                             strokeColor: color,
                           ),
@@ -200,15 +206,17 @@ class ParameterChartCard extends StatelessWidget {
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipColor: (touchedSpot) =>
-                        color.withValues(alpha: 0.9),
+                        isDark ? Colors.black87 : color.withValues(alpha: 0.9),
+                    tooltipBorderRadius: BorderRadius.circular(8),
                     getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
                       return touchedBarSpots.map((barSpot) {
                         final flSpot = barSpot;
                         return LineTooltipItem(
-                          "${flSpot.y} $unit\n${DateFormat('MMM dd').format(stats.dataPoints[flSpot.x.toInt()].timestamp)}",
+                          "${flSpot.y} $unit\n${DateFormat('MMM dd, yyyy HH:mm').format(stats.dataPoints[flSpot.x.toInt()].timestamp)}",
                           const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         );
                       }).toList();
@@ -223,10 +231,10 @@ class ParameterChartCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Expanded(
-                child: _buildStatItem("Average", "${stats.average}$unit"),
+                child: _buildStatItem("Average", "${stats.average}$unit", isDark, Icons.functions_rounded),
               ),
-              Expanded(child: _buildStatItem("Min", "${stats.min}$unit")),
-              Expanded(child: _buildStatItem("Max", "${stats.max}$unit")),
+              Expanded(child: _buildStatItem("Min", "${stats.min}$unit", isDark, Icons.arrow_downward_rounded)),
+              Expanded(child: _buildStatItem("Max", "${stats.max}$unit", isDark, Icons.arrow_upward_rounded)),
             ],
           ),
         ],
@@ -240,22 +248,29 @@ class ParameterChartCard extends StatelessWidget {
     return (length / 5).floorToDouble();
   }
 
-  Widget _buildStatItem(String label, String value) {
+  Widget _buildStatItem(String label, String value, bool isDark, IconData icon) {
     return Column(
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey.shade500,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 12, color: isDark ? Colors.white38 : Colors.grey.shade500),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isDark ? Colors.white54 : Colors.grey.shade500,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           value,
-          style: const TextStyle(
-            color: Color(0xFF1E293B),
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF1E293B),
             fontSize: 16,
             fontWeight: FontWeight.w800,
           ),

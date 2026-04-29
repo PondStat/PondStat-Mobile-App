@@ -94,6 +94,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
       TrendsPage(
         pondId: widget.pondId,
         species: widget.species,
+        userRole: widget.userRole,
       ),
       GrowthPage(
         pondId: widget.pondId,

@@ -19,11 +19,16 @@ class PeriodicParametersChart extends StatefulWidget {
   final String pondId;
   final String species;
   final String type;
+  final DateTime startDate;
+  final DateTime endDate;
+
   const PeriodicParametersChart({
     super.key,
     required this.pondId,
     required this.species,
     required this.type,
+    required this.startDate,
+    required this.endDate,
   });
 
   @override
@@ -35,7 +40,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
   late final List<ParameterItem> _baseParams;
   int _selectedIndex = 0;
 
-  // FIX 1: Cache the active stream so it is not recreated on every build/setState.
+  // Cache the active stream so it is not recreated on every build/setState.
   Stream<List<_DailyRecord>>? _cachedStream;
   String? _cachedStreamParamLabel; // tracks which param the cached stream belongs to
 
@@ -51,22 +56,43 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
       paramsToUse = MonitoringParameters.getDailyParameters(widget.species);
     }
     
-    _baseParams = paramsToUse;
+    final excludedParams = [
+      'Feeding rate',
+      'Total feed consumed',
+      'Total weight gained',
+      'Total weight of fish sampled',
+      'Number of fish sampled',
+    ];
+
+    _baseParams = paramsToUse.where((p) => !excludedParams.contains(p.label)).toList();
     final firstRangeIdx = _baseParams.indexWhere((p) => !p.isSinglePoint);
     if (firstRangeIdx != -1) _selectedIndex = firstRangeIdx;
   }
 
-  /// Returns the cached stream, only rebuilding it when the selected parameter changes.
+  @override
+  void didUpdateWidget(covariant PeriodicParametersChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.startDate != widget.startDate || oldWidget.endDate != widget.endDate) {
+      _cachedStream = null;
+      _cachedStreamParamLabel = null;
+    }
+  }
+
+  /// Returns the cached stream, only rebuilding it when the selected parameter changes or dates update.
   Stream<List<_DailyRecord>> _getStream(ParameterItem param) {
     if (_cachedStream != null && _cachedStreamParamLabel == param.label) {
       return _cachedStream!;
     }
 
     _cachedStreamParamLabel = param.label;
+    final endOfDay = DateTime(widget.endDate.year, widget.endDate.month, widget.endDate.day, 23, 59, 59);
+
     _cachedStream = FirestoreHelper.measurementsCollection
         .where('pondId', isEqualTo: widget.pondId)
         .where('type', isEqualTo: widget.type)
         .where('parameter', isEqualTo: param.label)
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(widget.startDate))
+        .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
         .snapshots()
         .map((snap) {
           final sortedDocs = snap.docs.toList()..sort((a, b) {
@@ -76,7 +102,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
             return tB.compareTo(tA); // descending
           });
 
-          final limitedDocs = sortedDocs.take(30).toList().reversed.toList();
+          // Show all items from this date range (in chronological order for the chart)
+          final limitedDocs = sortedDocs.reversed.toList();
 
           return limitedDocs.map((doc) {
             final data = doc.data();

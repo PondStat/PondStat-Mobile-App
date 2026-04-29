@@ -41,4 +41,18 @@ class FirestoreHelper {
         .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
         .orderBy('timestamp', descending: false);
   }
+
+  static Query<Map<String, dynamic>> getMeasurementsByDateRange(
+    String pondId,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    // End date should include the full day
+    final endOfDay = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
+    return measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .orderBy('timestamp', descending: false);
+  }
 }

@@ -10,15 +10,24 @@ import 'package:pondstat/features/monitoring/presentation/widgets/chemical_param
 class TrendsTab extends StatefulWidget {
   final String pondId;
   final String species;
+  final String userRole;
+  final DateTime startDate;
+  final DateTime endDate;
 
-  const TrendsTab({super.key, required this.pondId, required this.species});
+  const TrendsTab({
+    super.key,
+    required this.pondId,
+    required this.species,
+    required this.userRole,
+    required this.startDate,
+    required this.endDate,
+  });
 
   @override
   State<TrendsTab> createState() => _TrendsTabState();
 }
 
 class _TrendsTabState extends State<TrendsTab> {
-  int _selectedDays = 7;
   late Stream<QuerySnapshot<Map<String, dynamic>>> _historicalMeasurementsStream;
 
   @override
@@ -30,39 +39,29 @@ class _TrendsTabState extends State<TrendsTab> {
   @override
   void didUpdateWidget(covariant TrendsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.pondId != widget.pondId) {
+    if (oldWidget.pondId != widget.pondId ||
+        oldWidget.startDate != widget.startDate ||
+        oldWidget.endDate != widget.endDate) {
       _initStream();
     }
   }
 
   void _initStream() {
-    _historicalMeasurementsStream = FirestoreHelper.getHistoricalMeasurements(
+    _historicalMeasurementsStream = FirestoreHelper.getMeasurementsByDateRange(
       widget.pondId,
-      _selectedDays,
+      widget.startDate,
+      widget.endDate,
     ).snapshots();
-  }
-
-  void _updatePeriod(int days) {
-    if (_selectedDays != days) {
-      setState(() {
-        _selectedDays = days;
-        _initStream();
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildPeriodSelector(),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: _historicalMeasurementsStream,
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _historicalMeasurementsStream,
             builder: (context, snapshot) {
               if (!snapshot.hasData &&
                   snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return _buildSkeletonLoader();
               }
 
               if (snapshot.hasError) {
@@ -130,64 +129,62 @@ class _TrendsTabState extends State<TrendsTab> {
                 },
               );
             },
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          height: 250,
+          decoration: BoxDecoration(
+            color: Colors.grey.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(24),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPeriodSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildPeriodChip(7, "7 Days"),
-          const SizedBox(width: 12),
-          _buildPeriodChip(30, "30 Days"),
-          const SizedBox(width: 12),
-          _buildPeriodChip(90, "3 Months"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPeriodChip(int days, String label) {
-    final isSelected = _selectedDays == days;
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: isSelected ? Colors.white : Colors.grey.shade600,
-        ),
-      ),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) _updatePeriod(days);
+          child: const Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+            ),
+          ),
+        );
       },
-      selectedColor: const Color(0xFF0A74DA),
-      backgroundColor: Colors.grey.shade100,
-      side: BorderSide(
-        color: isSelected ? const Color(0xFF0A74DA) : Colors.grey.shade200,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     );
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.bar_chart_rounded, size: 64, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blueGrey.withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.analytics_outlined, size: 64, color: Colors.blueGrey.withValues(alpha: 0.4)),
+          ),
+          const SizedBox(height: 24),
           Text(
-            "No data for this period",
+            "No Data Found",
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white70 : Colors.blueGrey.shade800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "No measurements recorded for the selected date range.",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.white38 : Colors.grey.shade600,
             ),
           ),
         ],
