@@ -22,7 +22,9 @@ class _ExpensesTabState extends State<ExpensesTab> {
   @override
   void initState() {
     super.initState();
-    _pondStream = FirestoreHelper.pondsCollection.doc(widget.pondId).snapshots();
+    _pondStream = FirestoreHelper.pondsCollection
+        .doc(widget.pondId)
+        .snapshots();
     _expensesStream = repository.getExpensesStream(widget.pondId);
   }
 
@@ -30,7 +32,9 @@ class _ExpensesTabState extends State<ExpensesTab> {
   void didUpdateWidget(covariant ExpensesTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pondId != widget.pondId) {
-      _pondStream = FirestoreHelper.pondsCollection.doc(widget.pondId).snapshots();
+      _pondStream = FirestoreHelper.pondsCollection
+          .doc(widget.pondId)
+          .snapshots();
       _expensesStream = repository.getExpensesStream(widget.pondId);
     }
   }
@@ -81,12 +85,13 @@ class _ExpensesTabState extends State<ExpensesTab> {
             }
 
             final unsortedDocs = expenseSnapshot.data?.docs ?? [];
-            final docs = unsortedDocs.toList()..sort((a, b) {
-              final tA = a.data()['timestamp'] as Timestamp?;
-              final tB = b.data()['timestamp'] as Timestamp?;
-              if (tA == null || tB == null) return 0;
-              return tB.compareTo(tA);
-            });
+            final docs = unsortedDocs.toList()
+              ..sort((a, b) {
+                final tA = a.data()['timestamp'] as Timestamp?;
+                final tB = b.data()['timestamp'] as Timestamp?;
+                if (tA == null || tB == null) return 0;
+                return tB.compareTo(tA);
+              });
             double totalGroupSpend = 0;
             for (var doc in docs) {
               totalGroupSpend +=

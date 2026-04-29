@@ -7,11 +7,7 @@ class FinancesTab extends StatefulWidget {
   final String pondId;
   final bool canEdit;
 
-  const FinancesTab({
-    super.key,
-    required this.pondId,
-    required this.canEdit,
-  });
+  const FinancesTab({super.key, required this.pondId, required this.canEdit});
 
   @override
   State<FinancesTab> createState() => _FinancesTabState();
@@ -19,7 +15,11 @@ class FinancesTab extends StatefulWidget {
 
 class _FinancesTabState extends State<FinancesTab> {
   int _selectedFilterIndex = 0;
-  final List<String> _filters = ["Group Expenses", "Pond Expenses", "Pond Sales"];
+  final List<String> _filters = [
+    "Group Expenses",
+    "Pond Expenses",
+    "Pond Sales",
+  ];
 
   final Color primaryBlue = const Color(0xFF0A74DA);
 
@@ -37,7 +37,10 @@ class _FinancesTabState extends State<FinancesTab> {
                 color: Colors.orange.shade50,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.construction_rounded, color: Colors.orange.shade700),
+              child: Icon(
+                Icons.construction_rounded,
+                color: Colors.orange.shade700,
+              ),
             ),
             const SizedBox(width: 12),
             const Expanded(
@@ -50,7 +53,11 @@ class _FinancesTabState extends State<FinancesTab> {
         ),
         content: Text(
           "The '$title' feature is currently under development. Stay tuned for updates!",
-          style: TextStyle(color: Colors.grey.shade700, height: 1.4, fontSize: 15),
+          style: TextStyle(
+            color: Colors.grey.shade700,
+            height: 1.4,
+            fontSize: 15,
+          ),
         ),
         actions: [
           ElevatedButton(
@@ -63,7 +70,10 @@ class _FinancesTabState extends State<FinancesTab> {
               ),
             ),
             onPressed: () => Navigator.pop(context),
-            child: const Text("Got it!", style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              "Got it!",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -103,8 +113,12 @@ class _FinancesTabState extends State<FinancesTab> {
                     label: Text(
                       _filters[index],
                       style: TextStyle(
-                        fontWeight: _selectedFilterIndex == index ? FontWeight.w800 : FontWeight.w600,
-                        color: _selectedFilterIndex == index ? Colors.white : Colors.grey.shade700,
+                        fontWeight: _selectedFilterIndex == index
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: _selectedFilterIndex == index
+                            ? Colors.white
+                            : Colors.grey.shade700,
                         fontSize: 13,
                       ),
                     ),
@@ -114,7 +128,9 @@ class _FinancesTabState extends State<FinancesTab> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: _selectedFilterIndex == index ? primaryBlue : Colors.grey.shade300,
+                        color: _selectedFilterIndex == index
+                            ? primaryBlue
+                            : Colors.grey.shade300,
                       ),
                     ),
                     onSelected: (selected) {
@@ -143,16 +159,23 @@ class _FinancesTabState extends State<FinancesTab> {
           ? FloatingActionButton.extended(
               heroTag: 'finances_fab',
               onPressed: _handleFabPressed,
-              backgroundColor: _selectedFilterIndex == 0 ? Colors.teal : Colors.grey.shade400,
+              backgroundColor: _selectedFilterIndex == 0
+                  ? Colors.teal
+                  : Colors.grey.shade400,
               icon: Icon(
-                _selectedFilterIndex == 2 ? Icons.point_of_sale_rounded : Icons.receipt_long_rounded, 
+                _selectedFilterIndex == 2
+                    ? Icons.point_of_sale_rounded
+                    : Icons.receipt_long_rounded,
                 color: Colors.white,
               ),
               label: Text(
-                _selectedFilterIndex == 0 
-                    ? "Add Expenses" 
-                    : "Add ${_filters[_selectedFilterIndex].split(' ').last}", 
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+                _selectedFilterIndex == 0
+                    ? "Add Expenses"
+                    : "Add ${_filters[_selectedFilterIndex].split(' ').last}",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             )
           : null,
@@ -161,7 +184,11 @@ class _FinancesTabState extends State<FinancesTab> {
 
   Widget _buildContentForFilter(int index) {
     if (index == 0) {
-      return ExpensesTab(key: const ValueKey(0), pondId: widget.pondId, canAdd: widget.canEdit);
+      return ExpensesTab(
+        key: const ValueKey(0),
+        pondId: widget.pondId,
+        canAdd: widget.canEdit,
+      );
     } else {
       return _buildComingSoon(key: ValueKey(index), title: _filters[index]);
     }
@@ -173,7 +200,11 @@ class _FinancesTabState extends State<FinancesTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.construction_rounded, size: 64, color: Colors.grey.shade300),
+          Icon(
+            Icons.construction_rounded,
+            size: 64,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
             "$title Coming Soon",
@@ -197,4 +228,3 @@ class _FinancesTabState extends State<FinancesTab> {
     );
   }
 }
-

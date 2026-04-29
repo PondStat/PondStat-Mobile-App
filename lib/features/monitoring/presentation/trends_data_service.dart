@@ -57,7 +57,9 @@ class TrendsDataService {
       final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
 
       if (value != null && timestamp != null) {
-        rawData.putIfAbsent(parameter, () => []).add(TrendDataPoint(timestamp, value));
+        rawData
+            .putIfAbsent(parameter, () => [])
+            .add(TrendDataPoint(timestamp, value));
       }
     }
 
@@ -68,12 +70,19 @@ class TrendsDataService {
 
       points.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-      final paramItem = MonitoringParameters.getParameterByLabel(parameter, species);
-      
+      final paramItem = MonitoringParameters.getParameterByLabel(
+        parameter,
+        species,
+      );
+
       // Determine min/max for normalization
-      double min = paramItem?.minVal ?? points.map((p) => p.value).reduce((a, b) => a < b ? a : b);
-      double max = paramItem?.maxVal ?? points.map((p) => p.value).reduce((a, b) => a > b ? a : b);
-      
+      double min =
+          paramItem?.minVal ??
+          points.map((p) => p.value).reduce((a, b) => a < b ? a : b);
+      double max =
+          paramItem?.maxVal ??
+          points.map((p) => p.value).reduce((a, b) => a > b ? a : b);
+
       // Ensure min != max to avoid division by zero
       if (min == max) {
         min -= 1;
@@ -115,7 +124,7 @@ class TrendsDataService {
     for (var doc in docs) {
       final data = doc.data();
       final parameter = data['parameter'] as String?;
-      
+
       if (parameter == null || excludedParams.contains(parameter)) continue;
 
       final value = (data['value'] as num?)?.toDouble();

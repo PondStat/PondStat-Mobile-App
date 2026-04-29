@@ -1,34 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:pondstat/features/monitoring/presentation/trends_data_service.dart';
-import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
 
-class PhysicalParametersChart extends StatefulWidget {
-  final Map<String, List<NormalizedTrendPoint>> normalizedData;
-  final String species;
+class FishGainsChart extends StatefulWidget {
+  final List<GrowthMetrics> metrics;
 
-  const PhysicalParametersChart({
+  const FishGainsChart({
     super.key,
-    required this.normalizedData,
-    required this.species,
+    required this.metrics,
   });
 
   @override
-  State<PhysicalParametersChart> createState() =>
-      _PhysicalParametersChartState();
+  State<FishGainsChart> createState() => _FishGainsChartState();
 }
 
-class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
+class _FishGainsChartState extends State<FishGainsChart> {
   final Map<String, bool> _visibleParameters = {
-    'Temperature': true,
-    'Salinity': true,
-    'Transparency': true,
+    'ABW': true,
+    'ADG': true,
+    'DFR': true,
+    'FCR': true,
+  };
+
+  final Map<String, Color> _colors = {
+    'ABW': Colors.blue,
+    'ADG': Colors.green,
+    'DFR': Colors.orange,
+    'FCR': Colors.purple,
+  };
+
+  final Map<String, String> _units = {
+    'ABW': 'g',
+    'ADG': 'g',
+    'DFR': '%',
+    'FCR': '',
   };
 
   @override
   Widget build(BuildContext context) {
-    if (widget.normalizedData.isEmpty) {
+    if (widget.metrics.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -56,7 +67,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "PHYSICAL PARAMETERS",
+            "FISH GAINS",
             style: TextStyle(
               color: Colors.blueGrey,
               fontWeight: FontWeight.w900,
@@ -76,39 +87,57 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
   LineChartData _buildChartData(bool isDark) {
     List<LineChartBarData> lineBars = [];
 
-    final Set<DateTime> allTimestamps = {};
-    for (var list in widget.normalizedData.values) {
-      allTimestamps.addAll(list.map((p) => p.timestamp));
+    // Pre-calculate min/max for normalization
+    double abwMin = double.infinity;
+    double abwMax = -double.infinity;
+    double adgMin = double.infinity;
+    double adgMax = -double.infinity;
+    double dfrMin = double.infinity;
+    double dfrMax = -double.infinity;
+    double fcrMin = double.infinity;
+    double fcrMax = -double.infinity;
+
+    for (var m in widget.metrics) {
+      if (m.abw < abwMin) abwMin = m.abw;
+      if (m.abw > abwMax) abwMax = m.abw;
+      if (m.adg < adgMin) adgMin = m.adg;
+      if (m.adg > adgMax) adgMax = m.adg;
+      if (m.dfr < dfrMin) dfrMin = m.dfr;
+      if (m.dfr > dfrMax) dfrMax = m.dfr;
+      if (m.fcr < fcrMin) fcrMin = m.fcr;
+      if (m.fcr > fcrMax) fcrMax = m.fcr;
     }
-    final sortedTimestamps = allTimestamps.toList()..sort();
 
-    final Map<DateTime, int> timestampIndices = {};
-    for (int i = 0; i < sortedTimestamps.length; i++) {
-      timestampIndices[sortedTimestamps[i]] = i;
+    if (abwMin == abwMax) { abwMin -= 1; abwMax += 1; }
+    if (adgMin == adgMax) { adgMin -= 1; adgMax += 1; }
+    if (dfrMin == dfrMax) { dfrMin -= 1; dfrMax += 1; }
+    if (fcrMin == fcrMax) { fcrMin -= 1; fcrMax += 1; }
+
+    final Map<String, List<FlSpot>> normalizedSpots = {
+      'ABW': [],
+      'ADG': [],
+      'DFR': [],
+      'FCR': [],
+    };
+
+    for (int i = 0; i < widget.metrics.length; i++) {
+      final m = widget.metrics[i];
+      final x = i.toDouble();
+
+      normalizedSpots['ABW']!.add(FlSpot(x, ((m.abw - abwMin) / (abwMax - abwMin) * 100).clamp(0, 100)));
+      normalizedSpots['ADG']!.add(FlSpot(x, ((m.adg - adgMin) / (adgMax - adgMin) * 100).clamp(0, 100)));
+      normalizedSpots['DFR']!.add(FlSpot(x, ((m.dfr - dfrMin) / (dfrMax - dfrMin) * 100).clamp(0, 100)));
+      normalizedSpots['FCR']!.add(FlSpot(x, ((m.fcr - fcrMin) / (fcrMax - fcrMin) * 100).clamp(0, 100)));
     }
 
-    for (var entry in widget.normalizedData.entries) {
-      final parameterName = entry.key;
-      final points = entry.value;
-
-      if (_visibleParameters[parameterName] != true) continue;
-
-      final paramItem = MonitoringParameters.getParameterByLabel(
-        parameterName,
-        widget.species,
-      );
-      final color = paramItem?.color ?? Colors.grey;
-
-      final spots = points.map((p) {
-        final x = timestampIndices[p.timestamp]!.toDouble();
-        return FlSpot(x, p.normalizedValue);
-      }).toList();
+    for (var param in _visibleParameters.keys) {
+      if (_visibleParameters[param] != true) continue;
 
       lineBars.add(
         LineChartBarData(
-          spots: spots,
+          spots: normalizedSpots[param]!,
           isCurved: true,
-          color: color,
+          color: _colors[param]!,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
@@ -138,13 +167,13 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 30,
-            interval: _calculateInterval(sortedTimestamps.length),
+            interval: _calculateInterval(widget.metrics.length),
             getTitlesWidget: (value, meta) {
               if (value.toInt() < 0 ||
-                  value.toInt() >= sortedTimestamps.length) {
+                  value.toInt() >= widget.metrics.length) {
                 return const SizedBox.shrink();
               }
-              final date = sortedTimestamps[value.toInt()];
+              final date = widget.metrics[value.toInt()].date;
               return SideTitleWidget(
                 meta: meta,
                 child: Text(
@@ -189,11 +218,12 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
           tooltipBorderRadius: BorderRadius.circular(8),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((barSpot) {
-              final timestamp = sortedTimestamps[barSpot.x.toInt()];
+              final index = barSpot.x.toInt();
+              final m = widget.metrics[index];
 
               String? matchedParam;
               int visibleIndex = 0;
-              for (var key in widget.normalizedData.keys) {
+              for (var key in _visibleParameters.keys) {
                 if (_visibleParameters[key] == true) {
                   if (visibleIndex == barSpot.barIndex) {
                     matchedParam = key;
@@ -204,19 +234,17 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
               }
 
               if (matchedParam != null) {
-                final paramItem = MonitoringParameters.getParameterByLabel(
-                  matchedParam,
-                  widget.species,
-                );
-                final unit = paramItem?.unit ?? '';
-                final color = paramItem?.color ?? Colors.white;
-
-                final point = widget.normalizedData[matchedParam]!.firstWhere(
-                  (p) => p.timestamp == timestamp,
-                );
+                final color = _colors[matchedParam] ?? Colors.white;
+                final unit = _units[matchedParam] ?? '';
+                
+                double actualValue = 0.0;
+                if (matchedParam == 'ABW') actualValue = m.abw;
+                if (matchedParam == 'ADG') actualValue = m.adg;
+                if (matchedParam == 'DFR') actualValue = m.dfr;
+                if (matchedParam == 'FCR') actualValue = m.fcr;
 
                 return LineTooltipItem(
-                  "$matchedParam\n${point.actualValue} $unit",
+                  "$matchedParam\n${actualValue.toStringAsFixed(2)}$unit",
                   TextStyle(
                     color: color,
                     fontWeight: FontWeight.bold,
@@ -243,11 +271,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       spacing: 12,
       runSpacing: 8,
       children: _visibleParameters.keys.map((param) {
-        final paramItem = MonitoringParameters.getParameterByLabel(
-          param,
-          widget.species,
-        );
-        final color = paramItem?.color ?? Colors.grey;
+        final color = _colors[param]!;
         final isVisible = _visibleParameters[param]!;
 
         return GestureDetector(

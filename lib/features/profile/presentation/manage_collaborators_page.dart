@@ -485,7 +485,6 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                         color: textDark,
                       ),
                     ),
-
                   ],
                 ),
               ),

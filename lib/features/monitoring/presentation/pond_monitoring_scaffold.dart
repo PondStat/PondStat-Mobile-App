@@ -94,10 +94,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
       TrendsPage(
         pondId: widget.pondId,
         species: widget.species,
-      ),
-      GrowthPage(
-        pondId: widget.pondId,
-        canEdit: canEdit,
+        userRole: widget.userRole,
       ),
       OverviewTab(
         pondId: widget.pondId,
@@ -110,13 +107,18 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
         selectedDay: _selectedDay,
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
-            _selectedDay = DateTime.utc(selectedDay.year, selectedDay.month, selectedDay.day);
+            _selectedDay = DateTime.utc(
+              selectedDay.year,
+              selectedDay.month,
+              selectedDay.day,
+            );
             _focusedDay = focusedDay;
           });
         },
         primaryBlue: primaryBlue,
         secondaryBlue: secondaryBlue,
       ),
+      GrowthPage(pondId: widget.pondId, canEdit: canEdit),
       if (_selectedDay != null)
         WaterQualityPage(
           pondId: widget.pondId,
@@ -126,7 +128,12 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
           selectedDay: _selectedDay!,
         )
       else
-        const Scaffold(backgroundColor: Colors.transparent, body: Center(child: Text("Please select a day from the Overview tab"))),
+        const Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: Text("Please select a day from the Overview tab"),
+          ),
+        ),
     ];
 
     return Scaffold(
@@ -146,10 +153,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
                   secondaryBlue: secondaryBlue,
                 ),
                 Expanded(
-                  child: IndexedStack(
-                    index: _currentIndex,
-                    children: pages,
-                  ),
+                  child: IndexedStack(index: _currentIndex, children: pages),
                 ),
               ],
             ),
@@ -177,8 +181,14 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
           backgroundColor: Colors.white,
           selectedItemColor: primaryBlue,
           unselectedItemColor: Colors.grey.shade400,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 10),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 10,
+          ),
           elevation: 0,
           items: const [
             BottomNavigationBarItem(
@@ -190,12 +200,12 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
               label: "Trends",
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.trending_up_rounded),
-              label: "Growth",
-            ),
-            BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_rounded),
               label: "Overview",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.trending_up_rounded),
+              label: "Growth",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.water_drop_rounded),

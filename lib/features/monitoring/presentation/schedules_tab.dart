@@ -72,9 +72,8 @@ class _SchedulesTabState extends State<SchedulesTab> {
 
           // Parse schedules into a grouped format: day -> shift -> List of user objects
           final Map<String, Map<String, List<Map<String, dynamic>>>>
-              groupedSchedules = {
-            for (var day in _daysOfWeek)
-              day: {'morning': [], 'afternoon': []},
+          groupedSchedules = {
+            for (var day in _daysOfWeek) day: {'morning': [], 'afternoon': []},
           };
 
           for (var doc in docs) {
@@ -118,7 +117,9 @@ class _SchedulesTabState extends State<SchedulesTab> {
 
               // Only show days that have at least one assignment, unless we are in edit mode
               // If edit mode, show all days so they can see nothing is assigned.
-              if (morningUsers.isEmpty && afternoonUsers.isEmpty && !widget.canEdit) {
+              if (morningUsers.isEmpty &&
+                  afternoonUsers.isEmpty &&
+                  !widget.canEdit) {
                 return const SizedBox.shrink();
               }
 
@@ -135,7 +136,10 @@ class _SchedulesTabState extends State<SchedulesTab> {
               icon: const Icon(Icons.group_add_rounded, color: Colors.white),
               label: const Text(
                 "Assign Shifts",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             )
           : null,
@@ -169,7 +173,9 @@ class _SchedulesTabState extends State<SchedulesTab> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
               border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
             ),
             child: Text(
@@ -188,7 +194,12 @@ class _SchedulesTabState extends State<SchedulesTab> {
             bgColor: Colors.amber.shade50,
             assignedUsers: morningUsers,
           ),
-          Divider(height: 1, color: Colors.grey.shade200, indent: 16, endIndent: 16),
+          Divider(
+            height: 1,
+            color: Colors.grey.shade200,
+            indent: 16,
+            endIndent: 16,
+          ),
           _ShiftExpansionTile(
             shiftName: "Afternoon",
             icon: Icons.wb_twilight_rounded,
@@ -283,51 +294,59 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                   _OverlapAvatarGroup(users: widget.assignedUsers),
                   const SizedBox(width: 8),
                   Icon(
-                    _isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                    _isExpanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
                     color: Colors.grey.shade400,
                     size: 20,
                   ),
-                ]
+                ],
               ],
             ),
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 250),
-              crossFadeState: _isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+              crossFadeState: _isExpanded
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
               firstChild: Padding(
-                      padding: const EdgeInsets.only(top: 12.0),
-                      child: Column(
-                        children: widget.assignedUsers
-                            .map((user) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8.0),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 12,
-                                        backgroundColor: _getAvatarColor(user['name']).withValues(alpha: 0.2),
-                                        child: Text(
-                                          StringUtils.getInitials(user['name']),
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: _getAvatarColor(user['name']),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        user['name'],
-                                        style: TextStyle(
-                                          color: Colors.blueGrey.shade800,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
+                padding: const EdgeInsets.only(top: 12.0),
+                child: Column(
+                  children: widget.assignedUsers
+                      .map(
+                        (user) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: _getAvatarColor(
+                                  user['name'],
+                                ).withValues(alpha: 0.2),
+                                child: Text(
+                                  StringUtils.getInitials(user['name']),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: _getAvatarColor(user['name']),
                                   ),
-                                ))
-                            .toList(),
-                      ),
-                    ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                user['name'],
+                                style: TextStyle(
+                                  color: Colors.blueGrey.shade800,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
               secondChild: const SizedBox(width: double.infinity, height: 0),
             ),
           ],
@@ -360,7 +379,9 @@ class _OverlapAvatarGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxToShow = 3;
     final int toShow = users.length > maxToShow ? maxToShow : users.length;
-    final int remaining = users.length > maxToShow ? users.length - maxToShow : 0;
+    final int remaining = users.length > maxToShow
+        ? users.length - maxToShow
+        : 0;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -457,7 +478,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
     'Saturday',
     'Sunday',
   ];
-  
+
   String _selectedDay = 'Monday';
   String _selectedShift = 'morning'; // 'morning' or 'afternoon'
 
@@ -480,7 +501,9 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
   Future<void> _loadData() async {
     try {
       // 1. Fetch eligible users
-      final pondDoc = await FirestoreHelper.pondsCollection.doc(widget.pondId).get();
+      final pondDoc = await FirestoreHelper.pondsCollection
+          .doc(widget.pondId)
+          .get();
       if (!pondDoc.exists) return;
 
       final data = pondDoc.data() ?? {};
@@ -489,7 +512,9 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
       List<Map<String, dynamic>> users = [];
       for (var entry in roles.entries) {
         if (entry.value == 'owner' || entry.value == 'editor') {
-          final userDoc = await FirestoreHelper.usersCollection.doc(entry.key).get();
+          final userDoc = await FirestoreHelper.usersCollection
+              .doc(entry.key)
+              .get();
           if (userDoc.exists) {
             final userData = userDoc.data()!;
             users.add({
@@ -503,8 +528,11 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
       // 2. Fetch existing schedules for all those users
       for (var user in users) {
         final userId = user['id'];
-        final scheduleData = await _repository.getJobSchedule(widget.pondId, userId);
-        
+        final scheduleData = await _repository.getJobSchedule(
+          widget.pondId,
+          userId,
+        );
+
         // Initialize an empty 7-day schedule
         Map<String, dynamic> fullSchedule = {};
         for (var day in _daysOfWeek) {
@@ -512,15 +540,18 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
         }
 
         if (scheduleData != null && scheduleData['schedule'] != null) {
-          final savedSchedule = scheduleData['schedule'] as Map<String, dynamic>;
+          final savedSchedule =
+              scheduleData['schedule'] as Map<String, dynamic>;
           for (var day in _daysOfWeek) {
             if (savedSchedule.containsKey(day)) {
-              fullSchedule[day]['morning'] = savedSchedule[day]['morning'] ?? false;
-              fullSchedule[day]['afternoon'] = savedSchedule[day]['afternoon'] ?? false;
+              fullSchedule[day]['morning'] =
+                  savedSchedule[day]['morning'] ?? false;
+              fullSchedule[day]['afternoon'] =
+                  savedSchedule[day]['afternoon'] ?? false;
             }
           }
         }
-        
+
         // Deep copy for both tracking current and initial state
         _allUserSchedules[userId] = _deepCopySchedule(fullSchedule);
         _initialUserSchedules[userId] = _deepCopySchedule(fullSchedule);
@@ -555,9 +586,9 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
     for (var userId in _allUserSchedules.keys) {
       final current = _allUserSchedules[userId]!;
       final initial = _initialUserSchedules[userId]!;
-      
+
       for (var day in _daysOfWeek) {
-        if (current[day]['morning'] != initial[day]['morning'] || 
+        if (current[day]['morning'] != initial[day]['morning'] ||
             current[day]['afternoon'] != initial[day]['afternoon']) {
           return true;
         }
@@ -576,11 +607,11 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
         final userId = user['id'];
         final current = _allUserSchedules[userId]!;
         final initial = _initialUserSchedules[userId]!;
-        
+
         // Check if this specific user has changes
         bool userChanged = false;
         for (var day in _daysOfWeek) {
-          if (current[day]['morning'] != initial[day]['morning'] || 
+          if (current[day]['morning'] != initial[day]['morning'] ||
               current[day]['afternoon'] != initial[day]['afternoon']) {
             userChanged = true;
             break;
@@ -629,12 +660,14 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
     HapticFeedback.selectionClick();
     // Determine if all are currently selected
     bool allSelected = _eligibleUsers.every(
-      (user) => _allUserSchedules[user['id']]![_selectedDay][_selectedShift] == true
+      (user) =>
+          _allUserSchedules[user['id']]![_selectedDay][_selectedShift] == true,
     );
-    
+
     setState(() {
       for (var user in _eligibleUsers) {
-        _allUserSchedules[user['id']]![_selectedDay][_selectedShift] = !allSelected;
+        _allUserSchedules[user['id']]![_selectedDay][_selectedShift] =
+            !allSelected;
       }
     });
   }
@@ -666,7 +699,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
               ),
             ),
           ),
-          
+
           // Header
           Row(
             children: [
@@ -716,7 +749,10 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
               Expanded(
                 flex: 3,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(16),
@@ -726,7 +762,10 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                     child: DropdownButton<String>(
                       value: _selectedDay,
                       isExpanded: true,
-                      icon: const Icon(Icons.expand_more_rounded, color: Color(0xFF64748B)),
+                      icon: const Icon(
+                        Icons.expand_more_rounded,
+                        color: Color(0xFF64748B),
+                      ),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -749,12 +788,19 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
               Expanded(
                 flex: 2,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: _selectedShift == 'morning' ? Colors.amber.shade50 : Colors.indigo.shade50,
+                    color: _selectedShift == 'morning'
+                        ? Colors.amber.shade50
+                        : Colors.indigo.shade50,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: _selectedShift == 'morning' ? Colors.amber.shade200 : Colors.indigo.shade200,
+                      color: _selectedShift == 'morning'
+                          ? Colors.amber.shade200
+                          : Colors.indigo.shade200,
                     ),
                   ),
                   child: DropdownButtonHideUnderline(
@@ -762,13 +808,17 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                       value: _selectedShift,
                       isExpanded: true,
                       icon: Icon(
-                        Icons.expand_more_rounded, 
-                        color: _selectedShift == 'morning' ? Colors.amber.shade700 : Colors.indigo.shade700
+                        Icons.expand_more_rounded,
+                        color: _selectedShift == 'morning'
+                            ? Colors.amber.shade700
+                            : Colors.indigo.shade700,
                       ),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: _selectedShift == 'morning' ? Colors.amber.shade800 : Colors.indigo.shade800,
+                        color: _selectedShift == 'morning'
+                            ? Colors.amber.shade800
+                            : Colors.indigo.shade800,
                       ),
                       onChanged: (val) {
                         if (val != null) setState(() => _selectedShift = val);
@@ -778,9 +828,16 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                           value: 'morning',
                           child: Row(
                             children: [
-                              Icon(Icons.wb_sunny_rounded, size: 14, color: Colors.amber.shade700),
+                              Icon(
+                                Icons.wb_sunny_rounded,
+                                size: 14,
+                                color: Colors.amber.shade700,
+                              ),
                               const SizedBox(width: 6),
-                              const Text("Morning", style: TextStyle(fontSize: 13)),
+                              const Text(
+                                "Morning",
+                                style: TextStyle(fontSize: 13),
+                              ),
                             ],
                           ),
                         ),
@@ -788,9 +845,16 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                           value: 'afternoon',
                           child: Row(
                             children: [
-                              Icon(Icons.wb_twilight_rounded, size: 14, color: Colors.indigo.shade700),
+                              Icon(
+                                Icons.wb_twilight_rounded,
+                                size: 14,
+                                color: Colors.indigo.shade700,
+                              ),
                               const SizedBox(width: 6),
-                              const Text("Afternoon", style: TextStyle(fontSize: 13)),
+                              const Text(
+                                "Afternoon",
+                                style: TextStyle(fontSize: 13),
+                              ),
                             ],
                           ),
                         ),
@@ -821,14 +885,25 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                   onPressed: _toggleSelectAll,
                   style: TextButton.styleFrom(
                     foregroundColor: primaryBlue,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 0,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: Text(
-                    _eligibleUsers.every((u) => _allUserSchedules[u['id']]![_selectedDay][_selectedShift] == true) 
-                      ? "Deselect All" : "Select All",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    _eligibleUsers.every(
+                          (u) =>
+                              _allUserSchedules[u['id']]![_selectedDay][_selectedShift] ==
+                              true,
+                        )
+                        ? "Deselect All"
+                        : "Select All",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
             ],
@@ -840,70 +915,82 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _eligibleUsers.isEmpty
-                    ? Center(
-                        child: Text(
-                          "No eligible members found.\nInvite people with 'Editor' or 'Owner' roles.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: widget.scrollController,
-                        itemCount: _eligibleUsers.length,
-                        itemBuilder: (context, index) {
-                          final user = _eligibleUsers[index];
-                          final userId = user['id'];
-                          final isAssigned = _allUserSchedules[userId]![_selectedDay][_selectedShift] == true;
+                ? Center(
+                    child: Text(
+                      "No eligible members found.\nInvite people with 'Editor' or 'Owner' roles.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: widget.scrollController,
+                    itemCount: _eligibleUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = _eligibleUsers[index];
+                      final userId = user['id'];
+                      final isAssigned =
+                          _allUserSchedules[userId]![_selectedDay][_selectedShift] ==
+                          true;
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: isAssigned ? primaryBlue.withValues(alpha: 0.05) : Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isAssigned ? primaryBlue.withValues(alpha: 0.3) : Colors.grey.shade200,
-                              ),
-                            ),
-                            child: CheckboxListTile(
-                              value: isAssigned,
-                              onChanged: (val) {
-                                if (val != null) _toggleUserAssignment(userId, val);
-                              },
-                              activeColor: primaryBlue,
-                              checkColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                              checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                              title: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 14,
-                                    backgroundColor: Colors.grey.shade200,
-                                    child: Text(
-                                      StringUtils.getInitials(user['name']),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: isAssigned
+                              ? primaryBlue.withValues(alpha: 0.05)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isAssigned
+                                ? primaryBlue.withValues(alpha: 0.3)
+                                : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: CheckboxListTile(
+                          value: isAssigned,
+                          onChanged: (val) {
+                            if (val != null) _toggleUserAssignment(userId, val);
+                          },
+                          activeColor: primaryBlue,
+                          checkColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          checkboxShape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          title: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 14,
+                                backgroundColor: Colors.grey.shade200,
+                                child: Text(
+                                  StringUtils.getInitials(user['name']),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade700,
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      user['name'],
-                                      style: TextStyle(
-                                        fontWeight: isAssigned ? FontWeight.w800 : FontWeight.w600,
-                                        color: Colors.blueGrey.shade900,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  user['name'],
+                                  style: TextStyle(
+                                    fontWeight: isAssigned
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    color: Colors.blueGrey.shade900,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
           const SizedBox(height: 16),
 
@@ -934,7 +1021,10 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                     )
                   : const Text(
                       "Save Shift Assignments",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
             ),
           ),

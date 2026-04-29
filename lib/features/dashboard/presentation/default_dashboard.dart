@@ -41,7 +41,9 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   void initState() {
     super.initState();
 
-    _userPondsStream = DashboardRepository().getUserPondsStream(AuthRepository().currentUser!.uid);
+    _userPondsStream = DashboardRepository().getUserPondsStream(
+      AuthRepository().currentUser!.uid,
+    );
 
     _shimmerController = AnimationController(
       vsync: this,
