@@ -34,7 +34,7 @@ class PondMonitoringScaffold extends StatefulWidget {
 }
 
 class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
-  int _currentIndex = 0;
+  int _currentIndex = 2;
   late DateTime _focusedDay;
   DateTime? _selectedDay;
 
@@ -46,8 +46,19 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _focusedDay = now;
-    _selectedDay = DateTime.utc(now.year, now.month, now.day);
+    
+    final firstDay = widget.createdAt;
+    final lastDay = widget.createdAt.add(Duration(days: widget.targetCulturePeriodDays));
+    
+    DateTime initialFocus = now;
+    if (initialFocus.isBefore(firstDay)) {
+      initialFocus = firstDay;
+    } else if (initialFocus.isAfter(lastDay)) {
+      initialFocus = lastDay;
+    }
+    
+    _focusedDay = initialFocus;
+    _selectedDay = DateTime.utc(initialFocus.year, initialFocus.month, initialFocus.day);
   }
 
   void _showProfileSheet() {
@@ -115,10 +126,20 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
             _focusedDay = focusedDay;
           });
         },
+        onPageChanged: (focusedDay) {
+          setState(() {
+            _focusedDay = focusedDay;
+          });
+        },
         primaryBlue: primaryBlue,
         secondaryBlue: secondaryBlue,
       ),
-      GrowthPage(pondId: widget.pondId, canEdit: canEdit),
+      GrowthPage(
+        pondId: widget.pondId,
+        pondName: widget.pondName,
+        species: widget.species,
+        canEdit: canEdit,
+      ),
       if (_selectedDay != null)
         WaterQualityPage(
           pondId: widget.pondId,

@@ -56,30 +56,6 @@ class MonitoringParameters {
     }
 
     return [
-      const ParameterItem(
-        label: 'Feeding rate',
-        unit: '%',
-        icon: Icons.percent_rounded,
-        color: Colors.brown,
-        hint: 'e.g., 5',
-        isSinglePoint: true,
-      ),
-      const ParameterItem(
-        label: 'Total feed consumed',
-        unit: 'kg',
-        icon: Icons.set_meal_rounded,
-        color: Colors.brown,
-        hint: 'e.g., 10',
-        isSinglePoint: true,
-      ),
-      const ParameterItem(
-        label: 'Total weight gained',
-        unit: 'kg',
-        icon: Icons.monitor_weight_rounded,
-        color: Colors.brown,
-        hint: 'e.g., 2',
-        isSinglePoint: true,
-      ),
       ParameterItem(
         label: 'pH Level',
         unit: '',
@@ -119,9 +95,33 @@ class MonitoringParameters {
     ];
   }
 
-  static final List<ParameterItem> weeklyParameters = [
+  static final List<ParameterItem> samplingParameters = [
     const ParameterItem(
-      label: 'Total weight of fish sampled',
+      label: 'Feeding rate',
+      unit: '%',
+      icon: Icons.percent_rounded,
+      color: Colors.brown,
+      hint: 'e.g., 5',
+      isSinglePoint: true,
+    ),
+    const ParameterItem(
+      label: 'Total feed consumed',
+      unit: 'kg',
+      icon: Icons.set_meal_rounded,
+      color: Colors.brown,
+      hint: 'e.g., 10',
+      isSinglePoint: true,
+    ),
+    const ParameterItem(
+      label: 'Total weight gained',
+      unit: 'kg',
+      icon: Icons.monitor_weight_rounded,
+      color: Colors.brown,
+      hint: 'e.g., 2',
+      isSinglePoint: true,
+    ),
+    const ParameterItem(
+      label: 'Total weight of sampled fish',
       unit: 'g',
       icon: Icons.scale_rounded,
       color: Colors.lightGreen,
@@ -137,6 +137,9 @@ class MonitoringParameters {
       isSinglePoint: true,
       keyboardType: TextInputType.number,
     ),
+  ];
+
+  static final List<ParameterItem> weeklyParameters = [
     const ParameterItem(
       label: 'Phytoplankton',
       unit: 'cells/mL',
@@ -234,6 +237,7 @@ class MonitoringParameters {
       ...getDailyParameters(species),
       ...weeklyParameters,
       ...biweeklyParameters,
+      ...samplingParameters,
     ];
     try {
       return allParams.firstWhere((p) => p.label == label);

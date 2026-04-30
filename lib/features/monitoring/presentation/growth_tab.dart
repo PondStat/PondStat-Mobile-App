@@ -4,8 +4,17 @@ import 'package:pondstat/features/monitoring/presentation/growth_data_service.da
 
 class GrowthTab extends StatefulWidget {
   final String pondId;
+  final bool canEdit;
+  final void Function(GrowthMetrics) onEdit;
+  final void Function(GrowthMetrics) onDelete;
 
-  const GrowthTab({super.key, required this.pondId});
+  const GrowthTab({
+    super.key,
+    required this.pondId,
+    required this.canEdit,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   State<GrowthTab> createState() => _GrowthTabState();
@@ -135,6 +144,18 @@ class _GrowthTabState extends State<GrowthTab> {
           icon: Icons.set_meal_rounded,
           color: Colors.purple,
         ),
+        SummaryCard(
+          label: "Total Weight",
+          value: "${latest.totalWeight}g",
+          icon: Icons.scale_rounded,
+          color: Colors.lightGreen,
+        ),
+        SummaryCard(
+          label: "Sample Count",
+          value: "${latest.sampleCount.toInt()} pcs",
+          icon: Icons.numbers_rounded,
+          color: Colors.blueGrey,
+        ),
       ],
     );
   }
@@ -161,20 +182,63 @@ class _GrowthTabState extends State<GrowthTab> {
                   fontSize: 14,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: primaryIndigo.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  "ABW: ${m.abw}g",
-                  style: TextStyle(
-                    color: primaryIndigo,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: primaryIndigo.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "ABW: ${m.abw}g",
+                      style: TextStyle(
+                        color: primaryIndigo,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-                ),
+                  if (widget.canEdit) ...[
+                    const SizedBox(width: 8),
+                    PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      icon: Icon(
+                        Icons.more_horiz_rounded,
+                        color: Colors.grey.shade400,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      onSelected: (value) {
+                        if (value == 'edit') widget.onEdit(m);
+                        if (value == 'delete') widget.onDelete(m);
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_rounded, size: 18, color: primaryIndigo),
+                              const SizedBox(width: 12),
+                              const Text('Edit', style: TextStyle(fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                              SizedBox(width: 12),
+                              Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -189,6 +253,61 @@ class _GrowthTabState extends State<GrowthTab> {
               ),
               _buildMiniMetric("FCR", m.fcr.toStringAsFixed(2), Colors.orange),
               _buildMiniMetric("DFR", m.dfr.toStringAsFixed(2), Colors.purple),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: Colors.grey.shade100),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildMiniMetric("Total Weight", "${m.totalWeight}g", Colors.blueGrey),
+              _buildMiniMetric("Sample Count", "${m.sampleCount.toInt()} pcs", Colors.blueGrey),
+              const SizedBox(width: 40), // Spacer
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: Colors.grey.shade100),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildMiniMetric("Feed Rate", "${m.feedingRate}%", Colors.brown),
+              _buildMiniMetric("Feed Consumed", "${m.feedConsumed}kg", Colors.brown),
+              _buildMiniMetric("Weight Gained", "${m.weightGained}kg", Colors.brown),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: Colors.grey.shade100),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.person_outline_rounded, size: 14, color: textMuted),
+              const SizedBox(width: 4),
+              Text(
+                "By ${m.recorderName ?? 'Unknown'}",
+                style: TextStyle(
+                  color: textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (m.editorName != null) ...[
+                const SizedBox(width: 8),
+                Text("•", style: TextStyle(color: Colors.grey.shade300, fontSize: 11)),
+                const SizedBox(width: 8),
+                Icon(Icons.edit_rounded, size: 12, color: textMuted),
+                const SizedBox(width: 4),
+                Text(
+                  "Edited by ${m.editorName}",
+                  style: TextStyle(
+                    color: textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
             ],
           ),
         ],

@@ -7,6 +7,15 @@ class GrowthMetrics {
   final double adg;
   final double fcr;
   final double dfr;
+  final double totalWeight;
+  final double sampleCount;
+  final double feedingRate;
+  final double feedConsumed;
+  final double weightGained;
+  final String? weightDocId;
+  final String? countDocId;
+  final String? recorderName;
+  final String? editorName;
 
   GrowthMetrics({
     required this.date,
@@ -14,10 +23,34 @@ class GrowthMetrics {
     this.adg = 0.0,
     this.fcr = 0.0,
     this.dfr = 0.0,
+    this.totalWeight = 0.0,
+    this.sampleCount = 0.0,
+    this.feedingRate = 0.0,
+    this.feedConsumed = 0.0,
+    this.weightGained = 0.0,
+    this.weightDocId,
+    this.countDocId,
+    this.recorderName,
+    this.editorName,
   });
 }
 
 class GrowthDataService {
+  static Future<bool> hasRecordedSamplingThisWeek(String pondId) async {
+    final now = DateTime.now();
+    // A weekly limit means they cannot record again if a record exists within the last 6 days.
+    final sixDaysAgo = now.subtract(const Duration(days: 6));
+
+    final measurementsSnapshot = await FirestoreHelper.measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .where('type', isEqualTo: 'weekly')
+        .where('parameter', isEqualTo: 'Total weight of sampled fish')
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo))
+        .get();
+
+    return measurementsSnapshot.docs.isNotEmpty;
+  }
+
   static Future<List<GrowthMetrics>> calculateGrowthMetrics(
     String pondId,
   ) async {
@@ -43,7 +76,7 @@ class GrowthDataService {
     final weightDocs = allDocs.where((doc) {
       final data = doc.data();
       return data['type'] == 'weekly' &&
-          data['parameter'] == 'Total weight of fish sampled';
+          data['parameter'] == 'Total weight of sampled fish';
     }).toList();
 
     final countDocs = allDocs.where((doc) {
@@ -73,22 +106,38 @@ class GrowthDataService {
 
     // Pair weights and counts by date
     final Map<String, double> dailyWeights = {};
+    final Map<String, String> dailyWeightIds = {};
+    final Map<String, String> dailyRecorderNames = {};
+    final Map<String, String?> dailyEditorNames = {};
     final Map<String, double> dailyCounts = {};
+    final Map<String, String> dailyCountIds = {};
     final Set<String> allDates = {};
 
     for (var doc in weightDocs) {
       final data = doc.data();
+      if (data['timestamp'] == null || data['value'] == null) continue;
       final date = (data['timestamp'] as Timestamp).toDate();
       final dateKey = "${date.year}-${date.month}-${date.day}";
       dailyWeights[dateKey] = (data['value'] as num).toDouble();
+      dailyWeightIds[dateKey] = doc.id;
+      dailyRecorderNames[dateKey] = data['recorderName'] as String? ?? 'Unknown';
+      dailyEditorNames[dateKey] = data['editorName'] as String?;
       allDates.add(dateKey);
     }
 
     for (var doc in countDocs) {
       final data = doc.data();
+      if (data['timestamp'] == null || data['value'] == null) continue;
       final date = (data['timestamp'] as Timestamp).toDate();
       final dateKey = "${date.year}-${date.month}-${date.day}";
       dailyCounts[dateKey] = (data['value'] as num).toDouble();
+      dailyCountIds[dateKey] = doc.id;
+      if (!dailyRecorderNames.containsKey(dateKey)) {
+          dailyRecorderNames[dateKey] = data['recorderName'] as String? ?? 'Unknown';
+      }
+      if (!dailyEditorNames.containsKey(dateKey) || dailyEditorNames[dateKey] == null) {
+          dailyEditorNames[dateKey] = data['editorName'] as String?;
+      }
       allDates.add(dateKey);
     }
 
@@ -105,7 +154,16 @@ class GrowthDataService {
             int.parse(parts[1]),
             int.parse(parts[2]),
           );
-          pairedSamplings.add({'date': date, 'abw': weight / count});
+          pairedSamplings.add({
+            'date': date,
+            'abw': weight / count,
+            'totalWeight': weight,
+            'sampleCount': count,
+            'weightDocId': dailyWeightIds[dateKey],
+            'countDocId': dailyCountIds[dateKey],
+            'recorderName': dailyRecorderNames[dateKey],
+            'editorName': dailyEditorNames[dateKey],
+          });
         }
       }
     }
@@ -126,6 +184,9 @@ class GrowthDataService {
       double adg = 0.0;
       double fcr = 0.0;
       double dfr = 0.0;
+      double feedingRate = 0.0;
+      double feedConsumed = 0.0;
+      double weightGained = 0.0;
 
       if (i > 0) {
         final previousSampling = pairedSamplings[i - 1];
@@ -139,16 +200,20 @@ class GrowthDataService {
 
           // Get the feeding rate for the CURRENT sampling date for DFR
           final currentFeedingRateDoc = feedingRateDocs.where((doc) {
-            final date = (doc.data()['timestamp'] as Timestamp).toDate();
+            final data = doc.data();
+            if (data['timestamp'] == null) return false;
+            final date = (data['timestamp'] as Timestamp).toDate();
             return date.year == currentDate.year &&
                 date.month == currentDate.month &&
                 date.day == currentDate.day;
           }).toList();
 
           if (currentFeedingRateDoc.isNotEmpty) {
-            final feedingRate =
-                (currentFeedingRateDoc.first.data()['value'] as num).toDouble();
-            dfr = currentAbw * fishCount * feedingRate / 100.0;
+            final data = currentFeedingRateDoc.first.data();
+            if (data['value'] != null) {
+              feedingRate = (data['value'] as num).toDouble();
+              dfr = currentAbw * fishCount * feedingRate / 100.0;
+            }
           }
 
           // Calculate total feed and weight gained between samplings for FCR
@@ -164,25 +229,38 @@ class GrowthDataService {
           );
 
           final periodFeedDocs = feedConsumedDocs.where((doc) {
-            final date = (doc.data()['timestamp'] as Timestamp).toDate();
+            final data = doc.data();
+            if (data['timestamp'] == null) return false;
+            final date = (data['timestamp'] as Timestamp).toDate();
             final d = DateTime(date.year, date.month, date.day);
             return !d.isBefore(start) && !d.isAfter(end);
           }).toList();
 
           final periodWeightGainedDocs = weightGainedDocs.where((doc) {
-            final date = (doc.data()['timestamp'] as Timestamp).toDate();
+            final data = doc.data();
+            if (data['timestamp'] == null) return false;
+            final date = (data['timestamp'] as Timestamp).toDate();
             final d = DateTime(date.year, date.month, date.day);
             return !d.isBefore(start) && !d.isAfter(end);
           }).toList();
 
           final double totalFeed = periodFeedDocs.fold(
             0.0,
-            (acc, doc) => acc + (doc.data()['value'] as num).toDouble(),
+            (acc, doc) {
+              final val = doc.data()['value'];
+              return acc + (val != null ? (val as num).toDouble() : 0.0);
+            },
           );
           final double totalWeightGained = periodWeightGainedDocs.fold(
             0.0,
-            (acc, doc) => acc + (doc.data()['value'] as num).toDouble(),
+            (acc, doc) {
+              final val = doc.data()['value'];
+              return acc + (val != null ? (val as num).toDouble() : 0.0);
+            },
           );
+
+          feedConsumed = totalFeed;
+          weightGained = totalWeightGained;
 
           if (totalWeightGained > 0) {
             fcr = totalFeed / totalWeightGained;
@@ -197,6 +275,15 @@ class GrowthDataService {
           adg: _round(adg, 2),
           fcr: _round(fcr, 2),
           dfr: _round(dfr, 2),
+          totalWeight: _round(currentSampling['totalWeight'] as double, 1),
+          sampleCount: _round(currentSampling['sampleCount'] as double, 0),
+          feedingRate: _round(feedingRate, 2),
+          feedConsumed: _round(feedConsumed, 2),
+          weightGained: _round(weightGained, 2),
+          weightDocId: currentSampling['weightDocId'] as String?,
+          countDocId: currentSampling['countDocId'] as String?,
+          recorderName: currentSampling['recorderName'] as String?,
+          editorName: currentSampling['editorName'] as String?,
         ),
       );
     }

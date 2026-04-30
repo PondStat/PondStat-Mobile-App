@@ -74,7 +74,14 @@ class _MeasurementListViewState extends State<MeasurementListView> {
           );
         }
 
-        final docs = snapshot.data?.docs ?? [];
+        final rawDocs = snapshot.data?.docs ?? [];
+        final docs = rawDocs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final param = data['parameter'] as String?;
+          return param != 'Total weight of sampled fish' &&
+                 param != 'Number of fish sampled';
+        }).toList();
+
         if (docs.isEmpty) return _buildEmptyState();
 
         final sortedDocs = docs.toList()

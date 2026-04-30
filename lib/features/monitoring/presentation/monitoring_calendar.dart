@@ -8,6 +8,7 @@ class MonitoringCalendar extends StatelessWidget {
   final DateTime focusedDay;
   final DateTime? selectedDay;
   final Function(DateTime, DateTime) onDaySelected;
+  final Function(DateTime)? onPageChanged;
   final VoidCallback? onReturnToToday;
   final DateTime firstDay;
   final DateTime lastDay;
@@ -18,6 +19,7 @@ class MonitoringCalendar extends StatelessWidget {
     required this.focusedDay,
     required this.selectedDay,
     required this.onDaySelected,
+    this.onPageChanged,
     required this.firstDay,
     required this.lastDay,
     this.onReturnToToday,
@@ -117,8 +119,8 @@ class MonitoringCalendar extends StatelessWidget {
             ),
 
             TableCalendar(
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.now(),
+              firstDay: firstDay,
+              lastDay: lastDay,
               focusedDay: focusedDay,
               startingDayOfWeek: StartingDayOfWeek.monday,
               availableCalendarFormats: const {CalendarFormat.month: 'Month'},
@@ -156,6 +158,7 @@ class MonitoringCalendar extends StatelessWidget {
 
               selectedDayPredicate: (day) => isSameDay(selectedDay, day),
               onDaySelected: onDaySelected,
+              onPageChanged: onPageChanged,
 
               calendarBuilders: CalendarBuilders(
                 selectedBuilder: (context, date, events) {
