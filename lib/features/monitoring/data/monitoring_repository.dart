@@ -187,12 +187,7 @@ class MonitoringRepository {
           'replicateValues': data['replicateValues'],
           'notes': data['notes'],
         },
-        after: {
-          'value': avg,
-          'pointValues': newPointValues,
-          'replicateValues': newReplicateValues,
-          'notes': ?newNote,
-        },
+        after: updateData,
       );
     }
 
