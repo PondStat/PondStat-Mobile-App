@@ -29,8 +29,8 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
 
   final Color primaryBlue = const Color(0xFF0A74DA);
   final Color secondaryBlue = const Color(0xFF4FA0F0);
-  final Color textDark = const Color(0xFF1E293B);
-  final Color textMuted = const Color(0xFF64748B);
+  Color get textDark => Theme.of(context).colorScheme.onSurface;
+  Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
   final Color backgroundLight = const Color(0xFFF8FAFC);
 
   @override
@@ -943,9 +943,9 @@ class _CollaboratorTileState extends State<CollaboratorTile>
         ),
         title: Text(
           widget.isMe ? "$name (You)" : name,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 15,
           ),
         ),
@@ -1071,11 +1071,11 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       "Remove Access?",
                       style: TextStyle(
-                        color: Color(0xFF1E293B),
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w900,
                         fontSize: 18,
                       ),
@@ -1083,10 +1083,10 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                   ),
                 ],
               ),
-              content: const Text(
+              content: Text(
                 "This user will immediately lose all access to this pond's data.",
                 style: TextStyle(
-                  color: Color(0xFF64748B),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.4,
                   fontSize: 15,
                 ),

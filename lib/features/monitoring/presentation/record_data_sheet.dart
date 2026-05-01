@@ -54,8 +54,8 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   final MonitoringRepository _repository = MonitoringRepository();
 
   final Color primaryBlue = const Color(0xFF0A74DA);
-  final Color textDark = const Color(0xFF1E293B);
-  final Color textMuted = const Color(0xFF64748B);
+  Color get textDark => Theme.of(context).colorScheme.onSurface;
+  Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
 
   @override
   void initState() {
@@ -988,10 +988,10 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 color: Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back_rounded,
                 size: 20,
-                color: Color(0xFF1E293B),
+                color: textDark,
               ),
             ),
             onPressed: () {
@@ -1005,10 +1005,10 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         Expanded(
           child: Text(
             selectedParameter == null ? "Select Parameter" : "Enter Data",
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF1E293B),
+              color: textDark,
               letterSpacing: -0.5,
             ),
           ),
@@ -1020,10 +1020,10 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
               color: Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.close_rounded,
               size: 20,
-              color: Color(0xFF64748B),
+              color: textMuted,
             ),
           ),
           onPressed: () => Navigator.pop(context),

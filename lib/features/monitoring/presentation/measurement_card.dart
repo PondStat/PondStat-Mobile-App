@@ -27,10 +27,11 @@ class MeasurementCard extends StatelessWidget {
 
   final Color primaryBlue = const Color(0xFF0A74DA);
   final Color secondaryBlue = const Color(0xFF4FA0F0);
-  final Color textDark = const Color(0xFF1E293B);
-  final Color textMuted = const Color(0xFF64748B);
 
   void _confirmGroupDelete(BuildContext context) {
+    final Color textDark = Theme.of(context).colorScheme.onSurface;
+    final Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -187,10 +188,13 @@ class MeasurementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color textDark = Theme.of(context).colorScheme.onSurface;
+    final Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
+
     final parts = content.split('\n');
     final mainValue = parts.isNotEmpty ? parts[0] : '';
     final subtitle = parts.length > 1 ? parts.sublist(1).join('\n') : '';
-    
+
     if (groupDocs.isNotEmpty) {
       // final data = groupDocs.first.data() as Map<String, dynamic>;
       // recorderName = data['recorderName'] as String? ?? 'Unknown';

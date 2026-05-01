@@ -56,18 +56,19 @@ class GrowthDataService {
       'Number of fish sampled',
       'Feeding rate',
       'Total feed consumed',
-      'Total weight gained'
+      'Total weight gained',
     ];
 
-    final allDocs = measurementsSnapshot.docs
-        .where((doc) => relevantParams.contains(doc.data()['parameter']))
-        .toList()
-      ..sort((a, b) {
-        final tA = a.data()['timestamp'] as Timestamp?;
-        final tB = b.data()['timestamp'] as Timestamp?;
-        if (tA == null || tB == null) return 0;
-        return tA.compareTo(tB);
-      });
+    final allDocs =
+        measurementsSnapshot.docs
+            .where((doc) => relevantParams.contains(doc.data()['parameter']))
+            .toList()
+          ..sort((a, b) {
+            final tA = a.data()['timestamp'] as Timestamp?;
+            final tB = b.data()['timestamp'] as Timestamp?;
+            if (tA == null || tB == null) return 0;
+            return tA.compareTo(tB);
+          });
 
     if (allDocs.isEmpty) return [];
 
@@ -92,28 +93,35 @@ class GrowthDataService {
       final int weekNumber = (daysSinceStart / 7).floor() + 1;
       final int displayWeek = weekNumber > 0 ? weekNumber : 1;
 
-      weeklyBuckets.putIfAbsent(displayWeek, () => {
-        'date': date,
-        'Total weight of sampled fish': 0.0,
-        'Number of fish sampled': 0.0,
-        'Feeding rate': 0.0,
-        'Total feed consumed': 0.0,
-        'Total weight gained': 0.0,
-      });
+      weeklyBuckets.putIfAbsent(
+        displayWeek,
+        () => {
+          'date': date,
+          'Total weight of sampled fish': 0.0,
+          'Number of fish sampled': 0.0,
+          'Feeding rate': 0.0,
+          'Total feed consumed': 0.0,
+          'Total weight gained': 0.0,
+        },
+      );
 
       // Keep the latest date for this week's card
       weeklyBuckets[displayWeek]!['date'] = date;
-      
+
       // Add value to the bucket (sums if recorded multiple times, typically just once)
-      weeklyBuckets[displayWeek]![param] = (weeklyBuckets[displayWeek]![param] as double) + val;
+      weeklyBuckets[displayWeek]![param] =
+          (weeklyBuckets[displayWeek]![param] as double) + val;
 
       if (param == 'Total weight of sampled fish') {
         weeklyBuckets[displayWeek]!['weightDocId'] = doc.id;
       } else if (param == 'Number of fish sampled') {
         weeklyBuckets[displayWeek]!['countDocId'] = doc.id;
       }
-      
-      weeklyBuckets[displayWeek]!['recorderName'] = data['recorderName'] as String? ?? weeklyBuckets[displayWeek]!['recorderName'] ?? 'Unknown';
+
+      weeklyBuckets[displayWeek]!['recorderName'] =
+          data['recorderName'] as String? ??
+          weeklyBuckets[displayWeek]!['recorderName'] ??
+          'Unknown';
       if (data['editorName'] != null) {
         weeklyBuckets[displayWeek]!['editorName'] = data['editorName'];
       }
@@ -132,8 +140,10 @@ class GrowthDataService {
       final double feedConsumed = bucket['Total feed consumed'];
       final double weightGained = bucket['Total weight gained'];
 
-      final double currentAbw = sampleCount > 0 ? totalWeight / sampleCount : 0.0;
-      
+      final double currentAbw = sampleCount > 0
+          ? totalWeight / sampleCount
+          : 0.0;
+
       double adg = 0.0;
       double dfr = currentAbw * fishCount * feedingRate / 100.0;
       double fcr = weightGained > 0 ? feedConsumed / weightGained : 0.0;
@@ -141,10 +151,13 @@ class GrowthDataService {
       if (i > 0) {
         final prevWeek = sortedWeeks[i - 1];
         final prevBucket = weeklyBuckets[prevWeek]!;
-        
-        final prevTotalWeight = prevBucket['Total weight of sampled fish'] as double;
+
+        final prevTotalWeight =
+            prevBucket['Total weight of sampled fish'] as double;
         final prevSampleCount = prevBucket['Number of fish sampled'] as double;
-        final prevAbw = prevSampleCount > 0 ? prevTotalWeight / prevSampleCount : 0.0;
+        final prevAbw = prevSampleCount > 0
+            ? prevTotalWeight / prevSampleCount
+            : 0.0;
 
         final DateTime currentDate = bucket['date'] as DateTime;
         final DateTime prevDate = prevBucket['date'] as DateTime;

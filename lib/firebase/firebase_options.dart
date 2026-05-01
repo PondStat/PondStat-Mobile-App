@@ -7,13 +7,13 @@ import 'package:flutter/foundation.dart'
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
-/// 
+///
 /// import 'firebase_options.dart';
 /// // ...
 /// await Firebase.initializeApp(
 ///   options: DefaultFirebaseOptions.currentPlatform,
 /// );
-/// 
+///
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -64,8 +64,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '624574025589',
     projectId: 'pondstat-7c430',
     storageBucket: 'pondstat-7c430.firebasestorage.app',
-    androidClientId: '624574025589-5gjmf663uvnd81kiu5bilojmahe1pnot.apps.googleusercontent.com',
-    iosClientId: '624574025589-hpa5lda8qq5maa8pk4g6gcp8bhrbkhj7.apps.googleusercontent.com',
+    androidClientId:
+        '624574025589-5gjmf663uvnd81kiu5bilojmahe1pnot.apps.googleusercontent.com',
+    iosClientId:
+        '624574025589-hpa5lda8qq5maa8pk4g6gcp8bhrbkhj7.apps.googleusercontent.com',
     iosBundleId: 'com.example.pondstat',
   );
 
@@ -75,8 +77,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '624574025589',
     projectId: 'pondstat-7c430',
     storageBucket: 'pondstat-7c430.firebasestorage.app',
-    androidClientId: '624574025589-5gjmf663uvnd81kiu5bilojmahe1pnot.apps.googleusercontent.com',
-    iosClientId: '624574025589-hpa5lda8qq5maa8pk4g6gcp8bhrbkhj7.apps.googleusercontent.com',
+    androidClientId:
+        '624574025589-5gjmf663uvnd81kiu5bilojmahe1pnot.apps.googleusercontent.com',
+    iosClientId:
+        '624574025589-hpa5lda8qq5maa8pk4g6gcp8bhrbkhj7.apps.googleusercontent.com',
     iosBundleId: 'com.example.pondstat',
   );
 

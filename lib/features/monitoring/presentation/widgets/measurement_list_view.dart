@@ -76,7 +76,9 @@ class _MeasurementListViewState extends State<MeasurementListView> {
         }
 
         final rawDocs = snapshot.data?.docs ?? [];
-        final excludedParams = MonitoringParameters.samplingParameters.map((p) => p.label).toSet();
+        final excludedParams = MonitoringParameters.samplingParameters
+            .map((p) => p.label)
+            .toSet();
         final docs = rawDocs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final param = data['parameter'] as String?;

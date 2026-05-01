@@ -30,8 +30,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   final Color primaryBlue = const Color(0xFF0A74DA);
   final Color secondaryBlue = const Color(0xFF4FA0F0);
-  final Color textDark = const Color(0xFF1E293B);
-  final Color textMuted = const Color(0xFF64748B);
+  Color get textDark => Theme.of(context).colorScheme.onSurface;
+  Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
   final Color backgroundLight = const Color(0xFFF8FAFC);
 
   @override
