@@ -372,7 +372,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        toolbarHeight: 110,
+        toolbarHeight: 90,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             color: isDark ? theme.scaffoldBackgroundColor : null,
@@ -419,16 +419,6 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Pond List",
-                      style: TextStyle(
-                        color: isDark ? colorScheme.onSurface : Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 20,
-                        letterSpacing: -0.5,
-                      ),
                     ),
                   ],
                 ),
@@ -583,9 +573,27 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                           padding: const EdgeInsets.all(
                             16,
                           ).copyWith(bottom: 100),
-                          itemCount: sortedPonds.length,
+                          itemCount: sortedPonds.length + 1,
                           itemBuilder: (context, index) {
-                            final pondDoc = sortedPonds[index];
+                            if (index == 0) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 16.0,
+                                  left: 4.0,
+                                ),
+                                child: Text(
+                                  "Pond List",
+                                  style: TextStyle(
+                                    color: colorScheme.onSurface,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 22,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final pondDoc = sortedPonds[index - 1];
                             final pondData =
                                 pondDoc.data() as Map<String, dynamic>;
                             final String pondName =
