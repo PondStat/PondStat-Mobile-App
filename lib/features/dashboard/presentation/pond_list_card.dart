@@ -132,8 +132,8 @@ class _PondListCardState extends State<PondListCard> {
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.water_drop_rounded,
+                          child: Icon(
+                            _getSpeciesIcon(widget.species),
                             color: Colors.white,
                             size: 28,
                           ),
@@ -274,5 +274,18 @@ class _PondListCardState extends State<PondListCard> {
         ),
       ),
     );
+  }
+
+  IconData _getSpeciesIcon(String species) {
+    final lower = species.toLowerCase();
+    if (lower.contains('tilapia') || lower.contains('fish')) {
+      return Icons.set_meal_rounded;
+    }
+    if (lower.contains('shrimp') ||
+        lower.contains('prawn') ||
+        lower.contains('vannamei')) {
+      return Icons.bug_report_rounded;
+    }
+    return Icons.water_drop_rounded;
   }
 }
