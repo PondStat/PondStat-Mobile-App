@@ -545,23 +545,24 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                       return _buildErrorState(snapshot.error.toString());
                     }
 
-                    var ponds = snapshot.data?.docs.toList() ?? [];
+                    final ponds = snapshot.data?.docs ?? [];
 
                     if (ponds.isEmpty) {
                       return _buildEmptyState(context);
                     }
 
-                    // Sort client-side by createdAt descending
-                    ponds.sort((a, b) {
-                      final dataA = a.data() as Map<String, dynamic>;
-                      final dataB = b.data() as Map<String, dynamic>;
-                      final tA = dataA['createdAt'] as Timestamp?;
-                      final tB = dataB['createdAt'] as Timestamp?;
-                      if (tA == null && tB == null) return 0;
-                      if (tA == null) return 1;
-                      if (tB == null) return -1;
-                      return tB.compareTo(tA);
-                    });
+                    // Sort client-side by createdAt descending without mutating original list
+                    final sortedPonds = List<DocumentSnapshot>.from(ponds)
+                      ..sort((a, b) {
+                        final dataA = a.data() as Map<String, dynamic>;
+                        final dataB = b.data() as Map<String, dynamic>;
+                        final tA = dataA['createdAt'] as Timestamp?;
+                        final tB = dataB['createdAt'] as Timestamp?;
+                        if (tA == null && tB == null) return 0;
+                        if (tA == null) return 1;
+                        if (tB == null) return -1;
+                        return tB.compareTo(tA);
+                      });
 
                     return NotificationListener<ScrollNotification>(
                       onNotification: (ScrollNotification notification) {
@@ -587,9 +588,9 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                           padding: const EdgeInsets.all(
                             16,
                           ).copyWith(bottom: 100),
-                          itemCount: ponds.length,
+                          itemCount: sortedPonds.length,
                           itemBuilder: (context, index) {
-                            final pondDoc = ponds[index];
+                            final pondDoc = sortedPonds[index];
                             final pondData =
                                 pondDoc.data() as Map<String, dynamic>;
                             final String pondName =
