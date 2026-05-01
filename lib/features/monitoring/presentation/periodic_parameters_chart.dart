@@ -147,10 +147,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     final isDark = theme.brightness == Brightness.dark;
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('pondstat-app-v1')
-          .doc('pondstat-app-v1')
-          .collection('custom_parameters')
+      stream: FirestoreHelper.customParametersCollection
           .where('type', isEqualTo: widget.type)
           .snapshots(),
       builder: (context, snapshot) {

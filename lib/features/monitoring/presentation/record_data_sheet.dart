@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pondstat/core/firebase/firestore_helper.dart';
 
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/utils/helpers.dart';
@@ -179,7 +180,8 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
     setState(() => _isSaving = true);
     double avg = double.parse((totalSum / pointsWithData).toStringAsFixed(2));
-    String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+    String type =
+        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
     try {
       await widget.onSave(
@@ -261,7 +263,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+                String type =
+                    widget.customType ??
+                    ['daily', 'weekly', 'biweekly'][widget.tabIndex];
                 await _repository.addCustomParameter(
                   label: nameController.text.trim(),
                   unit: unitController.text.trim(),
@@ -445,12 +449,14 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   }
 
   Widget _buildParameterGrid() {
-    List<ParameterItem> hardcodedParams = widget.customParams ??
+    List<ParameterItem> hardcodedParams =
+        widget.customParams ??
         MonitoringParameters.getParametersByIndex(
           widget.tabIndex,
           widget.species,
         );
-    String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+    String type =
+        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
     if (type == 'growth') {
       List<Widget> gridItems = hardcodedParams
@@ -471,10 +477,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('pondstat-app-v1')
-          .doc('pondstat-app-v1')
-          .collection('custom_parameters')
+      stream: FirestoreHelper.customParametersCollection
           .where('type', isEqualTo: type)
           .snapshots(),
       builder: (context, snapshot) {
