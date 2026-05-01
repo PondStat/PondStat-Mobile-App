@@ -30,28 +30,8 @@ class GrowthPage extends StatefulWidget {
 
 class _GrowthPageState extends State<GrowthPage> {
   int _refreshKey = 0;
-  bool _isLoadingFab = false;
 
-  void _showRecordGrowth() async {
-    setState(() {
-      _isLoadingFab = true;
-    });
-    final hasRecorded = await GrowthDataService.hasRecordedSamplingThisWeek(widget.pondId);
-    setState(() {
-      _isLoadingFab = false;
-    });
-
-    if (hasRecorded && mounted) {
-      SnackbarHelper.show(
-        context,
-        "You have already recorded growth sampling within the last 7 days.",
-        backgroundColor: Colors.orange,
-      );
-      return;
-    }
-
-    if (!mounted) return;
-
+  void _showRecordGrowth() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -61,7 +41,7 @@ class _GrowthPageState extends State<GrowthPage> {
         tabIndex: 1,
         species: widget.species,
         customParams: MonitoringParameters.samplingParameters,
-        customType: 'weekly',
+        customType: 'growth',
         onSave: ({
           required String label,
           required String unit,
@@ -72,6 +52,18 @@ class _GrowthPageState extends State<GrowthPage> {
           required Map<String, List<double>> replicateValues,
           String? notes,
         }) async {
+          final now = DateTime.now();
+          final sixDaysAgo = now.subtract(const Duration(days: 6));
+          final snapshot = await FirestoreHelper.measurementsCollection
+              .where('pondId', isEqualTo: widget.pondId)
+              .where('parameter', isEqualTo: label)
+              .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo))
+              .get();
+
+          if (snapshot.docs.isNotEmpty) {
+            throw Exception("You have already recorded $label within the last 7 days.");
+          }
+
           final repository = MonitoringRepository();
           await repository.saveMeasurement(
             pondId: widget.pondId,
@@ -82,7 +74,7 @@ class _GrowthPageState extends State<GrowthPage> {
             type: type,
             pointValues: pointValues,
             replicateValues: replicateValues,
-            selectedDay: DateTime.now(),
+            selectedDay: now,
             notes: notes,
           );
           if (!sheetContext.mounted) return;
@@ -316,12 +308,12 @@ class _GrowthPageState extends State<GrowthPage> {
       floatingActionButton: widget.canEdit
           ? FloatingActionButton.extended(
               heroTag: 'growth_fab',
-              onPressed: _isLoadingFab ? null : () => _showRecordGrowth(),
-              backgroundColor: _isLoadingFab ? Colors.grey : Colors.indigo.shade400,
-              icon: _isLoadingFab ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.add_rounded, color: Colors.white),
-              label: Text(
-                _isLoadingFab ? "Checking..." : "Record Sampling",
-                style: const TextStyle(color: Colors.white),
+              onPressed: () => _showRecordGrowth(),
+              backgroundColor: Colors.indigo.shade400,
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text(
+                "Record Sampling",
+                style: TextStyle(color: Colors.white),
               ),
             )
           : null,

@@ -64,26 +64,10 @@ class _GrowthTabState extends State<GrowthTab> {
           return _buildEmptyState();
         }
 
-        final latest = metrics.first;
-
         return CustomScrollView(
           slivers: [
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSummaryGrid(latest),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader("Growth History"),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   return _buildGrowthCard(metrics[index]);
@@ -96,67 +80,6 @@ class _GrowthTabState extends State<GrowthTab> {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title.toUpperCase(),
-      style: TextStyle(
-        color: textMuted,
-        fontWeight: FontWeight.w900,
-        fontSize: 12,
-        letterSpacing: 1.2,
-      ),
-    );
-  }
-
-  Widget _buildSummaryGrid(GrowthMetrics latest) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
-      children: [
-        SummaryCard(
-          label: "Current ABW",
-          value: "${latest.abw.toStringAsFixed(1)}g",
-          icon: Icons.monitor_weight_rounded,
-          color: Colors.blue,
-        ),
-        SummaryCard(
-          label: "Latest ADG",
-          value: "${latest.adg.toStringAsFixed(2)}g",
-          icon: Icons.trending_up_rounded,
-          color: Colors.green,
-        ),
-        SummaryCard(
-          label: "Current FCR",
-          value: latest.fcr.toStringAsFixed(2),
-          icon: Icons.assignment_rounded,
-          color: Colors.orange,
-        ),
-        SummaryCard(
-          label: "Current DFR",
-          value: latest.dfr.toStringAsFixed(2),
-          icon: Icons.set_meal_rounded,
-          color: Colors.purple,
-        ),
-        SummaryCard(
-          label: "Total Weight",
-          value: "${latest.totalWeight}g",
-          icon: Icons.scale_rounded,
-          color: Colors.lightGreen,
-        ),
-        SummaryCard(
-          label: "Sample Count",
-          value: "${latest.sampleCount.toInt()} pcs",
-          icon: Icons.numbers_rounded,
-          color: Colors.blueGrey,
-        ),
-      ],
     );
   }
 
@@ -376,102 +299,4 @@ class _GrowthTabState extends State<GrowthTab> {
   }
 }
 
-class SummaryCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
 
-  const SummaryCard({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: color, size: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Color(0xFF1E293B),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF64748B),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class MiniMetric extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const MiniMetric({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF64748B),
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
-    );
-  }
-}

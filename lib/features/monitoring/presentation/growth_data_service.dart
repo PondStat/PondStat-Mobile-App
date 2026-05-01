@@ -36,21 +36,6 @@ class GrowthMetrics {
 }
 
 class GrowthDataService {
-  static Future<bool> hasRecordedSamplingThisWeek(String pondId) async {
-    final now = DateTime.now();
-    // A weekly limit means they cannot record again if a record exists within the last 6 days.
-    final sixDaysAgo = now.subtract(const Duration(days: 6));
-
-    final measurementsSnapshot = await FirestoreHelper.measurementsCollection
-        .where('pondId', isEqualTo: pondId)
-        .where('type', isEqualTo: 'weekly')
-        .where('parameter', isEqualTo: 'Total weight of sampled fish')
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo))
-        .get();
-
-    return measurementsSnapshot.docs.isNotEmpty;
-  }
-
   static Future<List<GrowthMetrics>> calculateGrowthMetrics(
     String pondId,
   ) async {
@@ -59,7 +44,6 @@ class GrowthDataService {
 
     final pondData = pondDoc.data() ?? {};
     final int fishCount = (pondData['stockingQuantity'] as num?)?.toInt() ?? 0;
-    if (fishCount <= 0) return [];
 
     final measurementsSnapshot = await FirestoreHelper.measurementsCollection
         .where('pondId', isEqualTo: pondId)
@@ -75,94 +59,69 @@ class GrowthDataService {
 
     final weightDocs = allDocs.where((doc) {
       final data = doc.data();
-      return data['type'] == 'weekly' &&
-          data['parameter'] == 'Total weight of sampled fish';
+      return data['parameter'] == 'Total weight of sampled fish';
     }).toList();
 
     final countDocs = allDocs.where((doc) {
       final data = doc.data();
-      return data['type'] == 'weekly' &&
-          data['parameter'] == 'Number of fish sampled';
+      return data['parameter'] == 'Number of fish sampled';
     }).toList();
 
     final feedingRateDocs = allDocs.where((doc) {
       final data = doc.data();
-      return data['type'] == 'daily' && data['parameter'] == 'Feeding rate';
+      return data['parameter'] == 'Feeding rate';
     }).toList();
 
     final feedConsumedDocs = allDocs.where((doc) {
       final data = doc.data();
-      return data['type'] == 'daily' &&
-          data['parameter'] == 'Total feed consumed';
+      return data['parameter'] == 'Total feed consumed';
     }).toList();
 
     final weightGainedDocs = allDocs.where((doc) {
       final data = doc.data();
-      return data['type'] == 'daily' &&
-          data['parameter'] == 'Total weight gained';
+      return data['parameter'] == 'Total weight gained';
     }).toList();
 
     if (weightDocs.isEmpty || countDocs.isEmpty) return [];
 
-    // Pair weights and counts by date
-    final Map<String, double> dailyWeights = {};
-    final Map<String, String> dailyWeightIds = {};
-    final Map<String, String> dailyRecorderNames = {};
-    final Map<String, String?> dailyEditorNames = {};
-    final Map<String, double> dailyCounts = {};
-    final Map<String, String> dailyCountIds = {};
-    final Set<String> allDates = {};
-
-    for (var doc in weightDocs) {
-      final data = doc.data();
-      if (data['timestamp'] == null || data['value'] == null) continue;
-      final date = (data['timestamp'] as Timestamp).toDate();
-      final dateKey = "${date.year}-${date.month}-${date.day}";
-      dailyWeights[dateKey] = (data['value'] as num).toDouble();
-      dailyWeightIds[dateKey] = doc.id;
-      dailyRecorderNames[dateKey] = data['recorderName'] as String? ?? 'Unknown';
-      dailyEditorNames[dateKey] = data['editorName'] as String?;
-      allDates.add(dateKey);
-    }
-
-    for (var doc in countDocs) {
-      final data = doc.data();
-      if (data['timestamp'] == null || data['value'] == null) continue;
-      final date = (data['timestamp'] as Timestamp).toDate();
-      final dateKey = "${date.year}-${date.month}-${date.day}";
-      dailyCounts[dateKey] = (data['value'] as num).toDouble();
-      dailyCountIds[dateKey] = doc.id;
-      if (!dailyRecorderNames.containsKey(dateKey)) {
-          dailyRecorderNames[dateKey] = data['recorderName'] as String? ?? 'Unknown';
-      }
-      if (!dailyEditorNames.containsKey(dateKey) || dailyEditorNames[dateKey] == null) {
-          dailyEditorNames[dateKey] = data['editorName'] as String?;
-      }
-      allDates.add(dateKey);
-    }
-
+    // Pair weights with the closest counts within 3 days
     final List<Map<String, dynamic>> pairedSamplings = [];
-    for (var dateKey in allDates) {
-      if (dailyWeights.containsKey(dateKey) &&
-          dailyCounts.containsKey(dateKey)) {
-        final weight = dailyWeights[dateKey]!;
-        final count = dailyCounts[dateKey]!;
-        if (count > 0) {
-          final parts = dateKey.split('-');
-          final date = DateTime(
-            int.parse(parts[0]),
-            int.parse(parts[1]),
-            int.parse(parts[2]),
-          );
+
+    for (var weightDoc in weightDocs) {
+      final weightData = weightDoc.data();
+      if (weightData['timestamp'] == null || weightData['value'] == null) continue;
+      final weightDate = (weightData['timestamp'] as Timestamp).toDate();
+      final weightVal = (weightData['value'] as num).toDouble();
+
+      Map<String, dynamic>? bestCountData;
+      String? bestCountId;
+      int smallestDiff = 99999;
+
+      for (var countDoc in countDocs) {
+        final countData = countDoc.data();
+        if (countData['timestamp'] == null || countData['value'] == null) continue;
+        final countDate = (countData['timestamp'] as Timestamp).toDate();
+        final diff = countDate.difference(weightDate).inDays.abs();
+
+        if (diff <= 3 && diff < smallestDiff) {
+          smallestDiff = diff;
+          bestCountData = countData;
+          bestCountId = countDoc.id;
+        }
+      }
+
+      if (bestCountData != null) {
+        final countVal = (bestCountData['value'] as num).toDouble();
+        if (countVal > 0) {
           pairedSamplings.add({
-            'date': date,
-            'abw': weight / count,
-            'totalWeight': weight,
-            'sampleCount': count,
-            'weightDocId': dailyWeightIds[dateKey],
-            'countDocId': dailyCountIds[dateKey],
-            'recorderName': dailyRecorderNames[dateKey],
-            'editorName': dailyEditorNames[dateKey],
+            'date': weightDate,
+            'abw': weightVal / countVal,
+            'totalWeight': weightVal,
+            'sampleCount': countVal,
+            'weightDocId': weightDoc.id,
+            'countDocId': bestCountId,
+            'recorderName': weightData['recorderName'] as String? ?? 'Unknown',
+            'editorName': weightData['editorName'] as String?,
           });
         }
       }
