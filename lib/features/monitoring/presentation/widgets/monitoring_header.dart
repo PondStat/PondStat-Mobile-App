@@ -24,16 +24,18 @@ class MonitoringHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final surfaceContainer = isDark
+        ? Theme.of(context).colorScheme.surfaceContainerHighest
+        : Colors.white;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: Color(0xFF1E293B),
-            ),
+            icon: Icon(Icons.arrow_back_rounded, color: onSurface),
             onPressed: onBackTap,
           ),
           const SizedBox(width: 8),
@@ -52,8 +54,8 @@ class MonitoringHeader extends StatelessWidget {
                 ),
                 Text(
                   pondName,
-                  style: const TextStyle(
-                    color: Color(0xFF1E293B),
+                  style: TextStyle(
+                    color: onSurface,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5,
@@ -65,19 +67,24 @@ class MonitoringHeader extends StatelessWidget {
             ),
           ),
           _buildCircleIconButton(
+            context: context,
             icon: Icons.history_rounded,
             onPressed: onHistoryTap,
             tooltip: 'History',
+            surfaceContainer: surfaceContainer,
           ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: onProfileTap,
             child: _buildCircleContainer(
+              surfaceContainer: surfaceContainer,
               child: Padding(
                 padding: const EdgeInsets.all(2.0),
                 child: CircleAvatar(
                   radius: 18,
-                  backgroundColor: Colors.grey.shade100,
+                  backgroundColor: isDark
+                      ? Colors.white12
+                      : Colors.grey.shade100,
                   backgroundImage: user?.photoURL != null
                       ? NetworkImage(user!.photoURL!)
                       : null,
@@ -103,23 +110,33 @@ class MonitoringHeader extends StatelessWidget {
   }
 
   Widget _buildCircleIconButton({
+    required BuildContext context,
     required IconData icon,
     required VoidCallback onPressed,
     required String tooltip,
+    required Color surfaceContainer,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return _buildCircleContainer(
+      surfaceContainer: surfaceContainer,
       child: IconButton(
-        icon: Icon(icon, color: const Color(0xFF64748B)),
+        icon: Icon(
+          icon,
+          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+        ),
         tooltip: tooltip,
         onPressed: onPressed,
       ),
     );
   }
 
-  Widget _buildCircleContainer({required Widget child}) {
+  Widget _buildCircleContainer({
+    required Widget child,
+    required Color surfaceContainer,
+  }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surfaceContainer,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
