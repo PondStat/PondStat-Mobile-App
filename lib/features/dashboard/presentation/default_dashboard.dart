@@ -137,12 +137,22 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   }
 
   String _getGreeting(User user) {
+    final hour = DateTime.now().hour;
+    String timeGreeting = 'Hello';
+    if (hour < 12) {
+      timeGreeting = 'Good morning';
+    } else if (hour < 17) {
+      timeGreeting = 'Good afternoon';
+    } else {
+      timeGreeting = 'Good evening';
+    }
+
     final name = user.displayName;
     if (name != null && name.trim().isNotEmpty) {
       final firstName = name.split(' ').first;
-      return 'Hello, $firstName';
+      return '$timeGreeting, $firstName! Ready to check your ponds?';
     }
-    return 'My Ponds';
+    return '$timeGreeting! Ready to check your ponds?';
   }
 
   Future<bool?> _confirmDelete(BuildContext context, String pondName) {
