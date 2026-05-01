@@ -372,7 +372,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        toolbarHeight: 90,
+        toolbarHeight: 110,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             color: isDark ? theme.scaffoldBackgroundColor : null,
@@ -392,26 +392,21 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white12
-                      : Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.water_drop,
-                  color: isDark ? colorScheme.primary : Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    Text(
+                      "Pondstat",
+                      style: TextStyle(
+                        color: isDark ? colorScheme.primary : Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 26,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     Text(
                       _getGreeting(user),
                       style: TextStyle(
@@ -427,11 +422,11 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "Pond Dashboard",
+                      "Pond List",
                       style: TextStyle(
                         color: isDark ? colorScheme.onSurface : Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
                         letterSpacing: -0.5,
                       ),
                     ),
