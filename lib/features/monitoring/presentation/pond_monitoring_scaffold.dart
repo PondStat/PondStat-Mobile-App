@@ -46,19 +46,25 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    
+
     final firstDay = widget.createdAt;
-    final lastDay = widget.createdAt.add(Duration(days: widget.targetCulturePeriodDays));
-    
+    final lastDay = widget.createdAt.add(
+      Duration(days: widget.targetCulturePeriodDays),
+    );
+
     DateTime initialFocus = now;
     if (initialFocus.isBefore(firstDay)) {
       initialFocus = firstDay;
     } else if (initialFocus.isAfter(lastDay)) {
       initialFocus = lastDay;
     }
-    
+
     _focusedDay = initialFocus;
-    _selectedDay = DateTime.utc(initialFocus.year, initialFocus.month, initialFocus.day);
+    _selectedDay = DateTime.utc(
+      initialFocus.year,
+      initialFocus.month,
+      initialFocus.day,
+    );
   }
 
   void _showProfileSheet() {
@@ -167,6 +173,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
               children: [
                 MonitoringHeader(
                   pondId: widget.pondId,
+                  pondName: widget.pondName,
                   onBackTap: () => Navigator.pop(context),
                   onHistoryTap: _showEditHistory,
                   onProfileTap: _showProfileSheet,

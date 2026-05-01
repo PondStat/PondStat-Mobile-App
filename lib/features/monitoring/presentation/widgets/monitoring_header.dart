@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class MonitoringHeader extends StatelessWidget {
   final String pondId;
+  final String pondName;
   final VoidCallback onBackTap;
   final VoidCallback onHistoryTap;
   final VoidCallback onProfileTap;
@@ -12,6 +13,7 @@ class MonitoringHeader extends StatelessWidget {
   const MonitoringHeader({
     super.key,
     required this.pondId,
+    required this.pondName,
     required this.onBackTap,
     required this.onHistoryTap,
     required this.onProfileTap,
@@ -34,48 +36,30 @@ class MonitoringHeader extends StatelessWidget {
             ),
             onPressed: onBackTap,
           ),
-          Hero(
-            tag: 'pond-icon-$pondId',
-            child: Material(
-              type: MaterialType.transparency,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [secondaryBlue, primaryBlue],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryBlue.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.water_drop_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
+          const SizedBox(width: 8),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "PondStat",
+                  "MONITORING",
                   style: TextStyle(
+                    color: primaryBlue,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                Text(
+                  pondName,
+                  style: const TextStyle(
                     color: Color(0xFF1E293B),
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
