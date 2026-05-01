@@ -452,6 +452,24 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         );
     String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
+    if (type == 'growth') {
+      List<Widget> gridItems = hardcodedParams
+          .map((p) => _buildParamTile(param: p))
+          .toList();
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.95,
+        ),
+        itemCount: gridItems.length,
+        itemBuilder: (context, i) => gridItems[i],
+      );
+    }
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('pondstat-app-v1')

@@ -3,6 +3,7 @@ import 'package:pondstat/core/firebase/firestore_helper.dart';
 
 class GrowthMetrics {
   final DateTime date;
+  final int weekNumber;
   final double abw;
   final double adg;
   final double fcr;
@@ -19,6 +20,7 @@ class GrowthMetrics {
 
   GrowthMetrics({
     required this.date,
+    required this.weekNumber,
     required this.abw,
     this.adg = 0.0,
     this.fcr = 0.0,
@@ -49,7 +51,17 @@ class GrowthDataService {
         .where('pondId', isEqualTo: pondId)
         .get();
 
-    final allDocs = measurementsSnapshot.docs.toList()
+    final relevantParams = [
+      'Total weight of sampled fish',
+      'Number of fish sampled',
+      'Feeding rate',
+      'Total feed consumed',
+      'Total weight gained'
+    ];
+
+    final allDocs = measurementsSnapshot.docs
+        .where((doc) => relevantParams.contains(doc.data()['parameter']))
+        .toList()
       ..sort((a, b) {
         final tA = a.data()['timestamp'] as Timestamp?;
         final tB = b.data()['timestamp'] as Timestamp?;
@@ -57,192 +69,109 @@ class GrowthDataService {
         return tA.compareTo(tB);
       });
 
-    final weightDocs = allDocs.where((doc) {
+    if (allDocs.isEmpty) return [];
+
+    DateTime pondStartDate;
+    if (pondData['createdAt'] != null) {
+      pondStartDate = (pondData['createdAt'] as Timestamp).toDate();
+    } else {
+      pondStartDate = (allDocs.first.data()['timestamp'] as Timestamp).toDate();
+    }
+
+    final Map<int, Map<String, dynamic>> weeklyBuckets = {};
+
+    for (var doc in allDocs) {
       final data = doc.data();
-      return data['parameter'] == 'Total weight of sampled fish';
-    }).toList();
+      if (data['timestamp'] == null || data['value'] == null) continue;
 
-    final countDocs = allDocs.where((doc) {
-      final data = doc.data();
-      return data['parameter'] == 'Number of fish sampled';
-    }).toList();
+      final date = (data['timestamp'] as Timestamp).toDate();
+      final val = (data['value'] as num).toDouble();
+      final param = data['parameter'] as String;
 
-    final feedingRateDocs = allDocs.where((doc) {
-      final data = doc.data();
-      return data['parameter'] == 'Feeding rate';
-    }).toList();
+      final int daysSinceStart = date.difference(pondStartDate).inDays;
+      final int weekNumber = (daysSinceStart / 7).floor() + 1;
+      final int displayWeek = weekNumber > 0 ? weekNumber : 1;
 
-    final feedConsumedDocs = allDocs.where((doc) {
-      final data = doc.data();
-      return data['parameter'] == 'Total feed consumed';
-    }).toList();
+      weeklyBuckets.putIfAbsent(displayWeek, () => {
+        'date': date,
+        'Total weight of sampled fish': 0.0,
+        'Number of fish sampled': 0.0,
+        'Feeding rate': 0.0,
+        'Total feed consumed': 0.0,
+        'Total weight gained': 0.0,
+      });
 
-    final weightGainedDocs = allDocs.where((doc) {
-      final data = doc.data();
-      return data['parameter'] == 'Total weight gained';
-    }).toList();
+      // Keep the latest date for this week's card
+      weeklyBuckets[displayWeek]!['date'] = date;
+      
+      // Add value to the bucket (sums if recorded multiple times, typically just once)
+      weeklyBuckets[displayWeek]![param] = (weeklyBuckets[displayWeek]![param] as double) + val;
 
-    if (weightDocs.isEmpty || countDocs.isEmpty) return [];
-
-    // Pair weights with the closest counts within 3 days
-    final List<Map<String, dynamic>> pairedSamplings = [];
-
-    for (var weightDoc in weightDocs) {
-      final weightData = weightDoc.data();
-      if (weightData['timestamp'] == null || weightData['value'] == null) continue;
-      final weightDate = (weightData['timestamp'] as Timestamp).toDate();
-      final weightVal = (weightData['value'] as num).toDouble();
-
-      Map<String, dynamic>? bestCountData;
-      String? bestCountId;
-      int smallestDiff = 99999;
-
-      for (var countDoc in countDocs) {
-        final countData = countDoc.data();
-        if (countData['timestamp'] == null || countData['value'] == null) continue;
-        final countDate = (countData['timestamp'] as Timestamp).toDate();
-        final diff = countDate.difference(weightDate).inDays.abs();
-
-        if (diff <= 3 && diff < smallestDiff) {
-          smallestDiff = diff;
-          bestCountData = countData;
-          bestCountId = countDoc.id;
-        }
+      if (param == 'Total weight of sampled fish') {
+        weeklyBuckets[displayWeek]!['weightDocId'] = doc.id;
+      } else if (param == 'Number of fish sampled') {
+        weeklyBuckets[displayWeek]!['countDocId'] = doc.id;
       }
-
-      if (bestCountData != null) {
-        final countVal = (bestCountData['value'] as num).toDouble();
-        if (countVal > 0) {
-          pairedSamplings.add({
-            'date': weightDate,
-            'abw': weightVal / countVal,
-            'totalWeight': weightVal,
-            'sampleCount': countVal,
-            'weightDocId': weightDoc.id,
-            'countDocId': bestCountId,
-            'recorderName': weightData['recorderName'] as String? ?? 'Unknown',
-            'editorName': weightData['editorName'] as String?,
-          });
-        }
+      
+      weeklyBuckets[displayWeek]!['recorderName'] = data['recorderName'] as String? ?? weeklyBuckets[displayWeek]!['recorderName'] ?? 'Unknown';
+      if (data['editorName'] != null) {
+        weeklyBuckets[displayWeek]!['editorName'] = data['editorName'];
       }
     }
 
-    pairedSamplings.sort(
-      (a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime),
-    );
-
-    if (pairedSamplings.isEmpty) return [];
-
+    final sortedWeeks = weeklyBuckets.keys.toList()..sort();
     final List<GrowthMetrics> metrics = [];
 
-    for (int i = 0; i < pairedSamplings.length; i++) {
-      final currentSampling = pairedSamplings[i];
-      final DateTime currentDate = currentSampling['date'] as DateTime;
-      final double currentAbw = currentSampling['abw'] as double;
+    for (int i = 0; i < sortedWeeks.length; i++) {
+      final week = sortedWeeks[i];
+      final bucket = weeklyBuckets[week]!;
 
+      final double totalWeight = bucket['Total weight of sampled fish'];
+      final double sampleCount = bucket['Number of fish sampled'];
+      final double feedingRate = bucket['Feeding rate'];
+      final double feedConsumed = bucket['Total feed consumed'];
+      final double weightGained = bucket['Total weight gained'];
+
+      final double currentAbw = sampleCount > 0 ? totalWeight / sampleCount : 0.0;
+      
       double adg = 0.0;
-      double fcr = 0.0;
-      double dfr = 0.0;
-      double feedingRate = 0.0;
-      double feedConsumed = 0.0;
-      double weightGained = 0.0;
+      double dfr = currentAbw * fishCount * feedingRate / 100.0;
+      double fcr = weightGained > 0 ? feedConsumed / weightGained : 0.0;
 
       if (i > 0) {
-        final previousSampling = pairedSamplings[i - 1];
-        final DateTime previousDate = previousSampling['date'] as DateTime;
-        final double previousAbw = previousSampling['abw'] as double;
+        final prevWeek = sortedWeeks[i - 1];
+        final prevBucket = weeklyBuckets[prevWeek]!;
+        
+        final prevTotalWeight = prevBucket['Total weight of sampled fish'] as double;
+        final prevSampleCount = prevBucket['Number of fish sampled'] as double;
+        final prevAbw = prevSampleCount > 0 ? prevTotalWeight / prevSampleCount : 0.0;
 
-        final int daysBetween = currentDate.difference(previousDate).inDays;
+        final DateTime currentDate = bucket['date'] as DateTime;
+        final DateTime prevDate = prevBucket['date'] as DateTime;
+        final int daysBetween = currentDate.difference(prevDate).inDays;
 
-        if (daysBetween > 0) {
-          adg = (currentAbw - previousAbw) / daysBetween;
-
-          // Get the feeding rate for the CURRENT sampling date for DFR
-          final currentFeedingRateDoc = feedingRateDocs.where((doc) {
-            final data = doc.data();
-            if (data['timestamp'] == null) return false;
-            final date = (data['timestamp'] as Timestamp).toDate();
-            return date.year == currentDate.year &&
-                date.month == currentDate.month &&
-                date.day == currentDate.day;
-          }).toList();
-
-          if (currentFeedingRateDoc.isNotEmpty) {
-            final data = currentFeedingRateDoc.first.data();
-            if (data['value'] != null) {
-              feedingRate = (data['value'] as num).toDouble();
-              dfr = currentAbw * fishCount * feedingRate / 100.0;
-            }
-          }
-
-          // Calculate total feed and weight gained between samplings for FCR
-          final start = DateTime(
-            previousDate.year,
-            previousDate.month,
-            previousDate.day,
-          );
-          final end = DateTime(
-            currentDate.year,
-            currentDate.month,
-            currentDate.day,
-          );
-
-          final periodFeedDocs = feedConsumedDocs.where((doc) {
-            final data = doc.data();
-            if (data['timestamp'] == null) return false;
-            final date = (data['timestamp'] as Timestamp).toDate();
-            final d = DateTime(date.year, date.month, date.day);
-            return !d.isBefore(start) && !d.isAfter(end);
-          }).toList();
-
-          final periodWeightGainedDocs = weightGainedDocs.where((doc) {
-            final data = doc.data();
-            if (data['timestamp'] == null) return false;
-            final date = (data['timestamp'] as Timestamp).toDate();
-            final d = DateTime(date.year, date.month, date.day);
-            return !d.isBefore(start) && !d.isAfter(end);
-          }).toList();
-
-          final double totalFeed = periodFeedDocs.fold(
-            0.0,
-            (acc, doc) {
-              final val = doc.data()['value'];
-              return acc + (val != null ? (val as num).toDouble() : 0.0);
-            },
-          );
-          final double totalWeightGained = periodWeightGainedDocs.fold(
-            0.0,
-            (acc, doc) {
-              final val = doc.data()['value'];
-              return acc + (val != null ? (val as num).toDouble() : 0.0);
-            },
-          );
-
-          feedConsumed = totalFeed;
-          weightGained = totalWeightGained;
-
-          if (totalWeightGained > 0) {
-            fcr = totalFeed / totalWeightGained;
-          }
+        if (daysBetween > 0 && currentAbw > 0 && prevAbw > 0) {
+          adg = (currentAbw - prevAbw) / daysBetween;
         }
       }
 
       metrics.add(
         GrowthMetrics(
-          date: currentDate,
+          date: bucket['date'] as DateTime,
+          weekNumber: week,
           abw: _round(currentAbw, 1),
           adg: _round(adg, 2),
           fcr: _round(fcr, 2),
           dfr: _round(dfr, 2),
-          totalWeight: _round(currentSampling['totalWeight'] as double, 1),
-          sampleCount: _round(currentSampling['sampleCount'] as double, 0),
+          totalWeight: _round(totalWeight, 1),
+          sampleCount: _round(sampleCount, 0),
           feedingRate: _round(feedingRate, 2),
           feedConsumed: _round(feedConsumed, 2),
           weightGained: _round(weightGained, 2),
-          weightDocId: currentSampling['weightDocId'] as String?,
-          countDocId: currentSampling['countDocId'] as String?,
-          recorderName: currentSampling['recorderName'] as String?,
-          editorName: currentSampling['editorName'] as String?,
+          weightDocId: bucket['weightDocId'] as String?,
+          countDocId: bucket['countDocId'] as String?,
+          recorderName: bucket['recorderName'] as String?,
+          editorName: bucket['editorName'] as String?,
         ),
       );
     }

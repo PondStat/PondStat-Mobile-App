@@ -70,7 +70,9 @@ class _GrowthTabState extends State<GrowthTab> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
-                  return _buildGrowthCard(metrics[index]);
+                  final current = metrics[index];
+                  final previous = (index < metrics.length - 1) ? metrics[index + 1] : null;
+                  return _buildGrowthCard(current, previous);
                 }, childCount: metrics.length),
               ),
             ),
@@ -83,45 +85,82 @@ class _GrowthTabState extends State<GrowthTab> {
     );
   }
 
-  Widget _buildGrowthCard(GrowthMetrics m) {
+  Widget _buildGrowthCard(GrowthMetrics m, GrowthMetrics? previous) {
+    double? deltaAbw;
+    if (previous != null) {
+      deltaAbw = m.abw - previous.abw;
+    }
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // HEADER: Date & Options
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                DateFormat('MMM dd, yyyy').format(m.date),
-                style: TextStyle(
-                  color: textDark,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Week ${m.weekNumber}",
+                    style: TextStyle(
+                      color: textDark,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    DateFormat('MMM dd, yyyy').format(m.date),
+                    style: TextStyle(
+                      color: textMuted,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: primaryIndigo.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      "ABW: ${m.abw}g",
-                      style: TextStyle(
-                        color: primaryIndigo,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
+                  if (deltaAbw != null && deltaAbw != 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: deltaAbw > 0 ? Colors.green.shade50 : Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            deltaAbw > 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                            size: 14,
+                            color: deltaAbw > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "${deltaAbw > 0 ? '+' : ''}${deltaAbw.toStringAsFixed(1)}g",
+                            style: TextStyle(
+                              color: deltaAbw > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
                   if (widget.canEdit) ...[
                     const SizedBox(width: 8),
                     PopupMenuButton<String>(
@@ -166,43 +205,62 @@ class _GrowthTabState extends State<GrowthTab> {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMiniMetric(
-                "ADG",
-                "${m.adg.toStringAsFixed(2)}g",
-                Colors.green,
-              ),
-              _buildMiniMetric("FCR", m.fcr.toStringAsFixed(2), Colors.orange),
-              _buildMiniMetric("DFR", m.dfr.toStringAsFixed(2), Colors.purple),
-            ],
+
+          // GROUP 1: Growth Performance (Green)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildMiniMetric("ABW", "${m.abw}g", Colors.green.shade700),
+                _buildMiniMetric("ADG", "${m.adg.toStringAsFixed(2)}g", Colors.green.shade700),
+                _buildMiniMetric("FCR", m.fcr.toStringAsFixed(2), Colors.orange.shade700),
+                _buildMiniMetric("DFR", m.dfr.toStringAsFixed(2), Colors.purple.shade700),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Divider(color: Colors.grey.shade100),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMiniMetric("Total Weight", "${m.totalWeight}g", Colors.blueGrey),
-              _buildMiniMetric("Sample Count", "${m.sampleCount.toInt()} pcs", Colors.blueGrey),
-              const SizedBox(width: 40), // Spacer
-            ],
+
+          // GROUP 2: Sampling Data (Blue)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildMiniMetric("Total Weight", "${m.totalWeight}g", Colors.blue.shade700),
+                _buildMiniMetric("Sample Count", "${m.sampleCount.toInt()} pcs", Colors.blue.shade700),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Divider(color: Colors.grey.shade100),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMiniMetric("Feed Rate", "${m.feedingRate}%", Colors.brown),
-              _buildMiniMetric("Feed Consumed", "${m.feedConsumed}kg", Colors.brown),
-              _buildMiniMetric("Weight Gained", "${m.weightGained}kg", Colors.brown),
-            ],
+
+          // GROUP 3: Feed Data (Orange)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildMiniMetric("Feed Rate", "${m.feedingRate}%", Colors.brown.shade700),
+                _buildMiniMetric("Consumed", "${m.feedConsumed}kg", Colors.brown.shade700),
+                _buildMiniMetric("W. Gained", "${m.weightGained}kg", Colors.brown.shade700),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Divider(color: Colors.grey.shade100),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
+
+          // FOOTER: Editors
           Row(
             children: [
               Icon(Icons.person_outline_rounded, size: 14, color: textMuted),
@@ -240,15 +298,17 @@ class _GrowthTabState extends State<GrowthTab> {
 
   Widget _buildMiniMetric(String label, String value, Color color) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           value,
           style: TextStyle(
-            color: textDark,
+            color: color,
             fontWeight: FontWeight.w800,
             fontSize: 15,
           ),
         ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: TextStyle(
