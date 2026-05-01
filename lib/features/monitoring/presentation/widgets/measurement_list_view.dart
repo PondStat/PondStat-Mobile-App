@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/features/monitoring/presentation/measurement_card.dart';
+import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
 class MeasurementListView extends StatefulWidget {
   final String pondId;
@@ -74,7 +75,14 @@ class _MeasurementListViewState extends State<MeasurementListView> {
           );
         }
 
-        final docs = snapshot.data?.docs ?? [];
+        final rawDocs = snapshot.data?.docs ?? [];
+        final excludedParams = MonitoringParameters.samplingParameters.map((p) => p.label).toSet();
+        final docs = rawDocs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final param = data['parameter'] as String?;
+          return param != null && !excludedParams.contains(param);
+        }).toList();
+
         if (docs.isEmpty) return _buildEmptyState();
 
         final sortedDocs = docs.toList()

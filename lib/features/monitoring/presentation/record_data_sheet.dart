@@ -22,12 +22,16 @@ class RecordDataSheet extends StatefulWidget {
     String? notes,
   })
   onSave;
+  final List<ParameterItem>? customParams;
+  final String? customType;
 
   const RecordDataSheet({
     super.key,
     required this.tabIndex,
     required this.onSave,
     required this.species,
+    this.customParams,
+    this.customType,
   });
 
   @override
@@ -175,7 +179,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
     setState(() => _isSaving = true);
     double avg = double.parse((totalSum / pointsWithData).toStringAsFixed(2));
-    String type = ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+    String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
     try {
       await widget.onSave(
@@ -257,7 +261,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                String type = ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+                String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
                 await _repository.addCustomParameter(
                   label: nameController.text.trim(),
                   unit: unitController.text.trim(),
@@ -441,12 +445,30 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   }
 
   Widget _buildParameterGrid() {
-    List<ParameterItem> hardcodedParams =
+    List<ParameterItem> hardcodedParams = widget.customParams ??
         MonitoringParameters.getParametersByIndex(
           widget.tabIndex,
           widget.species,
         );
-    String type = ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+    String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+
+    if (type == 'growth') {
+      List<Widget> gridItems = hardcodedParams
+          .map((p) => _buildParamTile(param: p))
+          .toList();
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.95,
+        ),
+        itemCount: gridItems.length,
+        itemBuilder: (context, i) => gridItems[i],
+      );
+    }
 
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance

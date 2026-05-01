@@ -190,6 +190,12 @@ class MeasurementCard extends StatelessWidget {
     final parts = content.split('\n');
     final mainValue = parts.isNotEmpty ? parts[0] : '';
     final subtitle = parts.length > 1 ? parts.sublist(1).join('\n') : '';
+    
+    if (groupDocs.isNotEmpty) {
+      // final data = groupDocs.first.data() as Map<String, dynamic>;
+      // recorderName = data['recorderName'] as String? ?? 'Unknown';
+      // editorName = data['editorName'] as String?;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),

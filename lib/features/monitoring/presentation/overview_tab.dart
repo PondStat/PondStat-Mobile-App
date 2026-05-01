@@ -12,6 +12,7 @@ class OverviewTab extends StatelessWidget {
   final DateTime focusedDay;
   final DateTime? selectedDay;
   final Function(DateTime, DateTime) onDaySelected;
+  final Function(DateTime) onPageChanged;
   final Color primaryBlue;
   final Color secondaryBlue;
 
@@ -26,6 +27,7 @@ class OverviewTab extends StatelessWidget {
     required this.focusedDay,
     required this.selectedDay,
     required this.onDaySelected,
+    required this.onPageChanged,
     required this.primaryBlue,
     required this.secondaryBlue,
   });
@@ -62,6 +64,7 @@ class OverviewTab extends StatelessWidget {
                 firstDay: createdAt,
                 lastDay: createdAt.add(Duration(days: targetCulturePeriodDays)),
                 onDaySelected: onDaySelected,
+                onPageChanged: onPageChanged,
               ),
             ),
           ),

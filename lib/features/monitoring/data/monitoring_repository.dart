@@ -166,6 +166,7 @@ class MonitoringRepository {
         'value': avg,
         'editedAt': FieldValue.serverTimestamp(),
         'editedBy': currentUser?.uid,
+        'editorName': currentUser?.displayName ?? 'Unknown',
       };
 
       if (newNote != null) {
