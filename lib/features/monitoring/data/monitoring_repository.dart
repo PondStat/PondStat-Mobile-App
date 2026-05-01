@@ -145,53 +145,64 @@ class MonitoringRepository {
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
-    final batch = _firestore.batch();
-
-    for (var doc in docs) {
-      final data = doc.data() as Map<String, dynamic>;
-      final newPointValues = updatedPointValues[doc.id];
-      final newReplicateValues = updatedReplicateValues[doc.id];
-      final newNote = updatedNotes?[doc.id];
-
-      if (newPointValues == null || newReplicateValues == null) continue;
-
-      final double avg = double.parse(
-        (newPointValues.values.reduce((a, b) => a + b) / newPointValues.length)
-            .toStringAsFixed(2),
+    await _firestore.runTransaction((transaction) async {
+      // Step 1: Read all fresh snapshots in parallel
+      final snapshots = await Future.wait(
+        docs.map((doc) => transaction.get(doc.reference)),
       );
 
-      final updateData = {
-        'pointValues': newPointValues,
-        'replicateValues': newReplicateValues,
-        'value': avg,
-        'editedAt': FieldValue.serverTimestamp(),
-        'editedBy': currentUser?.uid,
-        'editorName': currentUser?.displayName ?? 'Unknown',
-      };
+      // Step 2: Compute and Write
+      for (var snapshot in snapshots) {
+        if (!snapshot.exists) continue;
 
-      if (newNote != null) {
-        updateData['notes'] = newNote;
+        final data = snapshot.data() as Map<String, dynamic>;
+        final newPointValues = updatedPointValues[snapshot.id];
+        final newReplicateValues = updatedReplicateValues[snapshot.id];
+        final newNote = updatedNotes?[snapshot.id];
+
+        if (newPointValues == null || newReplicateValues == null) continue;
+
+        final double avg = double.parse(
+          (newPointValues.values.reduce((a, b) => a + b) /
+                  newPointValues.length)
+              .toStringAsFixed(2),
+        );
+
+        final updateData = {
+          'pointValues': newPointValues,
+          'replicateValues': newReplicateValues,
+          'value': avg,
+          'editedAt': FieldValue.serverTimestamp(),
+          'editedBy': currentUser?.uid,
+          'editorName': currentUser?.displayName ?? 'Unknown',
+        };
+
+        if (newNote != null) {
+          updateData['notes'] = newNote;
+        }
+
+        transaction.update(snapshot.reference, updateData);
+
+        // Step 3: Inline History Logging
+        final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
+        transaction.set(historyRef, {
+          'pondId': pondId,
+          'measurementId': snapshot.id,
+          'parameter': data['parameter'],
+          'action': 'update',
+          'editedAt': FieldValue.serverTimestamp(),
+          'editedBy': currentUser?.uid,
+          'editorName': currentUser?.displayName ?? 'Unknown',
+          'before': {
+            'value': data['value'],
+            'pointValues': data['pointValues'],
+            'replicateValues': data['replicateValues'],
+            'notes': data['notes'],
+          },
+          'after': updateData,
+        });
       }
-
-      batch.update(doc.reference, updateData);
-
-      _logHistory(
-        batch: batch,
-        pondId: pondId,
-        measurementId: doc.id,
-        parameter: data['parameter'],
-        action: 'update',
-        before: {
-          'value': data['value'],
-          'pointValues': data['pointValues'],
-          'replicateValues': data['replicateValues'],
-          'notes': data['notes'],
-        },
-        after: updateData,
-      );
-    }
-
-    await batch.commit();
+    });
   }
 
   /// Adds a new custom parameter to Firestore.
