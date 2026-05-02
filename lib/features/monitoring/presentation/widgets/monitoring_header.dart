@@ -68,9 +68,9 @@ class MonitoringHeader extends StatelessWidget {
           ),
           _buildCircleIconButton(
             context: context,
-            icon: Icons.history_rounded,
+            icon: Icons.receipt_long_rounded,
             onPressed: onHistoryTap,
-            tooltip: 'History',
+            tooltip: 'Log History',
             surfaceContainer: surfaceContainer,
           ),
           const SizedBox(width: 8),
