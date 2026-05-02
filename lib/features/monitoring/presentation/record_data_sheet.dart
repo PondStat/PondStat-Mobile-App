@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pondstat/core/firebase/firestore_helper.dart';
 
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/utils/helpers.dart';
@@ -53,8 +54,8 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   final MonitoringRepository _repository = MonitoringRepository();
 
   final Color primaryBlue = const Color(0xFF0A74DA);
-  final Color textDark = const Color(0xFF1E293B);
-  final Color textMuted = const Color(0xFF64748B);
+  Color get textDark => Theme.of(context).colorScheme.onSurface;
+  Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
 
   @override
   void initState() {
@@ -179,7 +180,8 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
     setState(() => _isSaving = true);
     double avg = double.parse((totalSum / pointsWithData).toStringAsFixed(2));
-    String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+    String type =
+        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
     try {
       await widget.onSave(
@@ -261,7 +263,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+                String type =
+                    widget.customType ??
+                    ['daily', 'weekly', 'biweekly'][widget.tabIndex];
                 await _repository.addCustomParameter(
                   label: nameController.text.trim(),
                   unit: unitController.text.trim(),
@@ -445,12 +449,14 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   }
 
   Widget _buildParameterGrid() {
-    List<ParameterItem> hardcodedParams = widget.customParams ??
+    List<ParameterItem> hardcodedParams =
+        widget.customParams ??
         MonitoringParameters.getParametersByIndex(
           widget.tabIndex,
           widget.species,
         );
-    String type = widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+    String type =
+        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
     if (type == 'growth') {
       List<Widget> gridItems = hardcodedParams
@@ -471,10 +477,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('pondstat-app-v1')
-          .doc('pondstat-app-v1')
-          .collection('custom_parameters')
+      stream: FirestoreHelper.customParametersCollection
           .where('type', isEqualTo: type)
           .snapshots(),
       builder: (context, snapshot) {
@@ -637,7 +640,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).colorScheme.surfaceContainerHighest
+              : Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -646,7 +651,11 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
               offset: const Offset(0, 4),
             ),
           ],
-          border: Border.all(color: Colors.grey.shade100),
+          border: Border.all(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white10
+                : Colors.grey.shade100,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -938,9 +947,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(
         top: 12,
@@ -985,11 +994,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 color: Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                size: 20,
-                color: Color(0xFF1E293B),
-              ),
+              child: Icon(Icons.arrow_back_rounded, size: 20, color: textDark),
             ),
             onPressed: () {
               HapticFeedback.selectionClick();
@@ -1002,10 +1007,10 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         Expanded(
           child: Text(
             selectedParameter == null ? "Select Parameter" : "Enter Data",
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF1E293B),
+              color: textDark,
               letterSpacing: -0.5,
             ),
           ),
@@ -1017,11 +1022,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
               color: Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.close_rounded,
-              size: 20,
-              color: Color(0xFF64748B),
-            ),
+            child: Icon(Icons.close_rounded, size: 20, color: textMuted),
           ),
           onPressed: () => Navigator.pop(context),
         ),

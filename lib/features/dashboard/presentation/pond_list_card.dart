@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pondstat/features/monitoring/presentation/pond_monitoring_scaffold.dart';
 
 class PondListCard extends StatefulWidget {
@@ -112,6 +113,7 @@ class _PondListCardState extends State<PondListCard> {
                         child: Container(
                           height: 56,
                           width: 56,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
@@ -132,8 +134,8 @@ class _PondListCardState extends State<PondListCard> {
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.water_drop_rounded,
+                          child: FaIcon(
+                            _getSpeciesIcon(widget.species),
                             color: Colors.white,
                             size: 28,
                           ),
@@ -159,8 +161,8 @@ class _PondListCardState extends State<PondListCard> {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(
-                                Icons.set_meal_rounded,
+                              FaIcon(
+                                _getSpeciesIcon(widget.species),
                                 size: 14,
                                 color: colorScheme.onSurfaceVariant.withValues(
                                   alpha: 0.7,
@@ -274,5 +276,18 @@ class _PondListCardState extends State<PondListCard> {
         ),
       ),
     );
+  }
+
+  IconData _getSpeciesIcon(String species) {
+    final lower = species.toLowerCase();
+    if (lower.contains('tilapia') || lower.contains('fish')) {
+      return FontAwesomeIcons.fish;
+    }
+    if (lower.contains('shrimp') ||
+        lower.contains('prawn') ||
+        lower.contains('vannamei')) {
+      return FontAwesomeIcons.shrimp;
+    }
+    return FontAwesomeIcons.droplet;
   }
 }

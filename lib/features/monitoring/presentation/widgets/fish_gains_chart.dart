@@ -6,10 +6,7 @@ import 'package:pondstat/features/monitoring/presentation/growth_data_service.da
 class FishGainsChart extends StatefulWidget {
   final List<GrowthMetrics> metrics;
 
-  const FishGainsChart({
-    super.key,
-    required this.metrics,
-  });
+  const FishGainsChart({super.key, required this.metrics});
 
   @override
   State<FishGainsChart> createState() => _FishGainsChartState();
@@ -108,10 +105,22 @@ class _FishGainsChartState extends State<FishGainsChart> {
       if (m.fcr > fcrMax) fcrMax = m.fcr;
     }
 
-    if (abwMin == abwMax) { abwMin -= 1; abwMax += 1; }
-    if (adgMin == adgMax) { adgMin -= 1; adgMax += 1; }
-    if (dfrMin == dfrMax) { dfrMin -= 1; dfrMax += 1; }
-    if (fcrMin == fcrMax) { fcrMin -= 1; fcrMax += 1; }
+    if (abwMin == abwMax) {
+      abwMin -= 1;
+      abwMax += 1;
+    }
+    if (adgMin == adgMax) {
+      adgMin -= 1;
+      adgMax += 1;
+    }
+    if (dfrMin == dfrMax) {
+      dfrMin -= 1;
+      dfrMax += 1;
+    }
+    if (fcrMin == fcrMax) {
+      fcrMin -= 1;
+      fcrMax += 1;
+    }
 
     final Map<String, List<FlSpot>> normalizedSpots = {
       'ABW': [],
@@ -124,10 +133,18 @@ class _FishGainsChartState extends State<FishGainsChart> {
       final m = widget.metrics[i];
       final x = i.toDouble();
 
-      normalizedSpots['ABW']!.add(FlSpot(x, ((m.abw - abwMin) / (abwMax - abwMin) * 100).clamp(0, 100)));
-      normalizedSpots['ADG']!.add(FlSpot(x, ((m.adg - adgMin) / (adgMax - adgMin) * 100).clamp(0, 100)));
-      normalizedSpots['DFR']!.add(FlSpot(x, ((m.dfr - dfrMin) / (dfrMax - dfrMin) * 100).clamp(0, 100)));
-      normalizedSpots['FCR']!.add(FlSpot(x, ((m.fcr - fcrMin) / (fcrMax - fcrMin) * 100).clamp(0, 100)));
+      normalizedSpots['ABW']!.add(
+        FlSpot(x, ((m.abw - abwMin) / (abwMax - abwMin) * 100).clamp(0, 100)),
+      );
+      normalizedSpots['ADG']!.add(
+        FlSpot(x, ((m.adg - adgMin) / (adgMax - adgMin) * 100).clamp(0, 100)),
+      );
+      normalizedSpots['DFR']!.add(
+        FlSpot(x, ((m.dfr - dfrMin) / (dfrMax - dfrMin) * 100).clamp(0, 100)),
+      );
+      normalizedSpots['FCR']!.add(
+        FlSpot(x, ((m.fcr - fcrMin) / (fcrMax - fcrMin) * 100).clamp(0, 100)),
+      );
     }
 
     for (var param in _visibleParameters.keys) {
@@ -169,8 +186,7 @@ class _FishGainsChartState extends State<FishGainsChart> {
             reservedSize: 30,
             interval: _calculateInterval(widget.metrics.length),
             getTitlesWidget: (value, meta) {
-              if (value.toInt() < 0 ||
-                  value.toInt() >= widget.metrics.length) {
+              if (value.toInt() < 0 || value.toInt() >= widget.metrics.length) {
                 return const SizedBox.shrink();
               }
               final date = widget.metrics[value.toInt()].date;
@@ -236,7 +252,7 @@ class _FishGainsChartState extends State<FishGainsChart> {
               if (matchedParam != null) {
                 final color = _colors[matchedParam] ?? Colors.white;
                 final unit = _units[matchedParam] ?? '';
-                
+
                 double actualValue = 0.0;
                 if (matchedParam == 'ABW') actualValue = m.abw;
                 if (matchedParam == 'ADG') actualValue = m.adg;

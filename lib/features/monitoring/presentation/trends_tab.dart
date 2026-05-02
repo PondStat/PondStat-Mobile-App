@@ -29,7 +29,8 @@ class TrendsTab extends StatefulWidget {
 }
 
 class _TrendsTabState extends State<TrendsTab> {
-  late Stream<QuerySnapshot<Map<String, dynamic>>> _historicalMeasurementsStream;
+  late Stream<QuerySnapshot<Map<String, dynamic>>>
+  _historicalMeasurementsStream;
   Future<List<GrowthMetrics>>? _growthMetricsFuture;
 
   @override
@@ -54,13 +55,25 @@ class _TrendsTabState extends State<TrendsTab> {
       widget.startDate,
       widget.endDate,
     ).snapshots();
-    
-    _growthMetricsFuture = GrowthDataService.calculateGrowthMetrics(widget.pondId).then((metrics) {
-      final endOfDay = DateTime(widget.endDate.year, widget.endDate.month, widget.endDate.day, 23, 59, 59);
-      return metrics.where((m) => 
-        !m.date.isBefore(widget.startDate) && !m.date.isAfter(endOfDay)
-      ).toList();
-    });
+
+    _growthMetricsFuture =
+        GrowthDataService.calculateGrowthMetrics(widget.pondId).then((metrics) {
+          final endOfDay = DateTime(
+            widget.endDate.year,
+            widget.endDate.month,
+            widget.endDate.day,
+            23,
+            59,
+            59,
+          );
+          return metrics
+              .where(
+                (m) =>
+                    !m.date.isBefore(widget.startDate) &&
+                    !m.date.isAfter(endOfDay),
+              )
+              .toList();
+        });
   }
 
   @override
@@ -94,8 +107,8 @@ class _TrendsTabState extends State<TrendsTab> {
             );
 
             final chemicalData = TrendsDataService.getNormalizedParameters(
-              docs, 
-              widget.species, 
+              docs,
+              widget.species,
               [
                 'pH Level',
                 'Dissolved Oxygen',
@@ -105,8 +118,8 @@ class _TrendsTabState extends State<TrendsTab> {
                 'Carbon dioxide',
                 'Magnesium',
                 'Calcium',
-                'Total Alkalinity'
-              ]
+                'Total Alkalinity',
+              ],
             );
 
             final biologicalData = TrendsDataService.getNormalizedParameters(
@@ -130,9 +143,7 @@ class _TrendsTabState extends State<TrendsTab> {
                   normalizedData: biologicalData,
                   species: widget.species,
                 ),
-                FishGainsChart(
-                  metrics: growthMetrics,
-                ),
+                FishGainsChart(metrics: growthMetrics),
               ],
             );
           },

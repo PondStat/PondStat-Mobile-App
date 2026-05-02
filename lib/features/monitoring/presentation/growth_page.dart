@@ -42,51 +42,57 @@ class _GrowthPageState extends State<GrowthPage> {
         species: widget.species,
         customParams: MonitoringParameters.samplingParameters,
         customType: 'growth',
-        onSave: ({
-          required String label,
-          required String unit,
-          required String timeString,
-          required double averageValue,
-          required String type,
-          required Map<String, double> pointValues,
-          required Map<String, List<double>> replicateValues,
-          String? notes,
-        }) async {
-          final now = DateTime.now();
-          final sixDaysAgo = now.subtract(const Duration(days: 6));
-          final snapshot = await FirestoreHelper.measurementsCollection
-              .where('pondId', isEqualTo: widget.pondId)
-              .where('parameter', isEqualTo: label)
-              .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo))
-              .get();
+        onSave:
+            ({
+              required String label,
+              required String unit,
+              required String timeString,
+              required double averageValue,
+              required String type,
+              required Map<String, double> pointValues,
+              required Map<String, List<double>> replicateValues,
+              String? notes,
+            }) async {
+              final now = DateTime.now();
+              final sixDaysAgo = now.subtract(const Duration(days: 6));
+              final snapshot = await FirestoreHelper.measurementsCollection
+                  .where('pondId', isEqualTo: widget.pondId)
+                  .where('parameter', isEqualTo: label)
+                  .where(
+                    'timestamp',
+                    isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
+                  )
+                  .get();
 
-          if (snapshot.docs.isNotEmpty) {
-            throw Exception("You have already recorded $label within the last 7 days.");
-          }
+              if (snapshot.docs.isNotEmpty) {
+                throw Exception(
+                  "You have already recorded $label within the last 7 days.",
+                );
+              }
 
-          final repository = MonitoringRepository();
-          await repository.saveMeasurement(
-            pondId: widget.pondId,
-            label: label,
-            unit: unit,
-            timeString: timeString,
-            averageValue: averageValue,
-            type: type,
-            pointValues: pointValues,
-            replicateValues: replicateValues,
-            selectedDay: now,
-            notes: notes,
-          );
-          if (!sheetContext.mounted) return;
-          setState(() {
-            _refreshKey++;
-          });
-          SnackbarHelper.show(
-            sheetContext,
-            "Growth sampling recorded",
-            backgroundColor: Colors.green,
-          );
-        },
+              final repository = MonitoringRepository();
+              await repository.saveMeasurement(
+                pondId: widget.pondId,
+                label: label,
+                unit: unit,
+                timeString: timeString,
+                averageValue: averageValue,
+                type: type,
+                pointValues: pointValues,
+                replicateValues: replicateValues,
+                selectedDay: now,
+                notes: notes,
+              );
+              if (!sheetContext.mounted) return;
+              setState(() {
+                _refreshKey++;
+              });
+              SnackbarHelper.show(
+                sheetContext,
+                "Growth sampling recorded",
+                backgroundColor: Colors.green,
+              );
+            },
       ),
     );
   }
@@ -100,129 +106,207 @@ class _GrowthPageState extends State<GrowthPage> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
               title: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
-                    child: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.red,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
-                    child: Text("Delete Sampling?", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                    child: Text(
+                      "Delete Sampling?",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              content: const Text("Are you sure you want to delete this sampling data? This action cannot be undone."),
+              content: const Text(
+                "Are you sure you want to delete this sampling data? This action cannot be undone.",
+              ),
               actions: [
                 TextButton(
                   onPressed: isDeleting ? null : () => Navigator.pop(context),
-                  child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade50, foregroundColor: Colors.red, elevation: 0),
-                  onPressed: isDeleting ? null : () async {
-                    setStateDialog(() => isDeleting = true);
-                    final user = FirebaseAuth.instance.currentUser;
-                    final batch = FirebaseFirestore.instance.batch();
-                    
-                    if (m.weightDocId != null) {
-                      final docRef = FirestoreHelper.measurementsCollection.doc(m.weightDocId);
-                      final docSnap = await docRef.get();
-                      if (docSnap.exists) {
-                         final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
-                         final data = docSnap.data() as Map<String, dynamic>;
-                         batch.set(historyRef, {
-                            'pondId': widget.pondId,
-                            'measurementId': m.weightDocId,
-                            'parameter': data['parameter'],
-                            'action': 'delete',
-                            'editedAt': FieldValue.serverTimestamp(),
-                            'editedBy': user?.uid,
-                            'editorName': user?.displayName ?? 'Unknown',
-                            'before': {'value': data['value']},
-                            'after': null,
-                          });
-                         batch.delete(docRef);
-                      }
-                    }
-                    if (m.countDocId != null) {
-                      final docRef = FirestoreHelper.measurementsCollection.doc(m.countDocId);
-                      final docSnap = await docRef.get();
-                      if (docSnap.exists) {
-                         final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
-                         final data = docSnap.data() as Map<String, dynamic>;
-                         batch.set(historyRef, {
-                            'pondId': widget.pondId,
-                            'measurementId': m.countDocId,
-                            'parameter': data['parameter'],
-                            'action': 'delete',
-                            'editedAt': FieldValue.serverTimestamp(),
-                            'editedBy': user?.uid,
-                            'editorName': user?.displayName ?? 'Unknown',
-                            'before': {'value': data['value']},
-                            'after': null,
-                          });
-                         batch.delete(docRef);
-                      }
-                    }
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade50,
+                    foregroundColor: Colors.red,
+                    elevation: 0,
+                  ),
+                  onPressed: isDeleting
+                      ? null
+                      : () async {
+                          setStateDialog(() => isDeleting = true);
+                          final user = FirebaseAuth.instance.currentUser;
+                          final batch = FirebaseFirestore.instance.batch();
 
-                    try {
-                      await batch.commit();
-                      HapticFeedback.heavyImpact();
-                      if (!context.mounted) return;
-                      Navigator.pop(context);
-                      setState(() => _refreshKey++);
-                      SnackbarHelper.show(context, "Sampling deleted");
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      setStateDialog(() => isDeleting = false);
-                      SnackbarHelper.show(context, "Error deleting: $e", backgroundColor: Colors.red);
-                    }
-                  },
-                  child: isDeleting ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2)) : const Text("Delete", style: TextStyle(fontWeight: FontWeight.bold)),
+                          if (m.weightDocId != null) {
+                            final docRef = FirestoreHelper
+                                .measurementsCollection
+                                .doc(m.weightDocId);
+                            final docSnap = await docRef.get();
+                            if (docSnap.exists) {
+                              final historyRef = FirestoreHelper
+                                  .measurementHistoryCollection
+                                  .doc();
+                              final data =
+                                  docSnap.data() as Map<String, dynamic>;
+                              batch.set(historyRef, {
+                                'pondId': widget.pondId,
+                                'measurementId': m.weightDocId,
+                                'parameter': data['parameter'],
+                                'action': 'delete',
+                                'editedAt': FieldValue.serverTimestamp(),
+                                'editedBy': user?.uid,
+                                'editorName': user?.displayName ?? 'Unknown',
+                                'before': {'value': data['value']},
+                                'after': null,
+                              });
+                              batch.delete(docRef);
+                            }
+                          }
+                          if (m.countDocId != null) {
+                            final docRef = FirestoreHelper
+                                .measurementsCollection
+                                .doc(m.countDocId);
+                            final docSnap = await docRef.get();
+                            if (docSnap.exists) {
+                              final historyRef = FirestoreHelper
+                                  .measurementHistoryCollection
+                                  .doc();
+                              final data =
+                                  docSnap.data() as Map<String, dynamic>;
+                              batch.set(historyRef, {
+                                'pondId': widget.pondId,
+                                'measurementId': m.countDocId,
+                                'parameter': data['parameter'],
+                                'action': 'delete',
+                                'editedAt': FieldValue.serverTimestamp(),
+                                'editedBy': user?.uid,
+                                'editorName': user?.displayName ?? 'Unknown',
+                                'before': {'value': data['value']},
+                                'after': null,
+                              });
+                              batch.delete(docRef);
+                            }
+                          }
+
+                          try {
+                            await batch.commit();
+                            HapticFeedback.heavyImpact();
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                            setState(() => _refreshKey++);
+                            SnackbarHelper.show(context, "Sampling deleted");
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            setStateDialog(() => isDeleting = false);
+                            SnackbarHelper.show(
+                              context,
+                              "Error deleting: $e",
+                              backgroundColor: Colors.red,
+                            );
+                          }
+                        },
+                  child: isDeleting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.red,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          "Delete",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                 ),
               ],
             );
-          }
+          },
         );
-      }
+      },
     );
   }
 
   void _showEditGrowthDialog(GrowthMetrics m) {
     if (m.weightDocId == null || m.countDocId == null) return;
-    
-    final weightController = TextEditingController(text: m.totalWeight.toString());
-    final countController = TextEditingController(text: m.sampleCount.toString());
+
+    final weightController = TextEditingController(
+      text: m.totalWeight.toString(),
+    );
+    final countController = TextEditingController(
+      text: m.sampleCount.toString(),
+    );
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text("Edit Sampling", style: TextStyle(fontWeight: FontWeight.w800)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: const Text(
+            "Edit Sampling",
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: weightController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: "Total Weight (g)", border: OutlineInputBorder()),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: "Total Weight (g)",
+                  border: OutlineInputBorder(),
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: countController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "Sample Count (pcs)", border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: "Sample Count (pcs)",
+                  border: OutlineInputBorder(),
+                ),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () async {
                 final newWeight = double.tryParse(weightController.text);
                 final newCount = double.tryParse(countController.text);
@@ -236,43 +320,61 @@ class _GrowthPageState extends State<GrowthPage> {
                 final batch = FirebaseFirestore.instance.batch();
 
                 // Update Weight
-                final wDocRef = FirestoreHelper.measurementsCollection.doc(m.weightDocId);
+                final wDocRef = FirestoreHelper.measurementsCollection.doc(
+                  m.weightDocId,
+                );
                 final wDocSnap = await wDocRef.get();
                 if (wDocSnap.exists) {
-                   final data = wDocSnap.data() as Map<String, dynamic>;
-                   batch.update(wDocRef, {'value': newWeight, 'editedAt': FieldValue.serverTimestamp(), 'editedBy': user?.uid, 'editorName': user?.displayName});
-                   final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
-                   batch.set(historyRef, {
-                      'pondId': widget.pondId,
-                      'measurementId': m.weightDocId,
-                      'parameter': data['parameter'],
-                      'action': 'update',
-                      'editedAt': FieldValue.serverTimestamp(),
-                      'editedBy': user?.uid,
-                      'editorName': user?.displayName ?? 'Unknown',
-                      'before': {'value': data['value']},
-                      'after': {'value': newWeight},
-                   });
+                  final data = wDocSnap.data() as Map<String, dynamic>;
+                  batch.update(wDocRef, {
+                    'value': newWeight,
+                    'editedAt': FieldValue.serverTimestamp(),
+                    'editedBy': user?.uid,
+                    'editorName': user?.displayName,
+                  });
+                  final historyRef = FirestoreHelper
+                      .measurementHistoryCollection
+                      .doc();
+                  batch.set(historyRef, {
+                    'pondId': widget.pondId,
+                    'measurementId': m.weightDocId,
+                    'parameter': data['parameter'],
+                    'action': 'update',
+                    'editedAt': FieldValue.serverTimestamp(),
+                    'editedBy': user?.uid,
+                    'editorName': user?.displayName ?? 'Unknown',
+                    'before': {'value': data['value']},
+                    'after': {'value': newWeight},
+                  });
                 }
 
                 // Update Count
-                final cDocRef = FirestoreHelper.measurementsCollection.doc(m.countDocId);
+                final cDocRef = FirestoreHelper.measurementsCollection.doc(
+                  m.countDocId,
+                );
                 final cDocSnap = await cDocRef.get();
                 if (cDocSnap.exists) {
-                   final data = cDocSnap.data() as Map<String, dynamic>;
-                   batch.update(cDocRef, {'value': newCount, 'editedAt': FieldValue.serverTimestamp(), 'editedBy': user?.uid, 'editorName': user?.displayName});
-                   final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
-                   batch.set(historyRef, {
-                      'pondId': widget.pondId,
-                      'measurementId': m.countDocId,
-                      'parameter': data['parameter'],
-                      'action': 'update',
-                      'editedAt': FieldValue.serverTimestamp(),
-                      'editedBy': user?.uid,
-                      'editorName': user?.displayName ?? 'Unknown',
-                      'before': {'value': data['value']},
-                      'after': {'value': newCount},
-                   });
+                  final data = cDocSnap.data() as Map<String, dynamic>;
+                  batch.update(cDocRef, {
+                    'value': newCount,
+                    'editedAt': FieldValue.serverTimestamp(),
+                    'editedBy': user?.uid,
+                    'editorName': user?.displayName,
+                  });
+                  final historyRef = FirestoreHelper
+                      .measurementHistoryCollection
+                      .doc();
+                  batch.set(historyRef, {
+                    'pondId': widget.pondId,
+                    'measurementId': m.countDocId,
+                    'parameter': data['parameter'],
+                    'action': 'update',
+                    'editedAt': FieldValue.serverTimestamp(),
+                    'editedBy': user?.uid,
+                    'editorName': user?.displayName ?? 'Unknown',
+                    'before': {'value': data['value']},
+                    'after': {'value': newCount},
+                  });
                 }
 
                 try {
@@ -280,10 +382,18 @@ class _GrowthPageState extends State<GrowthPage> {
                   if (!context.mounted) return;
                   Navigator.pop(context);
                   setState(() => _refreshKey++);
-                  SnackbarHelper.show(context, "Sampling updated", backgroundColor: Colors.green);
+                  SnackbarHelper.show(
+                    context,
+                    "Sampling updated",
+                    backgroundColor: Colors.green,
+                  );
                 } catch (e) {
                   if (!context.mounted) return;
-                  SnackbarHelper.show(context, "Error updating: $e", backgroundColor: Colors.red);
+                  SnackbarHelper.show(
+                    context,
+                    "Error updating: $e",
+                    backgroundColor: Colors.red,
+                  );
                 }
               },
               child: const Text("Save"),

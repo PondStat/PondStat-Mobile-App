@@ -137,12 +137,22 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   }
 
   String _getGreeting(User user) {
+    final hour = DateTime.now().hour;
+    String timeGreeting = 'Hello';
+    if (hour < 12) {
+      timeGreeting = 'Good morning';
+    } else if (hour < 17) {
+      timeGreeting = 'Good afternoon';
+    } else {
+      timeGreeting = 'Good evening';
+    }
+
     final name = user.displayName;
     if (name != null && name.trim().isNotEmpty) {
       final firstName = name.split(' ').first;
-      return 'Hello, $firstName';
+      return '$timeGreeting, $firstName! Ready to check your ponds?';
     }
-    return 'My Ponds';
+    return '$timeGreeting! Ready to check your ponds?';
   }
 
   Future<bool?> _confirmDelete(BuildContext context, String pondName) {
@@ -392,47 +402,35 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white12
-                      : Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.water_drop,
-                  color: isDark ? colorScheme.primary : Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      _getGreeting(user),
+                      "Pondstat",
                       style: TextStyle(
-                        color: isDark
-                            ? colorScheme.onSurfaceVariant
-                            : Colors.white.withValues(alpha: 0.9),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        letterSpacing: 0.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Pond Dashboard",
-                      style: TextStyle(
-                        color: isDark ? colorScheme.onSurface : Colors.white,
+                        color: isDark ? colorScheme.primary : Colors.white,
                         fontWeight: FontWeight.w900,
-                        fontSize: 22,
+                        fontSize: 26,
                         letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _getGreeting(user),
+                        style: TextStyle(
+                          color: isDark
+                              ? colorScheme.onSurfaceVariant
+                              : Colors.white.withValues(alpha: 0.9),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
                       ),
                     ),
                   ],
@@ -545,23 +543,24 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                       return _buildErrorState(snapshot.error.toString());
                     }
 
-                    var ponds = snapshot.data?.docs.toList() ?? [];
+                    final ponds = snapshot.data?.docs ?? [];
 
                     if (ponds.isEmpty) {
                       return _buildEmptyState(context);
                     }
 
-                    // Sort client-side by createdAt descending
-                    ponds.sort((a, b) {
-                      final dataA = a.data() as Map<String, dynamic>;
-                      final dataB = b.data() as Map<String, dynamic>;
-                      final tA = dataA['createdAt'] as Timestamp?;
-                      final tB = dataB['createdAt'] as Timestamp?;
-                      if (tA == null && tB == null) return 0;
-                      if (tA == null) return 1;
-                      if (tB == null) return -1;
-                      return tB.compareTo(tA);
-                    });
+                    // Sort client-side by createdAt descending without mutating original list
+                    final sortedPonds = List<DocumentSnapshot>.from(ponds)
+                      ..sort((a, b) {
+                        final dataA = a.data() as Map<String, dynamic>;
+                        final dataB = b.data() as Map<String, dynamic>;
+                        final tA = dataA['createdAt'] as Timestamp?;
+                        final tB = dataB['createdAt'] as Timestamp?;
+                        if (tA == null && tB == null) return 0;
+                        if (tA == null) return 1;
+                        if (tB == null) return -1;
+                        return tB.compareTo(tA);
+                      });
 
                     return NotificationListener<ScrollNotification>(
                       onNotification: (ScrollNotification notification) {
@@ -587,9 +586,27 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                           padding: const EdgeInsets.all(
                             16,
                           ).copyWith(bottom: 100),
-                          itemCount: ponds.length,
+                          itemCount: sortedPonds.length + 1,
                           itemBuilder: (context, index) {
-                            final pondDoc = ponds[index];
+                            if (index == 0) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 16.0,
+                                  left: 4.0,
+                                ),
+                                child: Text(
+                                  "Pond List",
+                                  style: TextStyle(
+                                    color: colorScheme.onSurface,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 22,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final pondDoc = sortedPonds[index - 1];
                             final pondData =
                                 pondDoc.data() as Map<String, dynamic>;
                             final String pondName =

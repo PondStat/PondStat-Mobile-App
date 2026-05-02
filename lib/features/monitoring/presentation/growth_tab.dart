@@ -22,7 +22,7 @@ class GrowthTab extends StatefulWidget {
 
 class _GrowthTabState extends State<GrowthTab> {
   final Color primaryIndigo = Colors.indigo;
-  final Color textDark = const Color(0xFF1E293B);
+  Color get textDark => Theme.of(context).colorScheme.onSurface;
   final Color textMuted = const Color(0xFF64748B);
 
   late Future<List<GrowthMetrics>> _growthMetricsFuture;
@@ -71,7 +71,9 @@ class _GrowthTabState extends State<GrowthTab> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final current = metrics[index];
-                  final previous = (index < metrics.length - 1) ? metrics[index + 1] : null;
+                  final previous = (index < metrics.length - 1)
+                      ? metrics[index + 1]
+                      : null;
                   return _buildGrowthCard(current, previous);
                 }, childCount: metrics.length),
               ),
@@ -137,23 +139,34 @@ class _GrowthTabState extends State<GrowthTab> {
                 children: [
                   if (deltaAbw != null && deltaAbw != 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: deltaAbw > 0 ? Colors.green.shade50 : Colors.red.shade50,
+                        color: deltaAbw > 0
+                            ? Colors.green.shade50
+                            : Colors.red.shade50,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            deltaAbw > 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                            deltaAbw > 0
+                                ? Icons.trending_up_rounded
+                                : Icons.trending_down_rounded,
                             size: 14,
-                            color: deltaAbw > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                            color: deltaAbw > 0
+                                ? Colors.green.shade700
+                                : Colors.red.shade700,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             "${deltaAbw > 0 ? '+' : ''}${deltaAbw.toStringAsFixed(1)}g",
                             style: TextStyle(
-                              color: deltaAbw > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                              color: deltaAbw > 0
+                                  ? Colors.green.shade700
+                                  : Colors.red.shade700,
                               fontWeight: FontWeight.w800,
                               fontSize: 13,
                             ),
@@ -181,9 +194,16 @@ class _GrowthTabState extends State<GrowthTab> {
                           value: 'edit',
                           child: Row(
                             children: [
-                              Icon(Icons.edit_rounded, size: 18, color: primaryIndigo),
+                              Icon(
+                                Icons.edit_rounded,
+                                size: 18,
+                                color: primaryIndigo,
+                              ),
                               const SizedBox(width: 12),
-                              const Text('Edit', style: TextStyle(fontWeight: FontWeight.w600)),
+                              const Text(
+                                'Edit',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
                             ],
                           ),
                         ),
@@ -191,9 +211,19 @@ class _GrowthTabState extends State<GrowthTab> {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                              Icon(
+                                Icons.delete_outline_rounded,
+                                size: 18,
+                                color: Colors.red,
+                              ),
                               SizedBox(width: 12),
-                              Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+                              Text(
+                                'Delete',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -217,9 +247,21 @@ class _GrowthTabState extends State<GrowthTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildMiniMetric("ABW", "${m.abw}g", Colors.green.shade700),
-                _buildMiniMetric("ADG", "${m.adg.toStringAsFixed(2)}g", Colors.green.shade700),
-                _buildMiniMetric("FCR", m.fcr.toStringAsFixed(2), Colors.orange.shade700),
-                _buildMiniMetric("DFR", m.dfr.toStringAsFixed(2), Colors.purple.shade700),
+                _buildMiniMetric(
+                  "ADG",
+                  "${m.adg.toStringAsFixed(2)}g",
+                  Colors.green.shade700,
+                ),
+                _buildMiniMetric(
+                  "FCR",
+                  m.fcr.toStringAsFixed(2),
+                  Colors.orange.shade700,
+                ),
+                _buildMiniMetric(
+                  "DFR",
+                  m.dfr.toStringAsFixed(2),
+                  Colors.purple.shade700,
+                ),
               ],
             ),
           ),
@@ -235,8 +277,16 @@ class _GrowthTabState extends State<GrowthTab> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildMiniMetric("Total Weight", "${m.totalWeight}g", Colors.blue.shade700),
-                _buildMiniMetric("Sample Count", "${m.sampleCount.toInt()} pcs", Colors.blue.shade700),
+                _buildMiniMetric(
+                  "Total Weight",
+                  "${m.totalWeight}g",
+                  Colors.blue.shade700,
+                ),
+                _buildMiniMetric(
+                  "Sample Count",
+                  "${m.sampleCount.toInt()} pcs",
+                  Colors.blue.shade700,
+                ),
               ],
             ),
           ),
@@ -252,9 +302,21 @@ class _GrowthTabState extends State<GrowthTab> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildMiniMetric("Feed Rate", "${m.feedingRate}%", Colors.brown.shade700),
-                _buildMiniMetric("Consumed", "${m.feedConsumed}kg", Colors.brown.shade700),
-                _buildMiniMetric("W. Gained", "${m.weightGained}kg", Colors.brown.shade700),
+                _buildMiniMetric(
+                  "Feed Rate",
+                  "${m.feedingRate}%",
+                  Colors.brown.shade700,
+                ),
+                _buildMiniMetric(
+                  "Consumed",
+                  "${m.feedConsumed}kg",
+                  Colors.brown.shade700,
+                ),
+                _buildMiniMetric(
+                  "W. Gained",
+                  "${m.weightGained}kg",
+                  Colors.brown.shade700,
+                ),
               ],
             ),
           ),
@@ -275,7 +337,10 @@ class _GrowthTabState extends State<GrowthTab> {
               ),
               if (m.editorName != null) ...[
                 const SizedBox(width: 8),
-                Text("•", style: TextStyle(color: Colors.grey.shade300, fontSize: 11)),
+                Text(
+                  "•",
+                  style: TextStyle(color: Colors.grey.shade300, fontSize: 11),
+                ),
                 const SizedBox(width: 8),
                 Icon(Icons.edit_rounded, size: 12, color: textMuted),
                 const SizedBox(width: 4),
@@ -358,5 +423,3 @@ class _GrowthTabState extends State<GrowthTab> {
     );
   }
 }
-
-

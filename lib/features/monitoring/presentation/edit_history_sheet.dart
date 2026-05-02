@@ -56,6 +56,10 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurface = colorScheme.onSurface;
+
     Query<Map<String, dynamic>> query = FirestoreHelper
         .measurementHistoryCollection
         .where('pondId', isEqualTo: widget.pondId);
@@ -65,9 +69,9 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
     }
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: const EdgeInsets.only(top: 12, left: 24, right: 24, bottom: 20),
       child: Column(
@@ -79,7 +83,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
               height: 5,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: isDark ? Colors.white24 : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -88,25 +92,25 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 "History",
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF1E293B),
+                  color: onSurface,
                 ),
               ),
               IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: isDark ? Colors.white12 : Colors.grey.shade100,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.close_rounded,
                     size: 20,
-                    color: Color(0xFF64748B),
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
                   ),
                 ),
                 onPressed: () => Navigator.pop(context),
@@ -220,7 +224,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
@@ -257,10 +261,10 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                                         Expanded(
                                           child: Text(
                                             data['parameter'] ?? 'Unknown',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontWeight: FontWeight.w900,
                                               fontSize: 16,
-                                              color: Color(0xFF1E293B),
+                                              color: onSurface,
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -419,6 +423,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
   }
 
   Widget _buildFilterChip(String label, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = selectedFilter == value;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -432,7 +437,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
         ),
         selected: isSelected,
         selectedColor: const Color(0xFF0A74DA),
-        backgroundColor: Colors.grey.shade100,
+        backgroundColor: isDark ? Colors.white12 : Colors.grey.shade100,
         showCheckmark: false,
         side: BorderSide.none,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pondstat/features/monitoring/presentation/widgets/pond_info_card.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/culture_progress_card.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_calendar.dart';
 
 class OverviewTab extends StatelessWidget {
@@ -37,8 +37,9 @@ class OverviewTab extends StatelessWidget {
     return SingleChildScrollView(
       child: Column(
         children: [
-          PondInfoCard(
-            pondName: pondName,
+          CultureProgressCard(
+            createdAt: createdAt,
+            targetCulturePeriodDays: targetCulturePeriodDays,
             primaryBlue: primaryBlue,
             secondaryBlue: secondaryBlue,
           ),
@@ -46,7 +47,7 @@ class OverviewTab extends StatelessWidget {
             padding: const EdgeInsets.all(20.0),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(

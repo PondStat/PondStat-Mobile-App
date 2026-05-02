@@ -54,3 +54,5 @@ app.*.map.json
 # Exceptions to above iOS rules
 !**/ios/Flutter/App.framework/
 !**/ios/Flutter/Flutter.framework/
+
+.gemini

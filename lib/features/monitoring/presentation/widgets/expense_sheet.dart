@@ -77,10 +77,13 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(
         top: 12,
@@ -101,7 +104,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                   height: 5,
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: isDark ? Colors.white10 : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -121,7 +124,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -130,10 +133,10 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF1E293B),
+                            color: onSurface,
                           ),
                         ),
-                        Text(
+                        const Text(
                           "Add a new group expenditure",
                           style: TextStyle(
                             color: Color(0xFF64748B),

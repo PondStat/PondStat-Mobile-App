@@ -250,6 +250,8 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return PopScope(
       canPop: !_hasChanges || _isSaving,
       onPopInvokedWithResult: (didPop, result) async {
@@ -289,7 +291,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
             if (widget.canEdit)
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: isDark ? Colors.white10 : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: TabBar(
@@ -337,6 +339,8 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildHeader() {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Row(
       children: [
         Container(
@@ -352,12 +356,12 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "Schedule Manager",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF1E293B),
+                  color: onSurface,
                 ),
               ),
               Text(
@@ -500,6 +504,8 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildMemberRow(Map<String, dynamic> member) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     final List<String> shifts = [];
     if (member['morning']) shifts.add("Morning");
     if (member['afternoon']) shifts.add("Afternoon");
@@ -531,10 +537,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
           Expanded(
             child: Text(
               member['userName'],
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1E293B),
-              ),
+              style: TextStyle(fontWeight: FontWeight.w700, color: onSurface),
             ),
           ),
           Row(
@@ -592,6 +595,8 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
 
   // --- Assign Tab ---
   Widget _buildAssignTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_eligibleUsers.isEmpty && !_isLoadingUsers) {
       return const Center(child: Text("No eligible members found."));
     }
@@ -625,8 +630,10 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
               : ListView.separated(
                   padding: const EdgeInsets.only(bottom: 16),
                   itemCount: _daysOfWeek.length,
-                  separatorBuilder: (context, index) =>
-                      Divider(height: 1, color: Colors.grey.shade100),
+                  separatorBuilder: (context, index) => Divider(
+                    height: 1,
+                    color: isDark ? Colors.white10 : Colors.grey.shade100,
+                  ),
                   itemBuilder: (context, index) =>
                       _buildDayRow(_daysOfWeek[index]),
                 ),
@@ -637,6 +644,8 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildUserDropdown() {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
@@ -649,10 +658,10 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
           value: _selectedUserId,
           isExpanded: true,
           icon: const Icon(Icons.expand_more_rounded, color: Color(0xFF64748B)),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
+            color: onSurface,
           ),
           onChanged: _onUserChanged,
           items: _eligibleUsers.map((user) {
@@ -677,6 +686,8 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildDayRow(String day) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     final bool morning = _schedule[day]?['morning'] ?? false;
     final bool afternoon = _schedule[day]?['afternoon'] ?? false;
 
@@ -688,9 +699,9 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
             width: 85,
             child: Text(
               day,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1E293B),
+                color: onSurface,
                 fontSize: 14,
               ),
             ),
