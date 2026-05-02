@@ -145,10 +145,17 @@ class MonitoringParameters {
       hint: 'e.g., 10000',
     ),
     const ParameterItem(
-      label: 'Bacterial',
+      label: 'Bacterial (yellow colonies)',
       unit: 'CFU/mL',
-      icon: Icons.coronavirus_rounded,
-      color: Colors.red,
+      icon: Icons.circle_rounded,
+      color: Colors.amber,
+      hint: 'e.g., 10^4',
+    ),
+    const ParameterItem(
+      label: 'Bacterial (green colonies)',
+      unit: 'CFU/mL',
+      icon: Icons.circle_rounded,
+      color: Colors.green,
       hint: 'e.g., 10^4',
     ),
   ];
