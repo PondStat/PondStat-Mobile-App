@@ -276,16 +276,22 @@ class _ExpensesTabState extends State<ExpensesTab> {
     final qty = data['quantity'] ?? 1;
     final unitPrice = (data['amountPerItem'] as num?)?.toDouble() ?? 0.0;
     final share = memberCount > 0 ? total / memberCount : 0.0;
-    final timestamp =
-        (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final ts = data['timestamp'] as Timestamp?;
+    final timestamp = ts?.toDate() ?? DateTime.now();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurface = colorScheme.onSurface;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.grey.shade100,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -302,7 +308,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.teal.shade50,
+                  color: isDark ? Colors.teal.withValues(alpha: 0.1) : Colors.teal.shade50,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -318,10 +324,10 @@ class _ExpensesTabState extends State<ExpensesTab> {
                   children: [
                     Text(
                       item,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
-                        color: Color(0xFF1E293B),
+                        color: onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -329,7 +335,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                     Text(
                       "Bought by $buyer • ${DateFormat('MMM dd').format(timestamp)}",
                       style: TextStyle(
-                        color: Colors.grey.shade500,
+                        color: isDark ? Colors.white38 : Colors.grey.shade500,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -389,13 +395,14 @@ class _ExpensesTabState extends State<ExpensesTab> {
     bool isBold = false,
     bool isPrimary = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(
-            color: Colors.grey.shade400,
+            color: isDark ? Colors.white38 : Colors.grey.shade400,
             fontSize: 10,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.5,
@@ -405,7 +412,11 @@ class _ExpensesTabState extends State<ExpensesTab> {
         Text(
           value,
           style: TextStyle(
-            color: isPrimary ? Colors.teal : const Color(0xFF1E293B),
+            color: isPrimary
+                ? Colors.teal
+                : (isDark
+                    ? Theme.of(context).colorScheme.onSurface
+                    : const Color(0xFF1E293B)),
             fontWeight: isBold || isPrimary ? FontWeight.w900 : FontWeight.w700,
             fontSize: 13,
           ),

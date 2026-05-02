@@ -77,6 +77,9 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -101,7 +104,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                   height: 5,
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: isDark ? Colors.white10 : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -130,7 +133,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF1E293B),
+                            color: onSurface,
                           ),
                         ),
                         Text(

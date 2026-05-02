@@ -57,6 +57,9 @@ class _MeasurementListViewState extends State<MeasurementListView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return StreamBuilder<QuerySnapshot>(
       stream: _measurementsStream,
       builder: (context, snapshot) {
@@ -184,6 +187,9 @@ class _MeasurementListViewState extends State<MeasurementListView> {
   }
 
   Widget _buildFilterChip(String label, String? filterValue) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     // We know filterValue might be null (for 'All') or a string.
     final isSelected = _selectedFilter == filterValue;
     return Padding(
@@ -210,9 +216,11 @@ class _MeasurementListViewState extends State<MeasurementListView> {
           }
         },
         selectedColor: widget.primaryBlue,
-        backgroundColor: Colors.grey.shade100,
+        backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
         side: BorderSide(
-          color: isSelected ? widget.primaryBlue : Colors.grey.shade300,
+          color: isSelected
+              ? widget.primaryBlue
+              : (isDark ? Colors.white24 : Colors.grey.shade300),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
@@ -220,6 +228,9 @@ class _MeasurementListViewState extends State<MeasurementListView> {
   }
 
   Widget _buildEmptyState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -246,10 +257,10 @@ class _MeasurementListViewState extends State<MeasurementListView> {
           const SizedBox(height: 20),
           Text(
             "No ${widget.type} records",
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF1E293B),
+              color: onSurface,
             ),
           ),
           const SizedBox(height: 8),

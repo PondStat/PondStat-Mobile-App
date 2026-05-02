@@ -54,6 +54,9 @@ class _SchedulesTabState extends State<SchedulesTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StreamBuilder<QuerySnapshot>(
@@ -151,10 +154,13 @@ class _SchedulesTabState extends State<SchedulesTab> {
     List<Map<String, dynamic>> morningUsers,
     List<Map<String, dynamic>> afternoonUsers,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -163,7 +169,9 @@ class _SchedulesTabState extends State<SchedulesTab> {
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,18 +180,24 @@ class _SchedulesTabState extends State<SchedulesTab> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.grey.shade50,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
               ),
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                ),
+              ),
             ),
             child: Text(
               day,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
-                color: Color(0xFF1E293B),
+                color: onSurface,
               ),
             ),
           ),
@@ -245,6 +259,9 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return InkWell(
       onTap: widget.assignedUsers.isNotEmpty ? _toggleExpanded : null,
       borderRadius: BorderRadius.circular(16),
@@ -269,10 +286,12 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                     children: [
                       Text(
                         widget.shiftName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
-                          color: Color(0xFF334155),
+                          color: isDark
+                              ? onSurface.withValues(alpha: 0.9)
+                              : const Color(0xFF334155),
                         ),
                       ),
                       Text(
@@ -283,7 +302,9 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                           fontSize: 12,
                           color: widget.assignedUsers.isEmpty
                               ? Colors.red.shade400
-                              : Colors.grey.shade600,
+                              : (isDark
+                                    ? Colors.white38
+                                    : Colors.grey.shade600),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -297,7 +318,7 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                     _isExpanded
                         ? Icons.expand_less_rounded
                         : Icons.expand_more_rounded,
-                    color: Colors.grey.shade400,
+                    color: isDark ? Colors.white24 : Colors.grey.shade400,
                     size: 20,
                   ),
                 ],
@@ -335,7 +356,7 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                               Text(
                                 user['name'],
                                 style: TextStyle(
-                                  color: Colors.blueGrey.shade800,
+                                  color: onSurface,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
                                 ),
@@ -674,6 +695,9 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -694,7 +718,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
               height: 5,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: isDark ? Colors.white12 : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -721,7 +745,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF1E293B),
+                        color: onSurface,
                       ),
                     ),
                     Text(
@@ -766,10 +790,10 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                         Icons.expand_more_rounded,
                         color: Color(0xFF64748B),
                       ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF1E293B),
+                        color: onSurface,
                       ),
                       onChanged: (val) {
                         if (val != null) setState(() => _selectedDay = val);
@@ -980,7 +1004,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                                     fontWeight: isAssigned
                                         ? FontWeight.w800
                                         : FontWeight.w600,
-                                    color: Colors.blueGrey.shade900,
+                                    color: onSurface,
                                     fontSize: 15,
                                   ),
                                 ),
