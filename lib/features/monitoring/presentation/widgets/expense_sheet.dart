@@ -81,9 +81,9 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(
         top: 12,
