@@ -134,7 +134,7 @@ class MonitoringCalendar extends StatelessWidget {
                   fontSize: 12,
                 ),
                 weekendStyle: TextStyle(
-                  color: Colors.grey.shade400,
+                  color: textMuted.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w800,
                   fontSize: 12,
                 ),
@@ -152,7 +152,7 @@ class MonitoringCalendar extends StatelessWidget {
                 ),
                 weekendTextStyle: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade500,
+                  color: textDark.withValues(alpha: 0.5),
                   fontSize: 15,
                 ),
               ),
