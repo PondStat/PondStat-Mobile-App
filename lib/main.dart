@@ -4,12 +4,12 @@ import 'dart:developer' as developer;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'app_theme.dart';
-import 'auth_wrapper.dart';
-import 'loading_overlay.dart';
-import 'firebase/firebase_options.dart';
-import 'services/notification_service.dart';
-import 'services/settings_service.dart';
+import 'package:pondstat/core/theme/app_theme.dart';
+import 'package:pondstat/features/auth/presentation/auth_wrapper.dart';
+import 'package:pondstat/core/widgets/loading_overlay.dart';
+import 'package:pondstat/core/firebase/firebase_options.dart';
+import 'package:pondstat/core/services/notification_service.dart';
+import 'package:pondstat/core/services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

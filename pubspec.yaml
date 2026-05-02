@@ -50,6 +50,9 @@ dependencies:
   intl: ^0.19.0
   connectivity_plus: ^7.1.1
   flutter_slidable: ^4.0.3
+  csv: ^8.0.0
+  path_provider: ^2.1.5
+  share_plus: ^13.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
