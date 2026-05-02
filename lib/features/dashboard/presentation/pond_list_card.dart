@@ -113,6 +113,7 @@ class _PondListCardState extends State<PondListCard> {
                         child: Container(
                           height: 56,
                           width: 56,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [

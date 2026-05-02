@@ -417,18 +417,21 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      _getGreeting(user),
-                      style: TextStyle(
-                        color: isDark
-                            ? colorScheme.onSurfaceVariant
-                            : Colors.white.withValues(alpha: 0.9),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        letterSpacing: 0.2,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _getGreeting(user),
+                        style: TextStyle(
+                          color: isDark
+                              ? colorScheme.onSurfaceVariant
+                              : Colors.white.withValues(alpha: 0.9),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
