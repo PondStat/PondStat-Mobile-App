@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pondstat/features/monitoring/presentation/pond_monitoring_scaffold.dart';
 
 class PondListCard extends StatefulWidget {
@@ -132,7 +133,7 @@ class _PondListCardState extends State<PondListCard> {
                               ),
                             ],
                           ),
-                          child: Icon(
+                          child: FaIcon(
                             _getSpeciesIcon(widget.species),
                             color: Colors.white,
                             size: 28,
@@ -159,8 +160,8 @@ class _PondListCardState extends State<PondListCard> {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(
-                                Icons.set_meal_rounded,
+                              FaIcon(
+                                _getSpeciesIcon(widget.species),
                                 size: 14,
                                 color: colorScheme.onSurfaceVariant.withValues(
                                   alpha: 0.7,
@@ -279,13 +280,13 @@ class _PondListCardState extends State<PondListCard> {
   IconData _getSpeciesIcon(String species) {
     final lower = species.toLowerCase();
     if (lower.contains('tilapia') || lower.contains('fish')) {
-      return Icons.set_meal_rounded;
+      return FontAwesomeIcons.fish;
     }
     if (lower.contains('shrimp') ||
         lower.contains('prawn') ||
         lower.contains('vannamei')) {
-      return Icons.bug_report_rounded;
+      return FontAwesomeIcons.shrimp;
     }
-    return Icons.water_drop_rounded;
+    return FontAwesomeIcons.droplet;
   }
 }
