@@ -251,7 +251,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return PopScope(
       canPop: !_hasChanges || _isSaving,
@@ -340,7 +339,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildHeader() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Row(
@@ -358,7 +356,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "Schedule Manager",
                 style: TextStyle(
                   fontSize: 20,
@@ -506,7 +504,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildMemberRow(Map<String, dynamic> member) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     final List<String> shifts = [];
@@ -599,7 +596,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   // --- Assign Tab ---
   Widget _buildAssignTab() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     if (_eligibleUsers.isEmpty && !_isLoadingUsers) {
       return const Center(child: Text("No eligible members found."));
@@ -648,7 +644,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildUserDropdown() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Container(
@@ -691,7 +686,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildDayRow(String day) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     final bool morning = _schedule[day]?['morning'] ?? false;

@@ -308,7 +308,9 @@ class _ExpensesTabState extends State<ExpensesTab> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.teal.withValues(alpha: 0.1) : Colors.teal.shade50,
+                  color: isDark
+                      ? Colors.teal.withValues(alpha: 0.1)
+                      : Colors.teal.shade50,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -415,8 +417,8 @@ class _ExpensesTabState extends State<ExpensesTab> {
             color: isPrimary
                 ? Colors.teal
                 : (isDark
-                    ? Theme.of(context).colorScheme.onSurface
-                    : const Color(0xFF1E293B)),
+                      ? Theme.of(context).colorScheme.onSurface
+                      : const Color(0xFF1E293B)),
             fontWeight: isBold || isPrimary ? FontWeight.w900 : FontWeight.w700,
             fontSize: 13,
           ),

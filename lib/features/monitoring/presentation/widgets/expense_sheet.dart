@@ -124,7 +124,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -136,7 +136,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                             color: onSurface,
                           ),
                         ),
-                        Text(
+                        const Text(
                           "Add a new group expenditure",
                           style: TextStyle(
                             color: Color(0xFF64748B),

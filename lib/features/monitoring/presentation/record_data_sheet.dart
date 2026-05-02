@@ -988,11 +988,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 color: Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.arrow_back_rounded,
-                size: 20,
-                color: textDark,
-              ),
+              child: Icon(Icons.arrow_back_rounded, size: 20, color: textDark),
             ),
             onPressed: () {
               HapticFeedback.selectionClick();
@@ -1020,11 +1016,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
               color: Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.close_rounded,
-              size: 20,
-              color: textMuted,
-            ),
+            child: Icon(Icons.close_rounded, size: 20, color: textMuted),
           ),
           onPressed: () => Navigator.pop(context),
         ),

@@ -21,7 +21,8 @@ class CultureProgressCard extends StatelessWidget {
     final today = DateTime(now.year, now.month, now.day);
 
     // Calculate Day of Culture (DOC)
-    int doc = today.difference(startDay).inDays + 1; // Day 1 starts on creation date
+    int doc =
+        today.difference(startDay).inDays + 1; // Day 1 starts on creation date
     if (doc < 0) doc = 0;
 
     final progress = targetCulturePeriodDays > 0
@@ -51,14 +52,13 @@ class CultureProgressCard extends StatelessWidget {
               children: [
                 const Text(
                   "Culture Progress",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: primaryBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),

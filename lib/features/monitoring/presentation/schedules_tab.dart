@@ -54,9 +54,6 @@ class _SchedulesTabState extends State<SchedulesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StreamBuilder<QuerySnapshot>(
@@ -740,7 +737,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "Assign Shift",
                       style: TextStyle(
                         fontSize: 20,

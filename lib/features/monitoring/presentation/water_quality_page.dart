@@ -313,8 +313,9 @@ class _EditDataDialogState extends State<_EditDataDialog> {
       Map<String, List<double>> newReplicateValues = {};
 
       final newNote = notesControllers[doc.id]?.text.trim();
-      updatedNotes[doc.id] =
-          newNote != null && newNote.isNotEmpty ? newNote : null;
+      updatedNotes[doc.id] = newNote != null && newNote.isNotEmpty
+          ? newNote
+          : null;
 
       for (var p in points) {
         final replicatesList = <double>[];
@@ -461,13 +462,13 @@ class _EditDataDialogState extends State<_EditDataDialog> {
                                 right: rIdx < replicates.length - 1 ? 8 : 0,
                               ),
                               child: TextField(
-                                controller: controllers[
-                                    '${points[pIdx]}-${replicates[rIdx]}'],
+                                controller:
+                                    controllers['${points[pIdx]}-${replicates[rIdx]}'],
                                 onChanged: (_) => setState(() {}),
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
-                                  decimal: true,
-                                ),
+                                      decimal: true,
+                                    ),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
@@ -553,9 +554,7 @@ class _EditDataDialogState extends State<_EditDataDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       scrollable: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       title: const Text(
         'Edit Measurements',
         style: TextStyle(fontWeight: FontWeight.w800),
@@ -581,20 +580,14 @@ class _EditDataDialogState extends State<_EditDataDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text(
             "Cancel",
-            style: TextStyle(
-              color: Colors.grey,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
           ),
         ),
         TextButton(
           onPressed: _handleBatchDelete,
           child: const Text(
             "Delete",
-            style: TextStyle(
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
           ),
         ),
         ElevatedButton(
@@ -616,4 +609,3 @@ class _EditDataDialogState extends State<_EditDataDialog> {
     );
   }
 }
-

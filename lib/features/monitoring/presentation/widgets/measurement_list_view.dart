@@ -57,9 +57,6 @@ class _MeasurementListViewState extends State<MeasurementListView> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
     return StreamBuilder<QuerySnapshot>(
       stream: _measurementsStream,
       builder: (context, snapshot) {
@@ -188,7 +185,6 @@ class _MeasurementListViewState extends State<MeasurementListView> {
 
   Widget _buildFilterChip(String label, String? filterValue) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     // We know filterValue might be null (for 'All') or a string.
     final isSelected = _selectedFilter == filterValue;
@@ -228,7 +224,6 @@ class _MeasurementListViewState extends State<MeasurementListView> {
   }
 
   Widget _buildEmptyState() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Center(
