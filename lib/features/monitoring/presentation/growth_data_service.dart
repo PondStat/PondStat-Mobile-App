@@ -8,10 +8,15 @@ class GrowthMetrics {
   final double adg;
   final double fcr;
   final double dfr;
+  final double totalWeight;
+  final double sampleCount;
+  final double feedingRate;
+  final double feedConsumed;
+  final double weightGained;
   final String? abwDocId;
   final String? adgDocId;
-  final String? fcrDocId;
   final String? dfrDocId;
+  final String? fcrDocId;
   final String? recorderName;
   final String? editorName;
 
@@ -22,10 +27,15 @@ class GrowthMetrics {
     this.adg = 0.0,
     this.fcr = 0.0,
     this.dfr = 0.0,
+    this.totalWeight = 0.0,
+    this.sampleCount = 0.0,
+    this.feedingRate = 0.0,
+    this.feedConsumed = 0.0,
+    this.weightGained = 0.0,
     this.abwDocId,
     this.adgDocId,
-    this.fcrDocId,
     this.dfrDocId,
+    this.fcrDocId,
     this.recorderName,
     this.editorName,
   });
@@ -120,6 +130,12 @@ class GrowthDataService {
         weeklyBuckets[displayWeek]!['countDocId'] = doc.id;
       } else if (param == 'ABW') {
         weeklyBuckets[displayWeek]!['abwDocId'] = doc.id;
+      } else if (param == 'ADG') {
+        weeklyBuckets[displayWeek]!['adgDocId'] = doc.id;
+      } else if (param == 'DFR') {
+        weeklyBuckets[displayWeek]!['dfrDocId'] = doc.id;
+      } else if (param == 'FCR') {
+        weeklyBuckets[displayWeek]!['fcrDocId'] = doc.id;
       }
 
       weeklyBuckets[displayWeek]!['recorderName'] =
@@ -191,10 +207,16 @@ class GrowthDataService {
           adg: _round(adg, 2),
           fcr: _round(fcr, 2),
           dfr: _round(dfr, 2),
-          abwDocId: bucket['abwDocId'] as String?,
+          totalWeight: totalWeight,
+          sampleCount: sampleCount,
+          feedingRate: feedingRate,
+          feedConsumed: feedConsumed,
+          weightGained: weightGained,
+          abwDocId:
+              bucket['abwDocId'] as String? ?? bucket['weightDocId'] as String?,
           adgDocId: bucket['adgDocId'] as String?,
-          fcrDocId: bucket['fcrDocId'] as String?,
           dfrDocId: bucket['dfrDocId'] as String?,
+          fcrDocId: bucket['fcrDocId'] as String?,
           recorderName: bucket['recorderName'] as String?,
           editorName: bucket['editorName'] as String?,
         ),
