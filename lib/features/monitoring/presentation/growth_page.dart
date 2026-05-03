@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
 import 'package:pondstat/core/utils/helpers.dart';
-import 'package:pondstat/features/monitoring/presentation/record_data_sheet.dart';
+import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
@@ -37,11 +37,8 @@ class _GrowthPageState extends State<GrowthPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => RecordDataSheet(
-        tabIndex: 1,
+      builder: (sheetContext) => RecordGrowthSheet(
         species: widget.species,
-        customParams: MonitoringParameters.samplingParameters,
-        customType: 'growth',
         onSave:
             ({
               required String label,
