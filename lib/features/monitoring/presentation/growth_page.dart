@@ -4,8 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
 import 'package:pondstat/core/utils/helpers.dart';
-import 'package:pondstat/features/monitoring/presentation/record_data_sheet.dart';
-import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
@@ -37,11 +36,8 @@ class _GrowthPageState extends State<GrowthPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => RecordDataSheet(
-        tabIndex: 1,
+      builder: (sheetContext) => RecordGrowthSheet(
         species: widget.species,
-        customParams: MonitoringParameters.samplingParameters,
-        customType: 'growth',
         onSave:
             ({
               required String label,
@@ -162,54 +158,37 @@ class _GrowthPageState extends State<GrowthPage> {
                           final user = FirebaseAuth.instance.currentUser;
                           final batch = FirebaseFirestore.instance.batch();
 
-                          if (m.weightDocId != null) {
-                            final docRef = FirestoreHelper
-                                .measurementsCollection
-                                .doc(m.weightDocId);
-                            final docSnap = await docRef.get();
-                            if (docSnap.exists) {
-                              final historyRef = FirestoreHelper
-                                  .measurementHistoryCollection
-                                  .doc();
-                              final data =
-                                  docSnap.data() as Map<String, dynamic>;
-                              batch.set(historyRef, {
-                                'pondId': widget.pondId,
-                                'measurementId': m.weightDocId,
-                                'parameter': data['parameter'],
-                                'action': 'delete',
-                                'editedAt': FieldValue.serverTimestamp(),
-                                'editedBy': user?.uid,
-                                'editorName': user?.displayName ?? 'Unknown',
-                                'before': {'value': data['value']},
-                                'after': null,
-                              });
-                              batch.delete(docRef);
-                            }
-                          }
-                          if (m.countDocId != null) {
-                            final docRef = FirestoreHelper
-                                .measurementsCollection
-                                .doc(m.countDocId);
-                            final docSnap = await docRef.get();
-                            if (docSnap.exists) {
-                              final historyRef = FirestoreHelper
-                                  .measurementHistoryCollection
-                                  .doc();
-                              final data =
-                                  docSnap.data() as Map<String, dynamic>;
-                              batch.set(historyRef, {
-                                'pondId': widget.pondId,
-                                'measurementId': m.countDocId,
-                                'parameter': data['parameter'],
-                                'action': 'delete',
-                                'editedAt': FieldValue.serverTimestamp(),
-                                'editedBy': user?.uid,
-                                'editorName': user?.displayName ?? 'Unknown',
-                                'before': {'value': data['value']},
-                                'after': null,
-                              });
-                              batch.delete(docRef);
+                          final docIds = [
+                            m.abwDocId,
+                            m.adgDocId,
+                            m.dfrDocId,
+                            m.fcrDocId,
+                          ];
+                          for (final docId in docIds) {
+                            if (docId != null) {
+                              final docRef = FirestoreHelper
+                                  .measurementsCollection
+                                  .doc(docId);
+                              final docSnap = await docRef.get();
+                              if (docSnap.exists) {
+                                final historyRef = FirestoreHelper
+                                    .measurementHistoryCollection
+                                    .doc();
+                                final data =
+                                    docSnap.data() as Map<String, dynamic>;
+                                batch.set(historyRef, {
+                                  'pondId': widget.pondId,
+                                  'measurementId': docId,
+                                  'parameter': data['parameter'],
+                                  'action': 'delete',
+                                  'editedAt': FieldValue.serverTimestamp(),
+                                  'editedBy': user?.uid,
+                                  'editorName': user?.displayName ?? 'Unknown',
+                                  'before': {'value': data['value']},
+                                  'after': null,
+                                });
+                                batch.delete(docRef);
+                              }
                             }
                           }
 
@@ -253,14 +232,17 @@ class _GrowthPageState extends State<GrowthPage> {
   }
 
   void _showEditGrowthDialog(GrowthMetrics m) {
-    if (m.weightDocId == null || m.countDocId == null) return;
+    if (m.abwDocId == null &&
+        m.adgDocId == null &&
+        m.dfrDocId == null &&
+        m.fcrDocId == null) {
+      return;
+    }
 
-    final weightController = TextEditingController(
-      text: m.totalWeight.toString(),
-    );
-    final countController = TextEditingController(
-      text: m.sampleCount.toString(),
-    );
+    final abwController = TextEditingController(text: m.abw.toString());
+    final adgController = TextEditingController(text: m.adg.toString());
+    final dfrController = TextEditingController(text: m.dfr.toString());
+    final fcrController = TextEditingController(text: m.fcr.toString());
 
     showDialog(
       context: context,
@@ -273,29 +255,59 @@ class _GrowthPageState extends State<GrowthPage> {
             "Edit Sampling",
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: weightController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: "Total Weight (g)",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: countController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: "Sample Count (pcs)",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (m.abwDocId != null)
+                  TextField(
+                    controller: abwController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: "ABW (g/pcs)",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                if (m.abwDocId != null) const SizedBox(height: 16),
+                if (m.adgDocId != null)
+                  TextField(
+                    controller: adgController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: "ADG (g/day)",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                if (m.adgDocId != null) const SizedBox(height: 16),
+                if (m.dfrDocId != null)
+                  TextField(
+                    controller: dfrController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: "DFR (%)",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                if (m.dfrDocId != null) const SizedBox(height: 16),
+                if (m.fcrDocId != null)
+                  TextField(
+                    controller: fcrController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: "FCR",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -308,10 +320,15 @@ class _GrowthPageState extends State<GrowthPage> {
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                final newWeight = double.tryParse(weightController.text);
-                final newCount = double.tryParse(countController.text);
+                final newAbw = double.tryParse(abwController.text);
+                final newAdg = double.tryParse(adgController.text);
+                final newDfr = double.tryParse(dfrController.text);
+                final newFcr = double.tryParse(fcrController.text);
 
-                if (newWeight == null || newCount == null) {
+                if ((m.abwDocId != null && newAbw == null) ||
+                    (m.adgDocId != null && newAdg == null) ||
+                    (m.dfrDocId != null && newDfr == null) ||
+                    (m.fcrDocId != null && newFcr == null)) {
                   SnackbarHelper.show(context, "Please enter valid numbers");
                   return;
                 }
@@ -319,63 +336,45 @@ class _GrowthPageState extends State<GrowthPage> {
                 final user = FirebaseAuth.instance.currentUser;
                 final batch = FirebaseFirestore.instance.batch();
 
-                // Update Weight
-                final wDocRef = FirestoreHelper.measurementsCollection.doc(
-                  m.weightDocId,
-                );
-                final wDocSnap = await wDocRef.get();
-                if (wDocSnap.exists) {
-                  final data = wDocSnap.data() as Map<String, dynamic>;
-                  batch.update(wDocRef, {
-                    'value': newWeight,
-                    'editedAt': FieldValue.serverTimestamp(),
-                    'editedBy': user?.uid,
-                    'editorName': user?.displayName,
-                  });
-                  final historyRef = FirestoreHelper
-                      .measurementHistoryCollection
-                      .doc();
-                  batch.set(historyRef, {
-                    'pondId': widget.pondId,
-                    'measurementId': m.weightDocId,
-                    'parameter': data['parameter'],
-                    'action': 'update',
-                    'editedAt': FieldValue.serverTimestamp(),
-                    'editedBy': user?.uid,
-                    'editorName': user?.displayName ?? 'Unknown',
-                    'before': {'value': data['value']},
-                    'after': {'value': newWeight},
-                  });
+                Future<void> queueUpdate(
+                  String? docId,
+                  double newValue,
+                  double oldValue,
+                ) async {
+                  if (docId == null || newValue == oldValue) return;
+                  final docRef = FirestoreHelper.measurementsCollection.doc(
+                    docId,
+                  );
+                  final docSnap = await docRef.get();
+                  if (docSnap.exists) {
+                    final data = docSnap.data() as Map<String, dynamic>;
+                    batch.update(docRef, {
+                      'value': newValue,
+                      'editedAt': FieldValue.serverTimestamp(),
+                      'editedBy': user?.uid,
+                      'editorName': user?.displayName,
+                    });
+                    final historyRef = FirestoreHelper
+                        .measurementHistoryCollection
+                        .doc();
+                    batch.set(historyRef, {
+                      'pondId': widget.pondId,
+                      'measurementId': docId,
+                      'parameter': data['parameter'],
+                      'action': 'update',
+                      'editedAt': FieldValue.serverTimestamp(),
+                      'editedBy': user?.uid,
+                      'editorName': user?.displayName ?? 'Unknown',
+                      'before': {'value': data['value']},
+                      'after': {'value': newValue},
+                    });
+                  }
                 }
 
-                // Update Count
-                final cDocRef = FirestoreHelper.measurementsCollection.doc(
-                  m.countDocId,
-                );
-                final cDocSnap = await cDocRef.get();
-                if (cDocSnap.exists) {
-                  final data = cDocSnap.data() as Map<String, dynamic>;
-                  batch.update(cDocRef, {
-                    'value': newCount,
-                    'editedAt': FieldValue.serverTimestamp(),
-                    'editedBy': user?.uid,
-                    'editorName': user?.displayName,
-                  });
-                  final historyRef = FirestoreHelper
-                      .measurementHistoryCollection
-                      .doc();
-                  batch.set(historyRef, {
-                    'pondId': widget.pondId,
-                    'measurementId': m.countDocId,
-                    'parameter': data['parameter'],
-                    'action': 'update',
-                    'editedAt': FieldValue.serverTimestamp(),
-                    'editedBy': user?.uid,
-                    'editorName': user?.displayName ?? 'Unknown',
-                    'before': {'value': data['value']},
-                    'after': {'value': newCount},
-                  });
-                }
+                await queueUpdate(m.abwDocId, newAbw ?? 0, m.abw);
+                await queueUpdate(m.adgDocId, newAdg ?? 0, m.adg);
+                await queueUpdate(m.dfrDocId, newDfr ?? 0, m.dfr);
+                await queueUpdate(m.fcrDocId, newFcr ?? 0, m.fcr);
 
                 try {
                   await batch.commit();

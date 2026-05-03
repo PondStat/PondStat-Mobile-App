@@ -13,8 +13,10 @@ class GrowthMetrics {
   final double feedingRate;
   final double feedConsumed;
   final double weightGained;
-  final String? weightDocId;
-  final String? countDocId;
+  final String? abwDocId;
+  final String? adgDocId;
+  final String? dfrDocId;
+  final String? fcrDocId;
   final String? recorderName;
   final String? editorName;
 
@@ -30,8 +32,10 @@ class GrowthMetrics {
     this.feedingRate = 0.0,
     this.feedConsumed = 0.0,
     this.weightGained = 0.0,
-    this.weightDocId,
-    this.countDocId,
+    this.abwDocId,
+    this.adgDocId,
+    this.dfrDocId,
+    this.fcrDocId,
     this.recorderName,
     this.editorName,
   });
@@ -57,6 +61,10 @@ class GrowthDataService {
       'Feeding rate',
       'Total feed consumed',
       'Total weight gained',
+      'ABW',
+      'ADG',
+      'DFR',
+      'FCR',
     ];
 
     final allDocs =
@@ -102,6 +110,10 @@ class GrowthDataService {
           'Feeding rate': 0.0,
           'Total feed consumed': 0.0,
           'Total weight gained': 0.0,
+          'ABW': 0.0,
+          'ADG': 0.0,
+          'DFR': 0.0,
+          'FCR': 0.0,
         },
       );
 
@@ -116,6 +128,14 @@ class GrowthDataService {
         weeklyBuckets[displayWeek]!['weightDocId'] = doc.id;
       } else if (param == 'Number of fish sampled') {
         weeklyBuckets[displayWeek]!['countDocId'] = doc.id;
+      } else if (param == 'ABW') {
+        weeklyBuckets[displayWeek]!['abwDocId'] = doc.id;
+      } else if (param == 'ADG') {
+        weeklyBuckets[displayWeek]!['adgDocId'] = doc.id;
+      } else if (param == 'DFR') {
+        weeklyBuckets[displayWeek]!['dfrDocId'] = doc.id;
+      } else if (param == 'FCR') {
+        weeklyBuckets[displayWeek]!['fcrDocId'] = doc.id;
       }
 
       weeklyBuckets[displayWeek]!['recorderName'] =
@@ -140,24 +160,35 @@ class GrowthDataService {
       final double feedConsumed = bucket['Total feed consumed'];
       final double weightGained = bucket['Total weight gained'];
 
-      final double currentAbw = sampleCount > 0
-          ? totalWeight / sampleCount
-          : 0.0;
+      final double explicitAbw = bucket['ABW'];
+      final double explicitAdg = bucket['ADG'];
+      final double explicitDfr = bucket['DFR'];
+      final double explicitFcr = bucket['FCR'];
 
-      double adg = 0.0;
-      double dfr = currentAbw * fishCount * feedingRate / 100.0;
-      double fcr = weightGained > 0 ? feedConsumed / weightGained : 0.0;
+      final double currentAbw = explicitAbw > 0
+          ? explicitAbw
+          : (sampleCount > 0 ? totalWeight / sampleCount : 0.0);
 
-      if (i > 0) {
+      double adg = explicitAdg > 0 ? explicitAdg : 0.0;
+      double dfr = explicitDfr > 0
+          ? explicitDfr
+          : (currentAbw * fishCount * feedingRate / 100.0);
+      double fcr = explicitFcr > 0
+          ? explicitFcr
+          : (weightGained > 0 ? feedConsumed / weightGained : 0.0);
+
+      if (i > 0 && explicitAdg == 0.0) {
         final prevWeek = sortedWeeks[i - 1];
         final prevBucket = weeklyBuckets[prevWeek]!;
 
         final prevTotalWeight =
             prevBucket['Total weight of sampled fish'] as double;
         final prevSampleCount = prevBucket['Number of fish sampled'] as double;
-        final prevAbw = prevSampleCount > 0
-            ? prevTotalWeight / prevSampleCount
-            : 0.0;
+        final prevExplicitAbw = prevBucket['ABW'] as double;
+
+        final prevAbw = prevExplicitAbw > 0
+            ? prevExplicitAbw
+            : (prevSampleCount > 0 ? prevTotalWeight / prevSampleCount : 0.0);
 
         final DateTime currentDate = bucket['date'] as DateTime;
         final DateTime prevDate = prevBucket['date'] as DateTime;
@@ -176,13 +207,16 @@ class GrowthDataService {
           adg: _round(adg, 2),
           fcr: _round(fcr, 2),
           dfr: _round(dfr, 2),
-          totalWeight: _round(totalWeight, 1),
-          sampleCount: _round(sampleCount, 0),
-          feedingRate: _round(feedingRate, 2),
-          feedConsumed: _round(feedConsumed, 2),
-          weightGained: _round(weightGained, 2),
-          weightDocId: bucket['weightDocId'] as String?,
-          countDocId: bucket['countDocId'] as String?,
+          totalWeight: totalWeight,
+          sampleCount: sampleCount,
+          feedingRate: feedingRate,
+          feedConsumed: feedConsumed,
+          weightGained: weightGained,
+          abwDocId:
+              bucket['abwDocId'] as String? ?? bucket['weightDocId'] as String?,
+          adgDocId: bucket['adgDocId'] as String?,
+          dfrDocId: bucket['dfrDocId'] as String?,
+          fcrDocId: bucket['fcrDocId'] as String?,
           recorderName: bucket['recorderName'] as String?,
           editorName: bucket['editorName'] as String?,
         ),

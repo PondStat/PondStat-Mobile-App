@@ -265,61 +265,6 @@ class _GrowthTabState extends State<GrowthTab> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
-
-          // GROUP 2: Sampling Data (Blue)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildMiniMetric(
-                  "Total Weight",
-                  "${m.totalWeight}g",
-                  Colors.blue.shade700,
-                ),
-                _buildMiniMetric(
-                  "Sample Count",
-                  "${m.sampleCount.toInt()} pcs",
-                  Colors.blue.shade700,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // GROUP 3: Feed Data (Orange)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildMiniMetric(
-                  "Feed Rate",
-                  "${m.feedingRate}%",
-                  Colors.brown.shade700,
-                ),
-                _buildMiniMetric(
-                  "Consumed",
-                  "${m.feedConsumed}kg",
-                  Colors.brown.shade700,
-                ),
-                _buildMiniMetric(
-                  "W. Gained",
-                  "${m.weightGained}kg",
-                  Colors.brown.shade700,
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 16),
 
           // FOOTER: Editors
