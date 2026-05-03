@@ -8,13 +8,10 @@ class GrowthMetrics {
   final double adg;
   final double fcr;
   final double dfr;
-  final double totalWeight;
-  final double sampleCount;
-  final double feedingRate;
-  final double feedConsumed;
-  final double weightGained;
-  final String? weightDocId;
-  final String? countDocId;
+  final String? abwDocId;
+  final String? adgDocId;
+  final String? fcrDocId;
+  final String? dfrDocId;
   final String? recorderName;
   final String? editorName;
 
@@ -25,13 +22,10 @@ class GrowthMetrics {
     this.adg = 0.0,
     this.fcr = 0.0,
     this.dfr = 0.0,
-    this.totalWeight = 0.0,
-    this.sampleCount = 0.0,
-    this.feedingRate = 0.0,
-    this.feedConsumed = 0.0,
-    this.weightGained = 0.0,
-    this.weightDocId,
-    this.countDocId,
+    this.abwDocId,
+    this.adgDocId,
+    this.fcrDocId,
+    this.dfrDocId,
     this.recorderName,
     this.editorName,
   });
@@ -197,14 +191,10 @@ class GrowthDataService {
           adg: _round(adg, 2),
           fcr: _round(fcr, 2),
           dfr: _round(dfr, 2),
-          totalWeight: _round(totalWeight, 1),
-          sampleCount: _round(sampleCount, 0),
-          feedingRate: _round(feedingRate, 2),
-          feedConsumed: _round(feedConsumed, 2),
-          weightGained: _round(weightGained, 2),
-          weightDocId:
-              bucket['abwDocId'] as String? ?? bucket['weightDocId'] as String?,
-          countDocId: bucket['countDocId'] as String?,
+          abwDocId: bucket['abwDocId'] as String?,
+          adgDocId: bucket['adgDocId'] as String?,
+          fcrDocId: bucket['fcrDocId'] as String?,
+          dfrDocId: bucket['dfrDocId'] as String?,
           recorderName: bucket['recorderName'] as String?,
           editorName: bucket['editorName'] as String?,
         ),
