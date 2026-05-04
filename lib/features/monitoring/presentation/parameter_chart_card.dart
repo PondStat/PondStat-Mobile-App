@@ -23,16 +23,16 @@ class ParameterChartCard extends StatelessWidget {
     final color = paramItem?.color ?? Colors.blue;
     final unit = paramItem?.unit ?? '';
 
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(24),
-        border: isDark ? Border.all(color: Colors.white12) : null,
+        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: isDark
             ? []
             : [
@@ -65,7 +65,7 @@ class ParameterChartCard extends StatelessWidget {
                   Text(
                     "Trend Analysis",
                     style: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.grey.shade800,
+                      color: colorScheme.onSurface,
                       fontWeight: FontWeight.w800,
                       fontSize: 18,
                     ),
@@ -79,21 +79,21 @@ class ParameterChartCard extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
+                    color: colorScheme.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.warning_amber_rounded,
-                        color: isDark ? Colors.red.shade300 : Colors.red,
+                        color: colorScheme.error,
                         size: 14,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         "${stats.outlierCount} Outliers",
                         style: TextStyle(
-                          color: isDark ? Colors.red.shade300 : Colors.red,
+                          color: colorScheme.error,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                         ),
@@ -112,12 +112,8 @@ class ParameterChartCard extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: 1,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.grey.shade100,
-                    strokeWidth: 1,
-                  ),
+                  getDrawingHorizontalLine: (value) =>
+                      FlLine(color: colorScheme.outlineVariant, strokeWidth: 1),
                 ),
                 titlesData: FlTitlesData(
                   show: true,
@@ -143,9 +139,7 @@ class ParameterChartCard extends StatelessWidget {
                           child: Text(
                             DateFormat('MM/dd').format(date),
                             style: TextStyle(
-                              color: isDark
-                                  ? Colors.white38
-                                  : Colors.grey.shade400,
+                              color: colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w600,
                               fontSize: 10,
                             ),
@@ -164,9 +158,7 @@ class ParameterChartCard extends StatelessWidget {
                           child: Text(
                             value.toStringAsFixed(1),
                             style: TextStyle(
-                              color: isDark
-                                  ? Colors.white38
-                                  : Colors.grey.shade400,
+                              color: colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w600,
                               fontSize: 10,
                             ),
@@ -193,9 +185,7 @@ class ParameterChartCard extends StatelessWidget {
                       getDotPainter: (spot, percent, barData, index) =>
                           FlDotCirclePainter(
                             radius: 4,
-                            color: isDark
-                                ? const Color(0xFF1E293B)
-                                : Colors.white,
+                            color: colorScheme.surfaceContainer,
                             strokeWidth: 2,
                             strokeColor: color,
                           ),
@@ -216,15 +206,15 @@ class ParameterChartCard extends StatelessWidget {
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipColor: (touchedSpot) =>
-                        isDark ? Colors.black87 : color.withValues(alpha: 0.9),
+                        colorScheme.inverseSurface,
                     tooltipBorderRadius: BorderRadius.circular(8),
                     getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
                       return touchedBarSpots.map((barSpot) {
                         final flSpot = barSpot;
                         return LineTooltipItem(
                           "${flSpot.y} $unit\n${DateFormat('MMM dd, yyyy HH:mm').format(stats.dataPoints[flSpot.x.toInt()].timestamp)}",
-                          const TextStyle(
-                            color: Colors.white,
+                          TextStyle(
+                            color: colorScheme.onInverseSurface,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -244,7 +234,7 @@ class ParameterChartCard extends StatelessWidget {
                 child: _buildStatItem(
                   "Average",
                   "${stats.average}$unit",
-                  isDark,
+                  colorScheme,
                   Icons.functions_rounded,
                 ),
               ),
@@ -252,7 +242,7 @@ class ParameterChartCard extends StatelessWidget {
                 child: _buildStatItem(
                   "Min",
                   "${stats.min}$unit",
-                  isDark,
+                  colorScheme,
                   Icons.arrow_downward_rounded,
                 ),
               ),
@@ -260,7 +250,7 @@ class ParameterChartCard extends StatelessWidget {
                 child: _buildStatItem(
                   "Max",
                   "${stats.max}$unit",
-                  isDark,
+                  colorScheme,
                   Icons.arrow_upward_rounded,
                 ),
               ),
@@ -280,7 +270,7 @@ class ParameterChartCard extends StatelessWidget {
   Widget _buildStatItem(
     String label,
     String value,
-    bool isDark,
+    ColorScheme colorScheme,
     IconData icon,
   ) {
     return Column(
@@ -288,16 +278,12 @@ class ParameterChartCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 12,
-              color: isDark ? Colors.white38 : Colors.grey.shade500,
-            ),
+            Icon(icon, size: 12, color: colorScheme.onSurfaceVariant),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
-                color: isDark ? Colors.white54 : Colors.grey.shade500,
+                color: colorScheme.onSurfaceVariant,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -308,7 +294,7 @@ class ParameterChartCard extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF1E293B),
+            color: colorScheme.onSurface,
             fontSize: 16,
             fontWeight: FontWeight.w800,
           ),
