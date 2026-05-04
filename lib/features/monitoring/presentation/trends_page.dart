@@ -124,10 +124,7 @@ class _TrendsPageState extends State<TrendsPage> {
       await file.writeAsString(csvData);
 
       final result = await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(path)],
-          text: 'PondStat Water Quality Report',
-        ),
+        ShareParams(files: [XFile(path)], text: 'PondStat Parameter Report'),
       );
 
       if (result.status == ShareResultStatus.success) {

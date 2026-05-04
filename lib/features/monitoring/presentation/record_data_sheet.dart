@@ -217,69 +217,133 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   void _showCreateParameterDialog() {
     final nameController = TextEditingController();
     final unitController = TextEditingController();
+    String? selectedCategory;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          "New Parameter",
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PondStatTextField(
-              controller: nameController,
-              label: "Parameter Name",
-              hint: "e.g., Turbidity",
-              prefixIcon: Icons.science_outlined,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
-            const SizedBox(height: 12),
-            PondStatTextField(
-              controller: unitController,
-              label: "Unit (Optional)",
-              hint: "e.g., NTU",
-              prefixIcon: Icons.straighten_rounded,
+            title: const Text(
+              "New Parameter",
+              style: TextStyle(fontWeight: FontWeight.w900),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PondStatTextField(
+                  controller: nameController,
+                  label: "Parameter Name",
+                  hint: "e.g., Turbidity",
+                  prefixIcon: Icons.science_outlined,
+                ),
+                const SizedBox(height: 12),
+                PondStatTextField(
+                  controller: unitController,
+                  label: "Unit",
+                  hint: "e.g., NTU",
+                  prefixIcon: Icons.straighten_rounded,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: "Graph Category",
+                    prefixIcon: const Icon(
+                      Icons.category_rounded,
+                      color: Colors.grey,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF0A74DA),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Chemical',
+                      child: Text('Chemical'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Physical',
+                      child: Text('Physical'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Biological',
+                      child: Text('Biological'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      selectedCategory = value;
+                    });
+                  },
+                ),
+              ],
             ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                String type =
-                    widget.customType ??
-                    ['daily', 'weekly', 'biweekly'][widget.tabIndex];
-                await _repository.addCustomParameter(
-                  label: nameController.text.trim(),
-                  unit: unitController.text.trim(),
-                  type: type,
-                );
-                if (context.mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text(
-              "Create",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryBlue,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  if (nameController.text.isNotEmpty &&
+                      unitController.text.isNotEmpty &&
+                      selectedCategory != null) {
+                    String type =
+                        widget.customType ??
+                        ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+                    await _repository.addCustomParameter(
+                      label: nameController.text.trim(),
+                      unit: unitController.text.trim(),
+                      type: type,
+                      category: selectedCategory!,
+                    );
+                    if (context.mounted) Navigator.pop(context);
+                  } else {
+                    SnackbarHelper.show(
+                      context,
+                      "Please fill out all fields",
+                      backgroundColor: Colors.orange.shade700,
+                    );
+                  }
+                },
+                child: const Text(
+                  "Create",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

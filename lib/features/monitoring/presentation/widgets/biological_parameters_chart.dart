@@ -22,8 +22,35 @@ class BiologicalParametersChart extends StatefulWidget {
 class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
   final Map<String, bool> _visibleParameters = {
     'Phytoplankton': true,
-    'Bacterial': true,
+    'Test 10-1 (Average yellow colonies)': true,
+    'Test yellow 10-1 (CFU/ml)': true,
+    'Test 10-2 (Average yellow colonies)': true,
+    'Test yellow 10-2 (CFU/ml)': true,
+    'Test 10-1 (Average green colonies)': true,
+    'Test green 10-1 (CFU/ml)': true,
+    'Test 10-2 (Average green colonies)': true,
+    'Test green 10-2 (CFU/ml)': true,
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _syncVisibleParameters();
+  }
+
+  @override
+  void didUpdateWidget(covariant BiologicalParametersChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncVisibleParameters();
+  }
+
+  void _syncVisibleParameters() {
+    for (var key in widget.normalizedData.keys) {
+      if (!_visibleParameters.containsKey(key)) {
+        _visibleParameters[key] = true;
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +107,58 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
       allTimestamps.addAll(list.map((p) => p.timestamp));
     }
     final sortedTimestamps = allTimestamps.toList()..sort();
+
+    if (allTimestamps.isEmpty) {
+      return LineChartData(
+        minX: 0,
+        maxX: 1,
+        minY: 0,
+        maxY: 100,
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.grey.shade100,
+            strokeWidth: 1,
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          bottomTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return SideTitleWidget(
+                  meta: meta,
+                  child: Text(
+                    '${value.toInt()}%',
+                    style: TextStyle(
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        lineBarsData: [],
+      );
+    }
 
     final Map<DateTime, int> timestampIndices = {};
     for (int i = 0; i < sortedTimestamps.length; i++) {
