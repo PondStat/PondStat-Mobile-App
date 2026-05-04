@@ -110,6 +110,73 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     super.dispose();
   }
 
+  bool _hasUnsavedData() {
+    if (_notesController.text.isNotEmpty) return true;
+    for (var controller in valueControllers.values) {
+      if (controller.text.isNotEmpty) return true;
+    }
+    if (_yAvg1Controller.text.isNotEmpty ||
+        _yCfu1Controller.text.isNotEmpty ||
+        _yAvg2Controller.text.isNotEmpty ||
+        _yCfu2Controller.text.isNotEmpty ||
+        _gAvg1Controller.text.isNotEmpty ||
+        _gCfu1Controller.text.isNotEmpty ||
+        _gAvg2Controller.text.isNotEmpty ||
+        _gCfu2Controller.text.isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  void _resetForm() {
+    setState(() {
+      for (var controller in valueControllers.values) {
+        controller.clear();
+      }
+      _notesController.clear();
+      _yAvg1Controller.clear();
+      _yCfu1Controller.clear();
+      _yAvg2Controller.clear();
+      _yCfu2Controller.clear();
+      _gAvg1Controller.clear();
+      _gCfu1Controller.clear();
+      _gAvg2Controller.clear();
+      _gCfu2Controller.clear();
+      selectedParameter = null;
+      selectedDocId = null;
+    });
+  }
+
+  Future<bool> _onWillPop() async {
+    if (!_hasUnsavedData()) return true;
+
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Unsaved Data?'),
+        content: const Text(
+          'You have entered data that has not been saved yet. Are you sure you want to close this sheet?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+
+    return shouldPop ?? false;
+  }
+
   // --- Logic ---
 
   double? _calculatePointAverage(String point) {
@@ -132,7 +199,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     return double.parse((sum / count).toStringAsFixed(2));
   }
 
-  void _processAndSaveForm() async {
+  void _processAndSaveForm({bool keepOpen = false}) async {
     if (selectedParameter == null || _isSaving) return;
 
     if (selectedParameter!.label == 'Bacterial Analysis') {
@@ -199,7 +266,11 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
       HapticFeedback.heavyImpact();
       if (mounted) {
-        Navigator.pop(context);
+        if (keepOpen) {
+          _resetForm();
+        } else {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -216,7 +287,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     }
   }
 
-  Future<void> _saveBacterialAnalysis() async {
+  Future<void> _saveBacterialAnalysis({bool keepOpen = false}) async {
     setState(() => _isSaving = true);
     String type =
         widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
@@ -293,7 +364,13 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       }
 
       HapticFeedback.heavyImpact();
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        if (keepOpen) {
+          _resetForm();
+        } else {
+          Navigator.pop(context);
+        }
+      }
     } catch (e) {
       if (mounted) {
         SnackbarHelper.show(
@@ -768,18 +845,46 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         ),
         const SizedBox(height: 32),
 
-        Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(
-              context,
-            ).colorScheme.copyWith(primary: themeColor),
-          ),
-          child: PrimaryButton(
-            text: 'Save Measurement',
-            icon: Icons.check_circle_outline_rounded,
-            isLoading: _isSaving,
-            onPressed: _processAndSaveForm,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  side: BorderSide(color: themeColor),
+                ),
+                onPressed: _isSaving
+                    ? null
+                    : () => _processAndSaveForm(keepOpen: true),
+                child: Text(
+                  "Save & Add Another",
+                  style: TextStyle(
+                    color: themeColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: Theme.of(
+                    context,
+                  ).colorScheme.copyWith(primary: themeColor),
+                ),
+                child: PrimaryButton(
+                  text: 'Save',
+                  icon: Icons.check_circle_outline_rounded,
+                  isLoading: _isSaving,
+                  onPressed: () => _processAndSaveForm(keepOpen: false),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -951,8 +1056,20 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     return Column(
       children: [
         for (int pIdx = 0; pIdx < points.length; pIdx++)
-          Padding(
-            padding: EdgeInsets.only(bottom: pIdx < points.length - 1 ? 24 : 0),
+          Container(
+            margin: EdgeInsets.only(bottom: pIdx < points.length - 1 ? 16 : 0),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.02)
+                  : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white10
+                    : Colors.grey.shade200,
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1166,6 +1283,17 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           fontSize: isCompact ? 14 : 18,
           color: textDark,
         ),
+        onSubmitted: (_) {
+          final keys = valueControllers.keys.toList();
+          final currentIndex = keys.indexOf(key);
+          if (currentIndex >= 0 && currentIndex < keys.length - 1) {
+            FocusScope.of(
+              context,
+            ).requestFocus(focusNodes[keys[currentIndex + 1]]);
+          } else {
+            FocusScope.of(context).unfocus();
+          }
+        },
         decoration: InputDecoration(
           labelText:
               customLabel ??
@@ -1236,37 +1364,47 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      padding: EdgeInsets.only(
-        top: 12,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 48,
-                height: 5,
-                margin: const EdgeInsets.only(bottom: 24),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(10),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final bool shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: EdgeInsets.only(
+          top: 12,
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
-            ),
-            _buildSheetHeader(),
-            const SizedBox(height: 16),
-            _buildContentSwitcher(),
-          ],
+              _buildSheetHeader(),
+              const SizedBox(height: 16),
+              _buildContentSwitcher(),
+            ],
+          ),
         ),
       ),
     );
