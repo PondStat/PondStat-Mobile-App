@@ -50,6 +50,16 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   late final Map<String, FocusNode> focusNodes;
   final TextEditingController _notesController = TextEditingController();
 
+  // Bacterial Analysis Controllers
+  final TextEditingController _yAvg1Controller = TextEditingController();
+  final TextEditingController _yCfu1Controller = TextEditingController();
+  final TextEditingController _yAvg2Controller = TextEditingController();
+  final TextEditingController _yCfu2Controller = TextEditingController();
+  final TextEditingController _gAvg1Controller = TextEditingController();
+  final TextEditingController _gCfu1Controller = TextEditingController();
+  final TextEditingController _gAvg2Controller = TextEditingController();
+  final TextEditingController _gCfu2Controller = TextEditingController();
+
   bool _isSaving = false;
   final MonitoringRepository _repository = MonitoringRepository();
 
@@ -88,6 +98,14 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     for (var node in focusNodes.values) {
       node.dispose();
     }
+    _yAvg1Controller.dispose();
+    _yCfu1Controller.dispose();
+    _yAvg2Controller.dispose();
+    _yCfu2Controller.dispose();
+    _gAvg1Controller.dispose();
+    _gCfu1Controller.dispose();
+    _gAvg2Controller.dispose();
+    _gCfu2Controller.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -116,6 +134,11 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
   void _processAndSaveForm() async {
     if (selectedParameter == null || _isSaving) return;
+
+    if (selectedParameter!.label == 'Bacterial Analysis') {
+      await _saveBacterialAnalysis();
+      return;
+    }
 
     double totalSum = 0;
     int pointsWithData = 0;
@@ -190,6 +213,97 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       if (mounted) {
         setState(() => _isSaving = false);
       }
+    }
+  }
+
+  Future<void> _saveBacterialAnalysis() async {
+    setState(() => _isSaving = true);
+    String type =
+        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+    final timeStr = selectedTime.format(context);
+    final notes = _notesController.text.trim();
+
+    final mappings = {
+      'Test 10-1 (Average yellow colonies)': {
+        'val': _yAvg1Controller.text.trim(),
+        'unit': '',
+      },
+      'Test yellow 10-1 (CFU/ml)': {
+        'val': _yCfu1Controller.text.trim(),
+        'unit': 'CFU/mL',
+      },
+      'Test 10-2 (Average yellow colonies)': {
+        'val': _yAvg2Controller.text.trim(),
+        'unit': '',
+      },
+      'Test yellow 10-2 (CFU/ml)': {
+        'val': _yCfu2Controller.text.trim(),
+        'unit': 'CFU/mL',
+      },
+      'Test 10-1 (Average green colonies)': {
+        'val': _gAvg1Controller.text.trim(),
+        'unit': '',
+      },
+      'Test green 10-1 (CFU/ml)': {
+        'val': _gCfu1Controller.text.trim(),
+        'unit': 'CFU/mL',
+      },
+      'Test 10-2 (Average green colonies)': {
+        'val': _gAvg2Controller.text.trim(),
+        'unit': '',
+      },
+      'Test green 10-2 (CFU/ml)': {
+        'val': _gCfu2Controller.text.trim(),
+        'unit': 'CFU/mL',
+      },
+    };
+
+    int saves = 0;
+    try {
+      for (var entry in mappings.entries) {
+        if (entry.value['val']!.isNotEmpty) {
+          final doubleVal = double.tryParse(entry.value['val']!);
+          if (doubleVal != null) {
+            await widget.onSave(
+              label: entry.key,
+              unit: entry.value['unit']!,
+              timeString: timeStr,
+              averageValue: doubleVal,
+              type: type,
+              pointValues: {'A': doubleVal}, // Treated as single point
+              replicateValues: {
+                'A': [doubleVal],
+              },
+              notes: notes,
+            );
+            saves++;
+          }
+        }
+      }
+
+      if (saves == 0) {
+        if (mounted) {
+          SnackbarHelper.show(
+            context,
+            "Please enter at least one value",
+            backgroundColor: Colors.orange.shade700,
+          );
+        }
+        return;
+      }
+
+      HapticFeedback.heavyImpact();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.show(
+          context,
+          "Failed to save: $e",
+          backgroundColor: Colors.redAccent,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -637,9 +751,13 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         const SizedBox(height: 28),
         _buildTimePickerCard(themeColor),
         const SizedBox(height: 32),
-        _buildDataPointsHeader(hasRange, themeColor),
-        const SizedBox(height: 16),
-        _buildDataPointInputs(themeColor),
+        if (selectedParameter!.label == 'Bacterial Analysis')
+          _buildBacterialAnalysisUI(themeColor)
+        else ...[
+          _buildDataPointsHeader(hasRange, themeColor),
+          const SizedBox(height: 16),
+          _buildDataPointInputs(themeColor),
+        ],
         const SizedBox(height: 24),
         PondStatTextField(
           controller: _notesController,
@@ -876,6 +994,135 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildBacterialAnalysisUI(Color themeColor) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TabBar(
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: themeColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              labelColor: Colors.white,
+              unselectedLabelColor: textMuted,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+              tabs: const [
+                Tab(text: "Yellow Colonies"),
+                Tab(text: "Green Colonies"),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 380, // Fixed height for inputs
+            child: TabBarView(
+              children: [
+                // Yellow Tab
+                ListView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    PondStatTextField(
+                      controller: _yAvg1Controller,
+                      label: "Test 10-1 (Average)",
+                      hint: "e.g., 100",
+                      prefixIcon: Icons.circle_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _yCfu1Controller,
+                      label: "Test 10-1 (CFU/ml)",
+                      hint: "e.g., 10000",
+                      prefixIcon: Icons.science_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _yAvg2Controller,
+                      label: "Test 10-2 (Average)",
+                      hint: "e.g., 100",
+                      prefixIcon: Icons.circle_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _yCfu2Controller,
+                      label: "Test 10-2 (CFU/ml)",
+                      hint: "e.g., 10000",
+                      prefixIcon: Icons.science_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                  ],
+                ),
+                // Green Tab
+                ListView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    PondStatTextField(
+                      controller: _gAvg1Controller,
+                      label: "Test 10-1 (Average)",
+                      hint: "e.g., 100",
+                      prefixIcon: Icons.circle_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _gCfu1Controller,
+                      label: "Test 10-1 (CFU/ml)",
+                      hint: "e.g., 10000",
+                      prefixIcon: Icons.science_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _gAvg2Controller,
+                      label: "Test 10-2 (Average)",
+                      hint: "e.g., 100",
+                      prefixIcon: Icons.circle_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _gCfu2Controller,
+                      label: "Test 10-2 (CFU/ml)",
+                      hint: "e.g., 10000",
+                      prefixIcon: Icons.science_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
