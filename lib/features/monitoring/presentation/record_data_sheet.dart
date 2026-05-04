@@ -126,27 +126,6 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     for (var p in points) {
       final pointAvg = _calculatePointAverage(p);
       if (pointAvg != null) {
-        // Validate against min/max
-        if (selectedParameter!.minVal != null &&
-            pointAvg < selectedParameter!.minVal!) {
-          SnackbarHelper.show(
-            context,
-            "Point $p average is below the minimum (${selectedParameter!.minVal})",
-            backgroundColor: Colors.red,
-          );
-          focusNodes['$p-1']?.requestFocus();
-          return;
-        }
-        if (selectedParameter!.maxVal != null &&
-            pointAvg > selectedParameter!.maxVal!) {
-          SnackbarHelper.show(
-            context,
-            "Point $p average is above the maximum (${selectedParameter!.maxVal})",
-            backgroundColor: Colors.red,
-          );
-          focusNodes['$p-1']?.requestFocus();
-          return;
-        }
         pointValues[p] = pointAvg;
         totalSum += pointAvg;
         pointsWithData++;

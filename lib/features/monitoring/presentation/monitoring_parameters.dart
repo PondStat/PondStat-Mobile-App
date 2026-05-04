@@ -26,33 +26,33 @@ class ParameterItem {
 
 class MonitoringParameters {
   static List<ParameterItem> getDailyParameters(String species) {
-    double? phMin = 6.5;
+    double? phMin = 7.5;
     double? phMax = 8.5;
-    double? tempMin = 25.0;
+    double? tempMin = 26.0;
     double? tempMax = 32.0;
-    double? salMin;
-    double? salMax;
-    double? transMin;
-    double? transMax;
+    double? salMin = 15.0;
+    double? salMax = 35.0;
+    double? transMin = 20.0;
+    double? transMax = 40.0;
 
     if (species.toLowerCase() == 'shrimp') {
       phMin = 7.5;
       phMax = 8.5;
       tempMin = 28.0;
-      tempMax = 30.0;
-      salMin = 15.0;
-      salMax = 30.0;
-      transMin = 25.0;
+      tempMax = 32.0;
+      salMin = 10.0;
+      salMax = 25.0;
+      transMin = 30.0;
       transMax = 40.0;
     } else if (species.toLowerCase() == 'tilapia') {
-      phMin = 6.5;
-      phMax = 9.0;
-      tempMin = 25.0;
+      phMin = 7.5;
+      phMax = 8.5;
+      tempMin = 26.0;
       tempMax = 32.0;
-      salMin = 30.0;
+      salMin = 15.0;
       salMax = 35.0;
       transMin = 20.0;
-      transMax = 60.0;
+      transMax = 40.0;
     }
 
     return [
