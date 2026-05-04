@@ -42,6 +42,8 @@ class RecordDataSheet extends StatefulWidget {
 class _RecordDataSheetState extends State<RecordDataSheet> {
   ParameterItem? selectedParameter;
   String? selectedDocId;
+  List<ParameterItem> _currentParams = [];
+  int _currentIndex = 0;
   TimeOfDay selectedTime = TimeOfDay.now();
 
   final List<String> points = const ['A', 'B', 'C', 'D'];
@@ -128,20 +130,24 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     return false;
   }
 
-  void _resetForm() {
+  void _clearInputs() {
+    for (var controller in valueControllers.values) {
+      controller.clear();
+    }
+    _notesController.clear();
+    _yAvg1Controller.clear();
+    _yCfu1Controller.clear();
+    _yAvg2Controller.clear();
+    _yCfu2Controller.clear();
+    _gAvg1Controller.clear();
+    _gCfu1Controller.clear();
+    _gAvg2Controller.clear();
+    _gCfu2Controller.clear();
+  }
+
+  void _closeForm() {
+    _clearInputs();
     setState(() {
-      for (var controller in valueControllers.values) {
-        controller.clear();
-      }
-      _notesController.clear();
-      _yAvg1Controller.clear();
-      _yCfu1Controller.clear();
-      _yAvg2Controller.clear();
-      _yCfu2Controller.clear();
-      _gAvg1Controller.clear();
-      _gCfu1Controller.clear();
-      _gAvg2Controller.clear();
-      _gCfu2Controller.clear();
       selectedParameter = null;
       selectedDocId = null;
     });
@@ -267,7 +273,18 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       HapticFeedback.heavyImpact();
       if (mounted) {
         if (keepOpen) {
-          _resetForm();
+          _clearInputs();
+          if (_currentIndex < _currentParams.length - 1) {
+            setState(() {
+              _currentIndex++;
+              selectedParameter = _currentParams[_currentIndex];
+            });
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (mounted) focusNodes['A-1']?.requestFocus();
+            });
+          } else {
+            _closeForm();
+          }
         } else {
           Navigator.pop(context);
         }
@@ -366,7 +383,18 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       HapticFeedback.heavyImpact();
       if (mounted) {
         if (keepOpen) {
-          _resetForm();
+          _clearInputs();
+          if (_currentIndex < _currentParams.length - 1) {
+            setState(() {
+              _currentIndex++;
+              selectedParameter = _currentParams[_currentIndex];
+            });
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (mounted) focusNodes['A-1']?.requestFocus();
+            });
+          } else {
+            _closeForm();
+          }
         } else {
           Navigator.pop(context);
         }
@@ -591,13 +619,20 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
   // --- UI Helpers ---
 
-  Widget _buildParamTile({required ParameterItem param, String? docId}) {
+  Widget _buildParamTile({
+    required ParameterItem param,
+    String? docId,
+    required List<ParameterItem> allParams,
+    required int index,
+  }) {
     return InkWell(
       onTap: () {
         HapticFeedback.selectionClick();
         setState(() {
           selectedParameter = param;
           selectedDocId = docId;
+          _currentParams = allParams;
+          _currentIndex = index;
         });
         Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted) focusNodes['A-1']?.requestFocus();
@@ -693,9 +728,13 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
     if (type == 'growth') {
-      List<Widget> gridItems = hardcodedParams
-          .map((p) => _buildParamTile(param: p))
-          .toList();
+      List<Widget> gridItems = hardcodedParams.asMap().entries.map((e) {
+        return _buildParamTile(
+          param: e.value,
+          allParams: hardcodedParams,
+          index: e.key,
+        );
+      }).toList();
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -715,26 +754,37 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           .where('type', isEqualTo: type)
           .snapshots(),
       builder: (context, snapshot) {
-        List<Widget> gridItems = hardcodedParams
-            .map((p) => _buildParamTile(param: p))
-            .toList();
+        List<ParameterItem> allParams = List.from(hardcodedParams);
+        List<String?> docIds = List.filled(hardcodedParams.length, null);
+
         if (snapshot.hasData) {
           for (var doc in snapshot.data!.docs) {
             final data = doc.data() as Map<String, dynamic>;
-            gridItems.add(
-              _buildParamTile(
-                param: ParameterItem(
-                  label: data['label'],
-                  unit: data['unit'] ?? '',
-                  icon: Icons.dashboard_customize_rounded,
-                  color: Colors.blueGrey,
-                ),
-                docId: doc.id,
+            allParams.add(
+              ParameterItem(
+                label: data['label'],
+                unit: data['unit'] ?? '',
+                icon: Icons.dashboard_customize_rounded,
+                color: Colors.blueGrey,
               ),
             );
+            docIds.add(doc.id);
           }
         }
+
+        List<Widget> gridItems = [];
+        for (int i = 0; i < allParams.length; i++) {
+          gridItems.add(
+            _buildParamTile(
+              param: allParams[i],
+              docId: docIds[i],
+              allParams: allParams,
+              index: i,
+            ),
+          );
+        }
         gridItems.add(_buildAddNewButton());
+
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -860,7 +910,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                     ? null
                     : () => _processAndSaveForm(keepOpen: true),
                 child: Text(
-                  "Save & Add Another",
+                  _currentIndex < _currentParams.length - 1
+                      ? "Save & Next"
+                      : "Save & Finish",
                   style: TextStyle(
                     color: themeColor,
                     fontWeight: FontWeight.bold,
@@ -1410,6 +1462,32 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     );
   }
 
+  void _goToPreviousParameter() {
+    if (_currentIndex > 0) {
+      _clearInputs();
+      setState(() {
+        _currentIndex--;
+        selectedParameter = _currentParams[_currentIndex];
+      });
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) focusNodes['A-1']?.requestFocus();
+      });
+    }
+  }
+
+  void _goToNextParameter() {
+    if (_currentIndex < _currentParams.length - 1) {
+      _clearInputs();
+      setState(() {
+        _currentIndex++;
+        selectedParameter = _currentParams[_currentIndex];
+      });
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) focusNodes['A-1']?.requestFocus();
+      });
+    }
+  }
+
   Widget _buildSheetHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1426,22 +1504,52 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
             onPressed: () {
               HapticFeedback.selectionClick();
-              setState(() {
-                selectedParameter = null;
-                selectedDocId = null;
-              });
+              _closeForm();
             },
           ),
         Expanded(
-          child: Text(
-            selectedParameter == null ? "Select Parameter" : "Enter Data",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: textDark,
-              letterSpacing: -0.5,
-            ),
-          ),
+          child: selectedParameter == null
+              ? Text(
+                  "Select Parameter",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: textDark,
+                    letterSpacing: -0.5,
+                  ),
+                )
+              : Row(
+                  children: [
+                    Text(
+                      "Enter Data",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: textDark,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left_rounded),
+                      onPressed: _currentIndex > 0
+                          ? _goToPreviousParameter
+                          : null,
+                      color: _currentIndex > 0
+                          ? primaryBlue
+                          : Colors.grey.shade300,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right_rounded),
+                      onPressed: _currentIndex < _currentParams.length - 1
+                          ? _goToNextParameter
+                          : null,
+                      color: _currentIndex < _currentParams.length - 1
+                          ? primaryBlue
+                          : Colors.grey.shade300,
+                    ),
+                  ],
+                ),
         ),
         IconButton(
           icon: Container(
