@@ -77,7 +77,9 @@ class _ExpensesTabState extends State<ExpensesTab> {
                   padding: const EdgeInsets.all(24.0),
                   child: Text(
                     "Error loading expenses:\n${expenseSnapshot.error}",
-                    style: const TextStyle(color: Colors.red),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -287,11 +289,9 @@ class _ExpensesTabState extends State<ExpensesTab> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? Colors.white12 : Colors.grey.shade100,
-        ),
+        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -337,7 +337,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                     Text(
                       "Bought by $buyer • ${DateFormat('MMM dd').format(timestamp)}",
                       style: TextStyle(
-                        color: isDark ? Colors.white38 : Colors.grey.shade500,
+                        color: colorScheme.onSurfaceVariant,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -397,14 +397,14 @@ class _ExpensesTabState extends State<ExpensesTab> {
     bool isBold = false,
     bool isPrimary = false,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(
-            color: isDark ? Colors.white38 : Colors.grey.shade400,
+            color: colorScheme.onSurfaceVariant,
             fontSize: 10,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.5,
@@ -414,11 +414,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
         Text(
           value,
           style: TextStyle(
-            color: isPrimary
-                ? Colors.teal
-                : (isDark
-                      ? Theme.of(context).colorScheme.onSurface
-                      : const Color(0xFF1E293B)),
+            color: isPrimary ? Colors.teal : colorScheme.onSurface,
             fontWeight: isBold || isPrimary ? FontWeight.w900 : FontWeight.w700,
             fontSize: 13,
           ),
@@ -428,6 +424,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
   }
 
   Widget _buildEmptyState() {
+    final colorScheme = Theme.of(context).colorScheme;
     return SliverFillRemaining(
       hasScrollBody: false,
       child: Center(
@@ -437,7 +434,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
             Icon(
               Icons.receipt_long_rounded,
               size: 64,
-              color: Colors.grey.shade200,
+              color: colorScheme.outlineVariant,
             ),
             const SizedBox(height: 16),
             Text(
@@ -445,7 +442,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade400,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],

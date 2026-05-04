@@ -210,6 +210,7 @@ class MonitoringRepository {
     required String label,
     required String unit,
     required String type,
+    required String category,
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
@@ -217,6 +218,7 @@ class MonitoringRepository {
       'label': label,
       'unit': unit,
       'type': type,
+      'category': category,
       'createdAt': FieldValue.serverTimestamp(),
       'createdBy': currentUser!.uid,
     });

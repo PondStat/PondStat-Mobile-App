@@ -27,56 +27,61 @@ class _FinancesTabState extends State<FinancesTab> {
     HapticFeedback.lightImpact();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                shape: BoxShape.circle,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.construction_rounded,
+                  color: Colors.orange.shade700,
+                ),
               ),
-              child: Icon(
-                Icons.construction_rounded,
-                color: Colors.orange.shade700,
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  "Coming Soon",
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                ),
               ),
+            ],
+          ),
+          content: Text(
+            "The '$title' feature is currently under development. Stay tuned for updates!",
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.4,
+              fontSize: 15,
             ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                "Coming Soon",
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "Got it!",
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ],
-        ),
-        content: Text(
-          "The '$title' feature is currently under development. Stay tuned for updates!",
-          style: TextStyle(
-            color: Colors.grey.shade700,
-            height: 1.4,
-            fontSize: 15,
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              "Got it!",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -95,6 +100,7 @@ class _FinancesTabState extends State<FinancesTab> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -117,20 +123,20 @@ class _FinancesTabState extends State<FinancesTab> {
                             ? FontWeight.w800
                             : FontWeight.w600,
                         color: _selectedFilterIndex == index
-                            ? Colors.white
-                            : Colors.grey.shade700,
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurfaceVariant,
                         fontSize: 13,
                       ),
                     ),
-                    backgroundColor: Colors.white,
+                    backgroundColor: colorScheme.surfaceContainer,
                     selectedColor: primaryBlue,
-                    checkmarkColor: Colors.white,
+                    checkmarkColor: colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
                         color: _selectedFilterIndex == index
                             ? primaryBlue
-                            : Colors.grey.shade300,
+                            : colorScheme.outlineVariant,
                       ),
                     ),
                     onSelected: (selected) {
@@ -161,7 +167,7 @@ class _FinancesTabState extends State<FinancesTab> {
               onPressed: _handleFabPressed,
               backgroundColor: _selectedFilterIndex == 0
                   ? Colors.teal
-                  : Colors.grey.shade400,
+                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               icon: Icon(
                 _selectedFilterIndex == 2
                     ? Icons.point_of_sale_rounded
@@ -195,6 +201,7 @@ class _FinancesTabState extends State<FinancesTab> {
   }
 
   Widget _buildComingSoon({required Key key, required String title}) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       key: key,
       child: Column(
@@ -203,7 +210,7 @@ class _FinancesTabState extends State<FinancesTab> {
           Icon(
             Icons.construction_rounded,
             size: 64,
-            color: Colors.grey.shade300,
+            color: colorScheme.outlineVariant,
           ),
           const SizedBox(height: 16),
           Text(
@@ -211,7 +218,7 @@ class _FinancesTabState extends State<FinancesTab> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: Colors.blueGrey.shade900,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -219,7 +226,7 @@ class _FinancesTabState extends State<FinancesTab> {
             "This feature is currently under development.",
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade500,
+              color: colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w500,
             ),
           ),

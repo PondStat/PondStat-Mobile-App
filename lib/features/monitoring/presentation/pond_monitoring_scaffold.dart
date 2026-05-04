@@ -237,7 +237,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.water_drop_rounded),
-              label: "Water",
+              label: "Parameter",
             ),
           ],
         ),

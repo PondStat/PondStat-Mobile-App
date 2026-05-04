@@ -56,7 +56,6 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
     final onSurface = colorScheme.onSurface;
 
@@ -83,7 +82,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
               height: 5,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.grey.shade300,
+                color: colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -104,13 +103,13 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white12 : Colors.grey.shade100,
+                    color: colorScheme.outlineVariant,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.close_rounded,
                     size: 20,
-                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
                 onPressed: () => Navigator.pop(context),
@@ -124,13 +123,13 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildFilterChip("All", "all"),
+                _buildFilterChip("All", "all", colorScheme),
                 const SizedBox(width: 8),
-                _buildFilterChip("Added", "create"),
+                _buildFilterChip("Added", "create", colorScheme),
                 const SizedBox(width: 8),
-                _buildFilterChip("Edited", "update"),
+                _buildFilterChip("Edited", "update", colorScheme),
                 const SizedBox(width: 8),
-                _buildFilterChip("Deleted", "delete"),
+                _buildFilterChip("Deleted", "delete", colorScheme),
               ],
             ),
           ),
@@ -148,7 +147,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                   return Center(
                     child: Text(
                       "Error: ${snapshot.error}",
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: colorScheme.error),
                     ),
                   );
                 }
@@ -169,13 +168,13 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                         Icon(
                           Icons.history_rounded,
                           size: 48,
-                          color: Colors.grey.shade300,
+                          color: colorScheme.outlineVariant,
                         ),
                         const SizedBox(height: 12),
                         Text(
                           "No history yet",
                           style: TextStyle(
-                            color: Colors.grey.shade500,
+                            color: colorScheme.onSurfaceVariant,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -224,7 +223,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                        color: colorScheme.surfaceContainer,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
@@ -310,14 +309,14 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                                         Icon(
                                           Icons.person_outline_rounded,
                                           size: 16,
-                                          color: Colors.grey.shade500,
+                                          color: colorScheme.onSurfaceVariant,
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
                                           "${data['editorName'] ?? 'Unknown'}",
                                           style: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.grey.shade700,
+                                            color: colorScheme.onSurfaceVariant,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -325,7 +324,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                                         Icon(
                                           Icons.access_time_rounded,
                                           size: 14,
-                                          color: Colors.grey.shade400,
+                                          color: colorScheme.onSurfaceVariant,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
@@ -335,7 +334,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
-                                            color: Colors.grey.shade500,
+                                            color: colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                       ],
@@ -422,8 +421,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildFilterChip(String label, String value, ColorScheme colorScheme) {
     final isSelected = selectedFilter == value;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -432,12 +430,14 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
           label,
           style: TextStyle(
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF64748B),
+            color: isSelected
+                ? colorScheme.onPrimary
+                : colorScheme.onSurfaceVariant,
           ),
         ),
         selected: isSelected,
         selectedColor: const Color(0xFF0A74DA),
-        backgroundColor: isDark ? Colors.white12 : Colors.grey.shade100,
+        backgroundColor: colorScheme.outlineVariant,
         showCheckmark: false,
         side: BorderSide.none,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
