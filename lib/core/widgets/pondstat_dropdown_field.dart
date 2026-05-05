@@ -8,8 +8,13 @@ class PondStatDropdownField<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final void Function(T?)? onChanged;
   final String? Function(T?)? validator;
+  
+  // New exposed capabilities
+  final FocusNode? focusNode;
+  final AutovalidateMode? autovalidateMode;
+  final void Function(T?)? onSaved;
 
-  const PondStatDropdownField({
+  PondStatDropdownField({
     super.key,
     required this.value,
     required this.label,
@@ -18,12 +23,19 @@ class PondStatDropdownField<T> extends StatelessWidget {
     this.prefixIcon,
     this.onChanged,
     this.validator,
-  });
+    this.focusNode,
+    this.autovalidateMode,
+    this.onSaved,
+  }) : assert(
+         value == null || items.any((item) => item.value == value),
+         'Dropdown value must match one of the provided items.',
+       );
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
     final isDark = theme.brightness == Brightness.dark;
 
     return Column(
@@ -33,22 +45,22 @@ class PondStatDropdownField<T> extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
+            style: textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w900,
               color: isDark
                   ? colorScheme.onSurfaceVariant
-                  : const Color(0xFF64748B),
+                  : colorScheme.onSurface.withValues(alpha: 0.6),
               letterSpacing: 1.2,
             ),
           ),
         ),
         DropdownButtonFormField<T>(
+          key: ValueKey(value),
           initialValue: value,
           isExpanded: true,
           icon: Icon(
             Icons.keyboard_arrow_down_rounded,
-            color: isDark ? Colors.white38 : Colors.grey.shade600,
+            color: colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           decoration: InputDecoration(
             hintText: hint,
@@ -57,12 +69,12 @@ class PondStatDropdownField<T> extends StatelessWidget {
           items: items,
           onChanged: onChanged,
           validator: validator,
-          style: TextStyle(
-            fontSize: 15,
+          focusNode: focusNode,
+          autovalidateMode: autovalidateMode,
+          onSaved: onSaved,
+          style: textTheme.bodyLarge?.copyWith(
             fontWeight: FontWeight.w600,
             color: colorScheme.onSurface,
-            fontFamily:
-                'Roboto', // Default material font to avoid weird inheritance issues
           ),
         ),
       ],
