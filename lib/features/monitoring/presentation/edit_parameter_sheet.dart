@@ -120,8 +120,9 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
         SnackbarHelper.show(context, "Measurements deleted");
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+      }
     } finally {
       if (mounted) setState(() => _isDeleting = false);
     }
