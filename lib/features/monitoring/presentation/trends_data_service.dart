@@ -63,7 +63,9 @@ class TrendsDataService {
       }
     }
 
-    final Map<String, List<NormalizedTrendPoint>> normalizedData = {};
+    final Map<String, List<NormalizedTrendPoint>> normalizedData = {
+      for (var param in targetParams) param: [],
+    };
 
     rawData.forEach((parameter, points) {
       if (points.isEmpty) return;

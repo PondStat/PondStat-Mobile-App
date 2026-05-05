@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PondStatusColors extends ThemeExtension<PondStatusColors> {
-  final Color? healthy;
-  final Color? warning;
-  final Color? critical;
+  final Color healthy;
+  final Color warning;
+  final Color critical;
 
-  const PondStatusColors({this.healthy, this.warning, this.critical});
+  const PondStatusColors({
+    required this.healthy,
+    required this.warning,
+    required this.critical,
+  });
 
   @override
   ThemeExtension<PondStatusColors> copyWith({
@@ -30,26 +34,39 @@ class PondStatusColors extends ThemeExtension<PondStatusColors> {
       return this;
     }
     return PondStatusColors(
-      healthy: Color.lerp(healthy, other.healthy, t),
-      warning: Color.lerp(warning, other.warning, t),
-      critical: Color.lerp(critical, other.critical, t),
+      healthy: Color.lerp(healthy, other.healthy, t) ?? healthy,
+      warning: Color.lerp(warning, other.warning, t) ?? warning,
+      critical: Color.lerp(critical, other.critical, t) ?? critical,
     );
   }
 }
 
+extension ThemeContextExtension on BuildContext {
+  PondStatusColors get pondColors =>
+      Theme.of(this).extension<PondStatusColors>()!;
+}
+
 class AppTheme {
-  static const Color customBlue = Color(
-    0xFF0A74DA,
-  ); // Updated to main primary blue
+  AppTheme._();
+
+  static const Color customBlue = Color(0xFF0A74DA);
   static const Color secondaryBlue = Color(0xFF4FA0F0);
+
+  static const Color _slate50 = Color(0xFFF8FAFC);
+  static const Color _slate100 = Color(0xFFF1F5F9);
+  static const Color _slate400 = Color(0xFF94A3B8);
+  static const Color _slate500 = Color(0xFF64748B);
+  static const Color _slate800 = Color(0xFF1E293B);
+  static const Color _slate900 = Color(0xFF0F172A);
+  static const Color _slate950 = Color(0xFF0B1120);
 
   static final ColorScheme _lightColorScheme = ColorScheme.fromSeed(
     seedColor: customBlue,
     primary: customBlue,
     secondary: secondaryBlue,
     brightness: Brightness.light,
-    surface: Colors.white, // Cleaner surface
-    onSurface: const Color(0xFF1E293B), // Slate 800
+    surface: Colors.white,
+    onSurface: _slate800,
     error: Colors.redAccent,
   );
 
@@ -58,21 +75,21 @@ class AppTheme {
     primary: secondaryBlue,
     secondary: customBlue,
     brightness: Brightness.dark,
-    surface: const Color(0xFF0F172A),
-    onSurface: const Color(0xFFF8FAFC),
+    surface: _slate900,
+    onSurface: _slate50,
     error: Colors.redAccent.shade200,
   );
 
-  static final _lightPondColors = PondStatusColors(
-    healthy: Colors.green.shade600,
-    warning: Colors.orange.shade600,
-    critical: Colors.red.shade600,
+  static final _lightPondColors = const PondStatusColors(
+    healthy: Color(0xFF0D9488),
+    warning: Color(0xFFD97706),
+    critical: Color(0xFFE11D48),
   );
 
-  static final _darkPondColors = PondStatusColors(
-    healthy: Colors.green.shade400,
-    warning: Colors.orange.shade400,
-    critical: Colors.red.shade400,
+  static final _darkPondColors = const PondStatusColors(
+    healthy: Color(0xFF2DD4BF),
+    warning: Color(0xFFFBBF24),
+    critical: Color(0xFFFB7185),
   );
 
   static ThemeData get lightTheme {
@@ -98,22 +115,22 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: isDark
-          ? const Color(0xFF0B1120)
-          : const Color(0xFFF8FAFC), // Slate 50
+      scaffoldBackgroundColor: isDark ? _slate950 : _slate50,
       splashFactory: InkSparkle.splashFactory,
       textTheme: textTheme,
       extensions: <ThemeExtension<dynamic>>[
         isDark ? _darkPondColors : _lightPondColors,
       ],
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: colorScheme.surface.withValues(alpha: 0.95),
+        scrolledUnderElevation: 4,
+        surfaceTintColor: colorScheme.surfaceTint,
+        shadowColor: Colors.black.withValues(alpha: 0.1),
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: GoogleFonts.poppins(
           color: colorScheme.onSurface,
-          fontSize: 22,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.5,
         ),
@@ -121,7 +138,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: isDark ? _slate800 : Colors.white,
         margin: const EdgeInsets.only(bottom: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -133,9 +150,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark
-            ? const Color(0xFF1E293B)
-            : const Color(0xFFF1F5F9), // Slate 100
+        fillColor: isDark ? _slate800 : _slate100,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
           vertical: 18,
@@ -167,34 +182,49 @@ class AppTheme {
           borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
         hintStyle: TextStyle(
-          color: isDark ? Colors.white38 : const Color(0xFF94A3B8), // Slate 400
-          fontSize: 15,
+          color: isDark ? Colors.white54 : _slate500,
           fontWeight: FontWeight.w500,
         ),
         labelStyle: TextStyle(
-          color: isDark ? Colors.white70 : const Color(0xFF64748B), // Slate 500
+          color: isDark ? Colors.white70 : _slate500,
           fontWeight: FontWeight.w600,
         ),
         floatingLabelStyle: TextStyle(
           color: colorScheme.primary,
           fontWeight: FontWeight.w800,
         ),
-        prefixIconColor: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+        prefixIconColor: isDark ? Colors.white70 : _slate500,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
-          elevation: 0, // Flat buttons, use shadow in container if needed
-          padding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 24.0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          textStyle: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        style:
+            ElevatedButton.styleFrom(
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(
+                vertical: 18.0,
+                horizontal: 24.0,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              textStyle: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ).copyWith(
+              backgroundColor: WidgetStateProperty.resolveWith<Color>((
+                Set<WidgetState> states,
+              ) {
+                if (states.contains(WidgetState.disabled)) {
+                  return isDark ? _slate800 : _slate100;
+                }
+                return colorScheme.primary;
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith<Color>((
+                Set<WidgetState> states,
+              ) {
+                if (states.contains(WidgetState.disabled)) {
+                  return isDark ? Colors.white38 : _slate400;
+                }
+                return Colors.white;
+              }),
+            ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -203,10 +233,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
           ),
-          textStyle: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -216,14 +243,13 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: isDark
-            ? const Color(0xFF1E293B)
-            : const Color(0xFF1E293B), // Dark even on light mode for contrast
+        backgroundColor: _slate800,
         contentTextStyle: GoogleFonts.inter(
           color: Colors.white,
           fontWeight: FontWeight.w600,
         ),
         behavior: SnackBarBehavior.floating,
+        elevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: DividerThemeData(

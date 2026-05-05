@@ -232,6 +232,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     bool isDark,
     List<ParameterItem> params,
   ) {
+    final colorScheme = theme.colorScheme;
     return SizedBox(
       height: 42,
       child: ListView.separated(
@@ -257,11 +258,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: selected
-                    ? param.color
-                    : (isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : Colors.grey.shade100),
+                color: selected ? param.color : colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: selected
                     ? [
@@ -280,8 +277,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                     param.icon,
                     size: 14,
                     color: selected
-                        ? Colors.white
-                        : (isDark ? Colors.white54 : Colors.grey.shade600),
+                        ? colorScheme.onPrimary
+                        : colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -290,8 +287,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: selected
-                          ? Colors.white
-                          : (isDark ? Colors.white54 : Colors.grey.shade700),
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -315,13 +312,13 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
       stream: _getStream(param),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return _buildLoadingCard(isDark, param.color);
+          return _buildLoadingCard(isDark, param.color, theme);
         }
         if (snap.hasError) {
-          return _buildErrorCard(snap.error.toString(), isDark);
+          return _buildErrorCard(snap.error.toString(), isDark, theme);
         }
         final records = snap.data ?? [];
-        if (records.isEmpty) return _buildEmptyCard(param, isDark);
+        if (records.isEmpty) return _buildEmptyCard(param, isDark, theme);
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -331,12 +328,13 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               _buildCard(
                 isDark: isDark,
                 color: param.color,
-                child: _buildLineChart(records, param, isDark),
+                theme: theme,
+                child: _buildLineChart(records, param, isDark, theme),
               ),
               if (!param.isSinglePoint &&
                   (param.minVal != null || param.maxVal != null)) ...[
                 const SizedBox(height: 8),
-                _buildRangeLegend(param, isDark),
+                _buildRangeLegend(param, isDark, theme),
               ],
             ],
           ),
@@ -364,6 +362,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           value: '${latest.toStringAsFixed(2)}$unit',
           color: param.color,
           isDark: isDark,
+          theme: theme,
           isHighlighted: true,
         ),
         const SizedBox(width: 8),
@@ -372,6 +371,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           value: '${avg.toStringAsFixed(2)}$unit',
           color: param.color,
           isDark: isDark,
+          theme: theme,
         ),
         const SizedBox(width: 8),
         _buildStatChip(
@@ -379,6 +379,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           value: '${min.toStringAsFixed(2)}$unit',
           color: param.color,
           isDark: isDark,
+          theme: theme,
         ),
         const SizedBox(width: 8),
         _buildStatChip(
@@ -386,6 +387,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           value: '${max.toStringAsFixed(2)}$unit',
           color: param.color,
           isDark: isDark,
+          theme: theme,
         ),
       ],
     );
@@ -396,17 +398,17 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     required String value,
     required Color color,
     required bool isDark,
+    required ThemeData theme,
     bool isHighlighted = false,
   }) {
+    final colorScheme = theme.colorScheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
           color: isHighlighted
               ? color.withValues(alpha: 0.12)
-              : (isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.grey.shade50),
+              : colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(14),
           border: isHighlighted
               ? Border.all(color: color.withValues(alpha: 0.3), width: 1.5)
@@ -419,9 +421,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: isHighlighted
-                    ? color
-                    : (isDark ? Colors.white38 : Colors.grey.shade500),
+                color: isHighlighted ? color : colorScheme.onSurfaceVariant,
                 letterSpacing: 0.5,
               ),
             ),
@@ -431,9 +431,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color: isHighlighted
-                    ? color
-                    : (isDark ? Colors.white70 : Colors.grey.shade800),
+                color: isHighlighted ? color : colorScheme.onSurface,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -448,7 +446,9 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     List<_DailyRecord> records,
     ParameterItem param,
     bool isDark,
+    ThemeData theme,
   ) {
+    final colorScheme = theme.colorScheme;
     final spots = records
         .asMap()
         .entries
@@ -462,10 +462,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     final yPad = ((maxY - minY) * 0.15).clamp(0.5, double.infinity);
     minY -= yPad;
     maxY += yPad;
-    final labelColor = isDark ? Colors.white38 : Colors.grey.shade500;
-    final gridColor = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.grey.shade200;
+    final labelColor = colorScheme.onSurfaceVariant;
+    final gridColor = colorScheme.outlineVariant;
 
     List<HorizontalLine> extraLines = [];
     if (param.minVal != null) {
@@ -586,8 +584,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           ),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) =>
-                  isDark ? const Color(0xFF1E293B) : Colors.white,
+              getTooltipColor: (_) => colorScheme.inverseSurface,
               tooltipBorder: BorderSide(
                 color: param.color.withValues(alpha: 0.3),
               ),
@@ -619,7 +616,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                 show: records.length <= 15,
                 getDotPainter: (spot, _, _, _) => FlDotCirclePainter(
                   radius: 3.5,
-                  color: Colors.white,
+                  color: colorScheme.surface,
                   strokeWidth: 2,
                   strokeColor: param.color,
                 ),
@@ -642,7 +639,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     );
   }
 
-  Widget _buildRangeLegend(ParameterItem param, bool isDark) {
+  Widget _buildRangeLegend(ParameterItem param, bool isDark, ThemeData theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -654,7 +651,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white54 : Colors.grey.shade600,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(width: 16),
@@ -667,7 +664,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white54 : Colors.grey.shade600,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -684,23 +681,30 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     ),
   );
 
-  Widget _buildLoadingCard(bool isDark, Color color) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    child: _buildCard(
-      isDark: isDark,
-      color: color,
-      child: const SizedBox(
-        height: 220,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-    ),
-  );
+  Widget _buildLoadingCard(bool isDark, Color color, ThemeData theme) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: _buildCard(
+          isDark: isDark,
+          color: color,
+          theme: theme,
+          child: const SizedBox(
+            height: 220,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+        ),
+      );
 
-  Widget _buildEmptyCard(ParameterItem param, bool isDark) => Padding(
+  Widget _buildEmptyCard(
+    ParameterItem param,
+    bool isDark,
+    ThemeData theme,
+  ) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 20),
     child: _buildCard(
       isDark: isDark,
       color: param.color,
+      theme: theme,
       child: SizedBox(
         height: 220,
         child: Column(
@@ -717,7 +721,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
-                color: isDark ? Colors.white54 : Colors.grey.shade600,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 6),
@@ -726,7 +730,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? Colors.white38 : Colors.grey.shade400,
+                color: theme.colorScheme.onSurfaceVariant,
                 height: 1.4,
               ),
             ),
@@ -736,18 +740,18 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     ),
   );
 
-  Widget _buildErrorCard(String error, bool isDark) => Padding(
+  Widget _buildErrorCard(String error, bool isDark, ThemeData theme) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 20),
     child: Container(
       height: 120,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.06),
+        color: theme.colorScheme.errorContainer,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         'Failed to load data:\n$error',
-        style: const TextStyle(color: Colors.red, fontSize: 13),
+        style: TextStyle(color: theme.colorScheme.error, fontSize: 13),
         textAlign: TextAlign.center,
       ),
     ),
@@ -757,12 +761,13 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     required bool isDark,
     required Color color,
     required Widget child,
+    required ThemeData theme,
   }) => Container(
     padding: const EdgeInsets.fromLTRB(12, 20, 12, 12),
     decoration: BoxDecoration(
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      color: theme.colorScheme.surfaceContainer,
       borderRadius: BorderRadius.circular(24),
-      border: isDark ? Border.all(color: Colors.white12) : null,
+      border: Border.all(color: theme.colorScheme.outlineVariant),
       boxShadow: [
         BoxShadow(
           color: Colors.black.withValues(alpha: 0.04),

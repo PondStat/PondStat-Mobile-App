@@ -4,8 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
 import 'package:pondstat/core/utils/helpers.dart';
-import 'package:pondstat/features/monitoring/presentation/record_data_sheet.dart';
-import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.dart';
+import 'package:pondstat/features/monitoring/presentation/edit_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
@@ -37,11 +37,8 @@ class _GrowthPageState extends State<GrowthPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => RecordDataSheet(
-        tabIndex: 1,
+      builder: (sheetContext) => RecordGrowthSheet(
         species: widget.species,
-        customParams: MonitoringParameters.samplingParameters,
-        customType: 'growth',
         onSave:
             ({
               required String label,
@@ -162,54 +159,37 @@ class _GrowthPageState extends State<GrowthPage> {
                           final user = FirebaseAuth.instance.currentUser;
                           final batch = FirebaseFirestore.instance.batch();
 
-                          if (m.weightDocId != null) {
-                            final docRef = FirestoreHelper
-                                .measurementsCollection
-                                .doc(m.weightDocId);
-                            final docSnap = await docRef.get();
-                            if (docSnap.exists) {
-                              final historyRef = FirestoreHelper
-                                  .measurementHistoryCollection
-                                  .doc();
-                              final data =
-                                  docSnap.data() as Map<String, dynamic>;
-                              batch.set(historyRef, {
-                                'pondId': widget.pondId,
-                                'measurementId': m.weightDocId,
-                                'parameter': data['parameter'],
-                                'action': 'delete',
-                                'editedAt': FieldValue.serverTimestamp(),
-                                'editedBy': user?.uid,
-                                'editorName': user?.displayName ?? 'Unknown',
-                                'before': {'value': data['value']},
-                                'after': null,
-                              });
-                              batch.delete(docRef);
-                            }
-                          }
-                          if (m.countDocId != null) {
-                            final docRef = FirestoreHelper
-                                .measurementsCollection
-                                .doc(m.countDocId);
-                            final docSnap = await docRef.get();
-                            if (docSnap.exists) {
-                              final historyRef = FirestoreHelper
-                                  .measurementHistoryCollection
-                                  .doc();
-                              final data =
-                                  docSnap.data() as Map<String, dynamic>;
-                              batch.set(historyRef, {
-                                'pondId': widget.pondId,
-                                'measurementId': m.countDocId,
-                                'parameter': data['parameter'],
-                                'action': 'delete',
-                                'editedAt': FieldValue.serverTimestamp(),
-                                'editedBy': user?.uid,
-                                'editorName': user?.displayName ?? 'Unknown',
-                                'before': {'value': data['value']},
-                                'after': null,
-                              });
-                              batch.delete(docRef);
+                          final docIds = [
+                            m.abwDocId,
+                            m.adgDocId,
+                            m.dfrDocId,
+                            m.fcrDocId,
+                          ];
+                          for (final docId in docIds) {
+                            if (docId != null) {
+                              final docRef = FirestoreHelper
+                                  .measurementsCollection
+                                  .doc(docId);
+                              final docSnap = await docRef.get();
+                              if (docSnap.exists) {
+                                final historyRef = FirestoreHelper
+                                    .measurementHistoryCollection
+                                    .doc();
+                                final data =
+                                    docSnap.data() as Map<String, dynamic>;
+                                batch.set(historyRef, {
+                                  'pondId': widget.pondId,
+                                  'measurementId': docId,
+                                  'parameter': data['parameter'],
+                                  'action': 'delete',
+                                  'editedAt': FieldValue.serverTimestamp(),
+                                  'editedBy': user?.uid,
+                                  'editorName': user?.displayName ?? 'Unknown',
+                                  'before': {'value': data['value']},
+                                  'after': null,
+                                });
+                                batch.delete(docRef);
+                              }
                             }
                           }
 
@@ -252,155 +232,31 @@ class _GrowthPageState extends State<GrowthPage> {
     );
   }
 
-  void _showEditGrowthDialog(GrowthMetrics m) {
-    if (m.weightDocId == null || m.countDocId == null) return;
+  void _showEditGrowthSheet(GrowthMetrics m) {
+    if (m.abwDocId == null &&
+        m.adgDocId == null &&
+        m.dfrDocId == null &&
+        m.fcrDocId == null) {
+      return;
+    }
 
-    final weightController = TextEditingController(
-      text: m.totalWeight.toString(),
-    );
-    final countController = TextEditingController(
-      text: m.sampleCount.toString(),
-    );
-
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Text(
-            "Edit Sampling",
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: weightController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: "Total Weight (g)",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: countController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: "Sample Count (pcs)",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                final newWeight = double.tryParse(weightController.text);
-                final newCount = double.tryParse(countController.text);
-
-                if (newWeight == null || newCount == null) {
-                  SnackbarHelper.show(context, "Please enter valid numbers");
-                  return;
-                }
-
-                final user = FirebaseAuth.instance.currentUser;
-                final batch = FirebaseFirestore.instance.batch();
-
-                // Update Weight
-                final wDocRef = FirestoreHelper.measurementsCollection.doc(
-                  m.weightDocId,
-                );
-                final wDocSnap = await wDocRef.get();
-                if (wDocSnap.exists) {
-                  final data = wDocSnap.data() as Map<String, dynamic>;
-                  batch.update(wDocRef, {
-                    'value': newWeight,
-                    'editedAt': FieldValue.serverTimestamp(),
-                    'editedBy': user?.uid,
-                    'editorName': user?.displayName,
-                  });
-                  final historyRef = FirestoreHelper
-                      .measurementHistoryCollection
-                      .doc();
-                  batch.set(historyRef, {
-                    'pondId': widget.pondId,
-                    'measurementId': m.weightDocId,
-                    'parameter': data['parameter'],
-                    'action': 'update',
-                    'editedAt': FieldValue.serverTimestamp(),
-                    'editedBy': user?.uid,
-                    'editorName': user?.displayName ?? 'Unknown',
-                    'before': {'value': data['value']},
-                    'after': {'value': newWeight},
-                  });
-                }
-
-                // Update Count
-                final cDocRef = FirestoreHelper.measurementsCollection.doc(
-                  m.countDocId,
-                );
-                final cDocSnap = await cDocRef.get();
-                if (cDocSnap.exists) {
-                  final data = cDocSnap.data() as Map<String, dynamic>;
-                  batch.update(cDocRef, {
-                    'value': newCount,
-                    'editedAt': FieldValue.serverTimestamp(),
-                    'editedBy': user?.uid,
-                    'editorName': user?.displayName,
-                  });
-                  final historyRef = FirestoreHelper
-                      .measurementHistoryCollection
-                      .doc();
-                  batch.set(historyRef, {
-                    'pondId': widget.pondId,
-                    'measurementId': m.countDocId,
-                    'parameter': data['parameter'],
-                    'action': 'update',
-                    'editedAt': FieldValue.serverTimestamp(),
-                    'editedBy': user?.uid,
-                    'editorName': user?.displayName ?? 'Unknown',
-                    'before': {'value': data['value']},
-                    'after': {'value': newCount},
-                  });
-                }
-
-                try {
-                  await batch.commit();
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                  setState(() => _refreshKey++);
-                  SnackbarHelper.show(
-                    context,
-                    "Sampling updated",
-                    backgroundColor: Colors.green,
-                  );
-                } catch (e) {
-                  if (!context.mounted) return;
-                  SnackbarHelper.show(
-                    context,
-                    "Error updating: $e",
-                    backgroundColor: Colors.red,
-                  );
-                }
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => EditGrowthSheet(
+        metrics: m,
+        pondId: widget.pondId,
+        onSave: () {
+          setState(() => _refreshKey++);
+          SnackbarHelper.show(
+            context,
+            "Sampling updated",
+            backgroundColor: Colors.green,
+          );
+        },
+      ),
     );
   }
 
@@ -412,7 +268,7 @@ class _GrowthPageState extends State<GrowthPage> {
         key: ValueKey(_refreshKey),
         pondId: widget.pondId,
         canEdit: widget.canEdit,
-        onEdit: _showEditGrowthDialog,
+        onEdit: _showEditGrowthSheet,
         onDelete: _confirmDeleteGrowth,
       ),
       floatingActionButton: widget.canEdit

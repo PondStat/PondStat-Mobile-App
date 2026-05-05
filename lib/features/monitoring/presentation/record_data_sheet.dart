@@ -42,6 +42,8 @@ class RecordDataSheet extends StatefulWidget {
 class _RecordDataSheetState extends State<RecordDataSheet> {
   ParameterItem? selectedParameter;
   String? selectedDocId;
+  List<ParameterItem> _currentParams = [];
+  int _currentIndex = 0;
   TimeOfDay selectedTime = TimeOfDay.now();
 
   final List<String> points = const ['A', 'B', 'C', 'D'];
@@ -49,6 +51,16 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   late final Map<String, TextEditingController> valueControllers;
   late final Map<String, FocusNode> focusNodes;
   final TextEditingController _notesController = TextEditingController();
+
+  // Bacterial Analysis Controllers
+  final TextEditingController _yAvg1Controller = TextEditingController();
+  final TextEditingController _yCfu1Controller = TextEditingController();
+  final TextEditingController _yAvg2Controller = TextEditingController();
+  final TextEditingController _yCfu2Controller = TextEditingController();
+  final TextEditingController _gAvg1Controller = TextEditingController();
+  final TextEditingController _gCfu1Controller = TextEditingController();
+  final TextEditingController _gAvg2Controller = TextEditingController();
+  final TextEditingController _gCfu2Controller = TextEditingController();
 
   bool _isSaving = false;
   final MonitoringRepository _repository = MonitoringRepository();
@@ -88,8 +100,87 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     for (var node in focusNodes.values) {
       node.dispose();
     }
+    _yAvg1Controller.dispose();
+    _yCfu1Controller.dispose();
+    _yAvg2Controller.dispose();
+    _yCfu2Controller.dispose();
+    _gAvg1Controller.dispose();
+    _gCfu1Controller.dispose();
+    _gAvg2Controller.dispose();
+    _gCfu2Controller.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  bool _hasUnsavedData() {
+    if (_notesController.text.isNotEmpty) return true;
+    for (var controller in valueControllers.values) {
+      if (controller.text.isNotEmpty) return true;
+    }
+    if (_yAvg1Controller.text.isNotEmpty ||
+        _yCfu1Controller.text.isNotEmpty ||
+        _yAvg2Controller.text.isNotEmpty ||
+        _yCfu2Controller.text.isNotEmpty ||
+        _gAvg1Controller.text.isNotEmpty ||
+        _gCfu1Controller.text.isNotEmpty ||
+        _gAvg2Controller.text.isNotEmpty ||
+        _gCfu2Controller.text.isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  void _clearInputs() {
+    for (var controller in valueControllers.values) {
+      controller.clear();
+    }
+    _notesController.clear();
+    _yAvg1Controller.clear();
+    _yCfu1Controller.clear();
+    _yAvg2Controller.clear();
+    _yCfu2Controller.clear();
+    _gAvg1Controller.clear();
+    _gCfu1Controller.clear();
+    _gAvg2Controller.clear();
+    _gCfu2Controller.clear();
+  }
+
+  void _closeForm() {
+    _clearInputs();
+    setState(() {
+      selectedParameter = null;
+      selectedDocId = null;
+    });
+  }
+
+  Future<bool> _onWillPop() async {
+    if (!_hasUnsavedData()) return true;
+
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Unsaved Data?'),
+        content: const Text(
+          'You have entered data that has not been saved yet. Are you sure you want to close this sheet?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+
+    return shouldPop ?? false;
   }
 
   // --- Logic ---
@@ -114,8 +205,13 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     return double.parse((sum / count).toStringAsFixed(2));
   }
 
-  void _processAndSaveForm() async {
+  void _processAndSaveForm({bool keepOpen = false}) async {
     if (selectedParameter == null || _isSaving) return;
+
+    if (selectedParameter!.label == 'Bacterial Analysis') {
+      await _saveBacterialAnalysis();
+      return;
+    }
 
     double totalSum = 0;
     int pointsWithData = 0;
@@ -126,27 +222,6 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     for (var p in points) {
       final pointAvg = _calculatePointAverage(p);
       if (pointAvg != null) {
-        // Validate against min/max
-        if (selectedParameter!.minVal != null &&
-            pointAvg < selectedParameter!.minVal!) {
-          SnackbarHelper.show(
-            context,
-            "Point $p average is below the minimum (${selectedParameter!.minVal})",
-            backgroundColor: Colors.red,
-          );
-          focusNodes['$p-1']?.requestFocus();
-          return;
-        }
-        if (selectedParameter!.maxVal != null &&
-            pointAvg > selectedParameter!.maxVal!) {
-          SnackbarHelper.show(
-            context,
-            "Point $p average is above the maximum (${selectedParameter!.maxVal})",
-            backgroundColor: Colors.red,
-          );
-          focusNodes['$p-1']?.requestFocus();
-          return;
-        }
         pointValues[p] = pointAvg;
         totalSum += pointAvg;
         pointsWithData++;
@@ -197,7 +272,22 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
       HapticFeedback.heavyImpact();
       if (mounted) {
-        Navigator.pop(context);
+        if (keepOpen) {
+          _clearInputs();
+          if (_currentIndex < _currentParams.length - 1) {
+            setState(() {
+              _currentIndex++;
+              selectedParameter = _currentParams[_currentIndex];
+            });
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (mounted) focusNodes['A-1']?.requestFocus();
+            });
+          } else {
+            _closeForm();
+          }
+        } else {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -214,72 +304,244 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     }
   }
 
+  Future<void> _saveBacterialAnalysis({bool keepOpen = false}) async {
+    setState(() => _isSaving = true);
+    String type =
+        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+    final timeStr = selectedTime.format(context);
+    final notes = _notesController.text.trim();
+
+    final mappings = {
+      'Test 10-1 (Average yellow colonies)': {
+        'val': _yAvg1Controller.text.trim(),
+        'unit': '',
+      },
+      'Test yellow 10-1 (CFU/ml)': {
+        'val': _yCfu1Controller.text.trim(),
+        'unit': 'CFU/mL',
+      },
+      'Test 10-2 (Average yellow colonies)': {
+        'val': _yAvg2Controller.text.trim(),
+        'unit': '',
+      },
+      'Test yellow 10-2 (CFU/ml)': {
+        'val': _yCfu2Controller.text.trim(),
+        'unit': 'CFU/mL',
+      },
+      'Test 10-1 (Average green colonies)': {
+        'val': _gAvg1Controller.text.trim(),
+        'unit': '',
+      },
+      'Test green 10-1 (CFU/ml)': {
+        'val': _gCfu1Controller.text.trim(),
+        'unit': 'CFU/mL',
+      },
+      'Test 10-2 (Average green colonies)': {
+        'val': _gAvg2Controller.text.trim(),
+        'unit': '',
+      },
+      'Test green 10-2 (CFU/ml)': {
+        'val': _gCfu2Controller.text.trim(),
+        'unit': 'CFU/mL',
+      },
+    };
+
+    int saves = 0;
+    try {
+      for (var entry in mappings.entries) {
+        if (entry.value['val']!.isNotEmpty) {
+          final doubleVal = double.tryParse(entry.value['val']!);
+          if (doubleVal != null) {
+            await widget.onSave(
+              label: entry.key,
+              unit: entry.value['unit']!,
+              timeString: timeStr,
+              averageValue: doubleVal,
+              type: type,
+              pointValues: {'A': doubleVal}, // Treated as single point
+              replicateValues: {
+                'A': [doubleVal],
+              },
+              notes: notes,
+            );
+            saves++;
+          }
+        }
+      }
+
+      if (saves == 0) {
+        if (mounted) {
+          SnackbarHelper.show(
+            context,
+            "Please enter at least one value",
+            backgroundColor: Colors.orange.shade700,
+          );
+        }
+        return;
+      }
+
+      HapticFeedback.heavyImpact();
+      if (mounted) {
+        if (keepOpen) {
+          _clearInputs();
+          if (_currentIndex < _currentParams.length - 1) {
+            setState(() {
+              _currentIndex++;
+              selectedParameter = _currentParams[_currentIndex];
+            });
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (mounted) focusNodes['A-1']?.requestFocus();
+            });
+          } else {
+            _closeForm();
+          }
+        } else {
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.show(
+          context,
+          "Failed to save: $e",
+          backgroundColor: Colors.redAccent,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   void _showCreateParameterDialog() {
     final nameController = TextEditingController();
     final unitController = TextEditingController();
+    String? selectedCategory;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          "New Parameter",
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PondStatTextField(
-              controller: nameController,
-              label: "Parameter Name",
-              hint: "e.g., Turbidity",
-              prefixIcon: Icons.science_outlined,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
-            const SizedBox(height: 12),
-            PondStatTextField(
-              controller: unitController,
-              label: "Unit (Optional)",
-              hint: "e.g., NTU",
-              prefixIcon: Icons.straighten_rounded,
+            title: const Text(
+              "New Parameter",
+              style: TextStyle(fontWeight: FontWeight.w900),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PondStatTextField(
+                  controller: nameController,
+                  label: "Parameter Name",
+                  hint: "e.g., Turbidity",
+                  prefixIcon: Icons.science_outlined,
+                ),
+                const SizedBox(height: 12),
+                PondStatTextField(
+                  controller: unitController,
+                  label: "Unit",
+                  hint: "e.g., NTU",
+                  prefixIcon: Icons.straighten_rounded,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: "Graph Category",
+                    prefixIcon: const Icon(
+                      Icons.category_rounded,
+                      color: Colors.grey,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF0A74DA),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Chemical',
+                      child: Text('Chemical'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Physical',
+                      child: Text('Physical'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Biological',
+                      child: Text('Biological'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      selectedCategory = value;
+                    });
+                  },
+                ),
+              ],
             ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                String type =
-                    widget.customType ??
-                    ['daily', 'weekly', 'biweekly'][widget.tabIndex];
-                await _repository.addCustomParameter(
-                  label: nameController.text.trim(),
-                  unit: unitController.text.trim(),
-                  type: type,
-                );
-                if (context.mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text(
-              "Create",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryBlue,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  if (nameController.text.isNotEmpty &&
+                      unitController.text.isNotEmpty &&
+                      selectedCategory != null) {
+                    String type =
+                        widget.customType ??
+                        ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+                    await _repository.addCustomParameter(
+                      label: nameController.text.trim(),
+                      unit: unitController.text.trim(),
+                      type: type,
+                      category: selectedCategory!,
+                    );
+                    if (context.mounted) Navigator.pop(context);
+                  } else {
+                    SnackbarHelper.show(
+                      context,
+                      "Please fill out all fields",
+                      backgroundColor: Colors.orange.shade700,
+                    );
+                  }
+                },
+                child: const Text(
+                  "Create",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -357,13 +619,20 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
   // --- UI Helpers ---
 
-  Widget _buildParamTile({required ParameterItem param, String? docId}) {
+  Widget _buildParamTile({
+    required ParameterItem param,
+    String? docId,
+    required List<ParameterItem> allParams,
+    required int index,
+  }) {
     return InkWell(
       onTap: () {
         HapticFeedback.selectionClick();
         setState(() {
           selectedParameter = param;
           selectedDocId = docId;
+          _currentParams = allParams;
+          _currentIndex = index;
         });
         Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted) focusNodes['A-1']?.requestFocus();
@@ -459,9 +728,13 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
     if (type == 'growth') {
-      List<Widget> gridItems = hardcodedParams
-          .map((p) => _buildParamTile(param: p))
-          .toList();
+      List<Widget> gridItems = hardcodedParams.asMap().entries.map((e) {
+        return _buildParamTile(
+          param: e.value,
+          allParams: hardcodedParams,
+          index: e.key,
+        );
+      }).toList();
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -481,26 +754,37 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           .where('type', isEqualTo: type)
           .snapshots(),
       builder: (context, snapshot) {
-        List<Widget> gridItems = hardcodedParams
-            .map((p) => _buildParamTile(param: p))
-            .toList();
+        List<ParameterItem> allParams = List.from(hardcodedParams);
+        List<String?> docIds = List.filled(hardcodedParams.length, null);
+
         if (snapshot.hasData) {
           for (var doc in snapshot.data!.docs) {
             final data = doc.data() as Map<String, dynamic>;
-            gridItems.add(
-              _buildParamTile(
-                param: ParameterItem(
-                  label: data['label'],
-                  unit: data['unit'] ?? '',
-                  icon: Icons.dashboard_customize_rounded,
-                  color: Colors.blueGrey,
-                ),
-                docId: doc.id,
+            allParams.add(
+              ParameterItem(
+                label: data['label'],
+                unit: data['unit'] ?? '',
+                icon: Icons.dashboard_customize_rounded,
+                color: Colors.blueGrey,
               ),
             );
+            docIds.add(doc.id);
           }
         }
+
+        List<Widget> gridItems = [];
+        for (int i = 0; i < allParams.length; i++) {
+          gridItems.add(
+            _buildParamTile(
+              param: allParams[i],
+              docId: docIds[i],
+              allParams: allParams,
+              index: i,
+            ),
+          );
+        }
         gridItems.add(_buildAddNewButton());
+
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -594,9 +878,13 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         const SizedBox(height: 28),
         _buildTimePickerCard(themeColor),
         const SizedBox(height: 32),
-        _buildDataPointsHeader(hasRange, themeColor),
-        const SizedBox(height: 16),
-        _buildDataPointInputs(themeColor),
+        if (selectedParameter!.label == 'Bacterial Analysis')
+          _buildBacterialAnalysisUI(themeColor)
+        else ...[
+          _buildDataPointsHeader(hasRange, themeColor),
+          const SizedBox(height: 16),
+          _buildDataPointInputs(themeColor),
+        ],
         const SizedBox(height: 24),
         PondStatTextField(
           controller: _notesController,
@@ -607,18 +895,48 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         ),
         const SizedBox(height: 32),
 
-        Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(
-              context,
-            ).colorScheme.copyWith(primary: themeColor),
-          ),
-          child: PrimaryButton(
-            text: 'Save Measurement',
-            icon: Icons.check_circle_outline_rounded,
-            isLoading: _isSaving,
-            onPressed: _processAndSaveForm,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  side: BorderSide(color: themeColor),
+                ),
+                onPressed: _isSaving
+                    ? null
+                    : () => _processAndSaveForm(keepOpen: true),
+                child: Text(
+                  _currentIndex < _currentParams.length - 1
+                      ? "Save & Next"
+                      : "Save & Finish",
+                  style: TextStyle(
+                    color: themeColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: Theme.of(
+                    context,
+                  ).colorScheme.copyWith(primary: themeColor),
+                ),
+                child: PrimaryButton(
+                  text: 'Save',
+                  icon: Icons.check_circle_outline_rounded,
+                  isLoading: _isSaving,
+                  onPressed: () => _processAndSaveForm(keepOpen: false),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -790,8 +1108,20 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     return Column(
       children: [
         for (int pIdx = 0; pIdx < points.length; pIdx++)
-          Padding(
-            padding: EdgeInsets.only(bottom: pIdx < points.length - 1 ? 24 : 0),
+          Container(
+            margin: EdgeInsets.only(bottom: pIdx < points.length - 1 ? 16 : 0),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.02)
+                  : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white10
+                    : Colors.grey.shade200,
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -836,6 +1166,135 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     );
   }
 
+  Widget _buildBacterialAnalysisUI(Color themeColor) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TabBar(
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: themeColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              labelColor: Colors.white,
+              unselectedLabelColor: textMuted,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+              tabs: const [
+                Tab(text: "Yellow Colonies"),
+                Tab(text: "Green Colonies"),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 380, // Fixed height for inputs
+            child: TabBarView(
+              children: [
+                // Yellow Tab
+                ListView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    PondStatTextField(
+                      controller: _yAvg1Controller,
+                      label: "Test 10-1 (Average)",
+                      hint: "e.g., 100",
+                      prefixIcon: Icons.circle_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _yCfu1Controller,
+                      label: "Test 10-1 (CFU/ml)",
+                      hint: "e.g., 10000",
+                      prefixIcon: Icons.science_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _yAvg2Controller,
+                      label: "Test 10-2 (Average)",
+                      hint: "e.g., 100",
+                      prefixIcon: Icons.circle_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _yCfu2Controller,
+                      label: "Test 10-2 (CFU/ml)",
+                      hint: "e.g., 10000",
+                      prefixIcon: Icons.science_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                  ],
+                ),
+                // Green Tab
+                ListView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    PondStatTextField(
+                      controller: _gAvg1Controller,
+                      label: "Test 10-1 (Average)",
+                      hint: "e.g., 100",
+                      prefixIcon: Icons.circle_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _gCfu1Controller,
+                      label: "Test 10-1 (CFU/ml)",
+                      hint: "e.g., 10000",
+                      prefixIcon: Icons.science_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _gAvg2Controller,
+                      label: "Test 10-2 (Average)",
+                      hint: "e.g., 100",
+                      prefixIcon: Icons.circle_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PondStatTextField(
+                      controller: _gCfu2Controller,
+                      label: "Test 10-2 (CFU/ml)",
+                      hint: "e.g., 10000",
+                      prefixIcon: Icons.science_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReplicateInput(
     String point,
     int replicate,
@@ -876,6 +1335,17 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           fontSize: isCompact ? 14 : 18,
           color: textDark,
         ),
+        onSubmitted: (_) {
+          final keys = valueControllers.keys.toList();
+          final currentIndex = keys.indexOf(key);
+          if (currentIndex >= 0 && currentIndex < keys.length - 1) {
+            FocusScope.of(
+              context,
+            ).requestFocus(focusNodes[keys[currentIndex + 1]]);
+          } else {
+            FocusScope.of(context).unfocus();
+          }
+        },
         decoration: InputDecoration(
           labelText:
               customLabel ??
@@ -946,40 +1416,76 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      padding: EdgeInsets.only(
-        top: 12,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 48,
-                height: 5,
-                margin: const EdgeInsets.only(bottom: 24),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(10),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final bool shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: EdgeInsets.only(
+          top: 12,
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
-            ),
-            _buildSheetHeader(),
-            const SizedBox(height: 16),
-            _buildContentSwitcher(),
-          ],
+              _buildSheetHeader(),
+              const SizedBox(height: 16),
+              _buildContentSwitcher(),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  void _goToPreviousParameter() {
+    if (_currentIndex > 0) {
+      _clearInputs();
+      setState(() {
+        _currentIndex--;
+        selectedParameter = _currentParams[_currentIndex];
+      });
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) focusNodes['A-1']?.requestFocus();
+      });
+    }
+  }
+
+  void _goToNextParameter() {
+    if (_currentIndex < _currentParams.length - 1) {
+      _clearInputs();
+      setState(() {
+        _currentIndex++;
+        selectedParameter = _currentParams[_currentIndex];
+      });
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) focusNodes['A-1']?.requestFocus();
+      });
+    }
   }
 
   Widget _buildSheetHeader() {
@@ -998,22 +1504,52 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
             onPressed: () {
               HapticFeedback.selectionClick();
-              setState(() {
-                selectedParameter = null;
-                selectedDocId = null;
-              });
+              _closeForm();
             },
           ),
         Expanded(
-          child: Text(
-            selectedParameter == null ? "Select Parameter" : "Enter Data",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: textDark,
-              letterSpacing: -0.5,
-            ),
-          ),
+          child: selectedParameter == null
+              ? Text(
+                  "Select Parameter",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: textDark,
+                    letterSpacing: -0.5,
+                  ),
+                )
+              : Row(
+                  children: [
+                    Text(
+                      "Enter Data",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: textDark,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left_rounded),
+                      onPressed: _currentIndex > 0
+                          ? _goToPreviousParameter
+                          : null,
+                      color: _currentIndex > 0
+                          ? primaryBlue
+                          : Colors.grey.shade300,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right_rounded),
+                      onPressed: _currentIndex < _currentParams.length - 1
+                          ? _goToNextParameter
+                          : null,
+                      color: _currentIndex < _currentParams.length - 1
+                          ? primaryBlue
+                          : Colors.grey.shade300,
+                    ),
+                  ],
+                ),
         ),
         IconButton(
           icon: Container(

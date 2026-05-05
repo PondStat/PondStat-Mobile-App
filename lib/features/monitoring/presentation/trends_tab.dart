@@ -31,6 +31,7 @@ class TrendsTab extends StatefulWidget {
 class _TrendsTabState extends State<TrendsTab> {
   late Stream<QuerySnapshot<Map<String, dynamic>>>
   _historicalMeasurementsStream;
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _customParamsStream;
   Future<List<GrowthMetrics>>? _growthMetricsFuture;
 
   @override
@@ -55,6 +56,9 @@ class _TrendsTabState extends State<TrendsTab> {
       widget.startDate,
       widget.endDate,
     ).snapshots();
+
+    _customParamsStream = FirestoreHelper.customParametersCollection
+        .snapshots();
 
     _growthMetricsFuture =
         GrowthDataService.calculateGrowthMetrics(widget.pondId).then((metrics) {
@@ -84,67 +88,111 @@ class _TrendsTabState extends State<TrendsTab> {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _historicalMeasurementsStream,
           builder: (context, streamSnapshot) {
-            if (streamSnapshot.connectionState == ConnectionState.waiting ||
-                futureSnapshot.connectionState == ConnectionState.waiting) {
-              return _buildSkeletonLoader();
-            }
+            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _customParamsStream,
+              builder: (context, customParamsSnapshot) {
+                if (streamSnapshot.connectionState == ConnectionState.waiting ||
+                    futureSnapshot.connectionState == ConnectionState.waiting ||
+                    customParamsSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                  return _buildSkeletonLoader();
+                }
 
-            if (streamSnapshot.hasError) {
-              return Center(child: Text("Error: ${streamSnapshot.error}"));
-            }
+                if (streamSnapshot.hasError) {
+                  return Center(child: Text("Error: ${streamSnapshot.error}"));
+                }
 
-            final docs = streamSnapshot.data?.docs ?? [];
-            final growthMetrics = futureSnapshot.data ?? [];
+                final docs = streamSnapshot.data?.docs ?? [];
+                final growthMetrics = futureSnapshot.data ?? [];
+                final customParamsDocs = customParamsSnapshot.data?.docs ?? [];
 
-            if (docs.isEmpty && growthMetrics.isEmpty) {
-              return _buildEmptyState();
-            }
+                if (docs.isEmpty && growthMetrics.isEmpty) {
+                  return _buildEmptyState();
+                }
 
-            final physicalData = TrendsDataService.getNormalizedParameters(
-              docs,
-              widget.species,
-              ['Temperature', 'Salinity', 'Transparency'],
-            );
+                final List<String> customPhysical = [];
+                final List<String> customChemical = [];
+                final List<String> customBiological = [];
 
-            final chemicalData = TrendsDataService.getNormalizedParameters(
-              docs,
-              widget.species,
-              [
-                'pH Level',
-                'Dissolved Oxygen',
-                'Nitrate',
-                'Nitrite',
-                'Ammonia',
-                'Carbon dioxide',
-                'Magnesium',
-                'Calcium',
-                'Total Alkalinity',
-              ],
-            );
+                for (var doc in customParamsDocs) {
+                  final data = doc.data();
+                  final category = data['category'] as String?;
+                  final label = data['label'] as String?;
+                  if (label != null) {
+                    if (category == 'Physical') customPhysical.add(label);
+                    if (category == 'Chemical') customChemical.add(label);
+                    if (category == 'Biological') customBiological.add(label);
+                  }
+                }
 
-            final biologicalData = TrendsDataService.getNormalizedParameters(
-              docs,
-              widget.species,
-              ['Phytoplankton', 'Bacterial'],
-            );
+                final physicalData = TrendsDataService.getNormalizedParameters(
+                  docs,
+                  widget.species,
+                  [
+                    'Temperature',
+                    'Salinity',
+                    'Transparency',
+                    ...customPhysical,
+                  ],
+                );
 
-            return ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              children: [
-                PhysicalParametersChart(
-                  normalizedData: physicalData,
-                  species: widget.species,
-                ),
-                ChemicalParametersChart(
-                  normalizedData: chemicalData,
-                  species: widget.species,
-                ),
-                BiologicalParametersChart(
-                  normalizedData: biologicalData,
-                  species: widget.species,
-                ),
-                FishGainsChart(metrics: growthMetrics),
-              ],
+                final chemicalData = TrendsDataService.getNormalizedParameters(
+                  docs,
+                  widget.species,
+                  [
+                    'pH Level',
+                    'Dissolved Oxygen',
+                    'Nitrate',
+                    'Nitrite',
+                    'Ammonia',
+                    'Carbon dioxide',
+                    'Magnesium',
+                    'Calcium',
+                    'Total Alkalinity',
+                    ...customChemical,
+                  ],
+                );
+
+                final biologicalData =
+                    TrendsDataService.getNormalizedParameters(
+                      docs,
+                      widget.species,
+                      [
+                        'Phytoplankton',
+                        'Test 10-1 (Average yellow colonies)',
+                        'Test yellow 10-1 (CFU/ml)',
+                        'Test 10-2 (Average yellow colonies)',
+                        'Test yellow 10-2 (CFU/ml)',
+                        'Test 10-1 (Average green colonies)',
+                        'Test green 10-1 (CFU/ml)',
+                        'Test 10-2 (Average green colonies)',
+                        'Test green 10-2 (CFU/ml)',
+                        ...customBiological,
+                      ],
+                    );
+
+                return ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  children: [
+                    PhysicalParametersChart(
+                      normalizedData: physicalData,
+                      species: widget.species,
+                    ),
+                    ChemicalParametersChart(
+                      normalizedData: chemicalData,
+                      species: widget.species,
+                    ),
+                    BiologicalParametersChart(
+                      normalizedData: biologicalData,
+                      species: widget.species,
+                    ),
+                    FishGainsChart(metrics: growthMetrics),
+                  ],
+                );
+              },
             );
           },
         );

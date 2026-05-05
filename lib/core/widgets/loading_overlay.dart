@@ -1,10 +1,20 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class LoadingOverlay extends StatefulWidget {
   final bool isExiting;
+  final List<String>? messages;
+  final Duration? timeoutDuration;
+  final VoidCallback? onTimeout;
 
-  const LoadingOverlay({super.key, this.isExiting = false});
+  const LoadingOverlay({
+    super.key,
+    this.isExiting = false,
+    this.messages,
+    this.timeoutDuration = const Duration(seconds: 15),
+    this.onTimeout,
+  });
 
   @override
   State<LoadingOverlay> createState() => _LoadingOverlayState();
@@ -14,41 +24,57 @@ class _LoadingOverlayState extends State<LoadingOverlay>
     with SingleTickerProviderStateMixin {
   late AnimationController _rippleController;
   Timer? _statusTimer;
-  int _messageIndex = 0;
+  Timer? _timeoutTimer;
+  final ValueNotifier<int> _messageIndexNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<bool> _isTimedOutNotifier = ValueNotifier<bool>(false);
 
-  final List<String> _loadingMessages = [
-    'Preparing the pond...',
-    'Waking up the fish...',
-    'Fetching water quality data...',
-    'Calibrating sensors...',
-    'Almost ready...',
-  ];
+  late final List<String> _displayMessages;
 
   @override
   void initState() {
     super.initState();
+    _displayMessages =
+        widget.messages ??
+        const [
+          'Preparing the pond...',
+          'Waking up the fish...',
+          'Fetching water quality data...',
+          'Calibrating sensors...',
+          'Almost ready...',
+        ];
+
     _rippleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
     _statusTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted) {
-        setState(() {
-          _messageIndex = (_messageIndex + 1) % _loadingMessages.length;
-        });
+      if (mounted && !_isTimedOutNotifier.value) {
+        _messageIndexNotifier.value =
+            (_messageIndexNotifier.value + 1) % _displayMessages.length;
       }
     });
+
+    if (widget.timeoutDuration != null) {
+      _timeoutTimer = Timer(widget.timeoutDuration!, () {
+        if (mounted) {
+          _isTimedOutNotifier.value = true;
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _rippleController.dispose();
     _statusTimer?.cancel();
+    _timeoutTimer?.cancel();
+    _messageIndexNotifier.dispose();
+    _isTimedOutNotifier.dispose();
     super.dispose();
   }
 
-  Widget _buildRipple(double animationValue, double baseSize) {
+  Widget _buildRipple(double animationValue, double baseSize, Color color) {
     final double size = baseSize + (animationValue * (baseSize * 0.5));
     final double opacity = 1.0 - animationValue;
 
@@ -57,9 +83,9 @@ class _LoadingOverlayState extends State<LoadingOverlay>
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: opacity * 0.15),
+        color: color.withValues(alpha: opacity * 0.15),
         border: Border.all(
-          color: Colors.white.withValues(alpha: opacity * 0.5),
+          color: color.withValues(alpha: opacity * 0.5),
           width: 2,
         ),
       ),
@@ -68,7 +94,8 @@ class _LoadingOverlayState extends State<LoadingOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF0077C2);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final Size screenSize = MediaQuery.sizeOf(context);
 
     final double safeAnimationSize = (screenSize.height * 0.35).clamp(
@@ -82,10 +109,19 @@ class _LoadingOverlayState extends State<LoadingOverlay>
       curve: Curves.easeInOut,
       child: Semantics(
         label: 'Loading PondStat app data, please wait.',
+        liveRegion: true,
         child: Scaffold(
-          backgroundColor: primaryColor,
+          backgroundColor: Colors.transparent,
           body: Stack(
             children: [
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    color: colorScheme.primary.withValues(alpha: 0.85),
+                  ),
+                ),
+              ),
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -95,28 +131,35 @@ class _LoadingOverlayState extends State<LoadingOverlay>
                       child: AnimatedBuilder(
                         animation: _rippleController,
                         builder: (context, child) {
+                          final CurvedAnimation curvedAnimation =
+                              CurvedAnimation(
+                                parent: _rippleController,
+                                curve: Curves.easeOutSine,
+                              );
                           final double pulseScale =
-                              1.0 + (0.05 * _rippleController.value);
+                              1.0 + (0.05 * curvedAnimation.value);
 
                           return Stack(
                             alignment: Alignment.center,
                             children: [
                               _buildRipple(
-                                _rippleController.value,
+                                curvedAnimation.value,
                                 safeAnimationSize * 0.5,
+                                colorScheme.onPrimary,
                               ),
                               _buildRipple(
-                                (_rippleController.value + 0.5) % 1.0,
+                                (curvedAnimation.value + 0.5) % 1.0,
                                 safeAnimationSize * 0.5,
+                                colorScheme.onPrimary,
                               ),
                               Transform.scale(
                                 scale: pulseScale,
                                 child: Container(
                                   padding: const EdgeInsets.all(24),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.onPrimary,
                                     shape: BoxShape.circle,
-                                    boxShadow: [
+                                    boxShadow: const [
                                       BoxShadow(
                                         color: Colors.black26,
                                         blurRadius: 10,
@@ -127,7 +170,7 @@ class _LoadingOverlayState extends State<LoadingOverlay>
                                   child: Icon(
                                     Icons.water_drop,
                                     size: 48,
-                                    color: primaryColor,
+                                    color: colorScheme.primary,
                                   ),
                                 ),
                               ),
@@ -137,40 +180,85 @@ class _LoadingOverlayState extends State<LoadingOverlay>
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
+                    Text(
                       'PondStat',
-                      style: TextStyle(
-                        fontSize: 32,
+                      style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: colorScheme.onPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 500),
-                      transitionBuilder:
-                          (Widget child, Animation<double> animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: Tween<Offset>(
-                                  begin: const Offset(0.0, 0.2),
-                                  end: Offset.zero,
-                                ).animate(animation),
-                                child: child,
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _isTimedOutNotifier,
+                      builder: (context, isTimedOut, child) {
+                        if (isTimedOut) {
+                          return Column(
+                            children: [
+                              Text(
+                                "Taking longer than expected...",
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onPrimary.withValues(
+                                    alpha: 0.9,
+                                  ),
+                                  letterSpacing: 0.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              OutlinedButton.icon(
+                                onPressed:
+                                    widget.onTimeout ??
+                                    () => Navigator.of(context).pop(),
+                                icon: const Icon(Icons.close_rounded),
+                                label: const Text("Cancel"),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: colorScheme.onPrimary,
+                                  side: BorderSide(
+                                    color: colorScheme.onPrimary.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        return ValueListenableBuilder<int>(
+                          valueListenable: _messageIndexNotifier,
+                          builder: (context, messageIndex, child) {
+                            return AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 500),
+                              transitionBuilder:
+                                  (Widget child, Animation<double> animation) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: SlideTransition(
+                                        position: Tween<Offset>(
+                                          begin: const Offset(0.0, 0.2),
+                                          end: Offset.zero,
+                                        ).animate(animation),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                              child: ExcludeSemantics(
+                                child: Text(
+                                  _displayMessages[messageIndex],
+                                  key: ValueKey<int>(messageIndex),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onPrimary.withValues(
+                                      alpha: 0.7,
+                                    ),
+                                    letterSpacing: 0.5,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
                             );
                           },
-                      child: Text(
-                        _loadingMessages[_messageIndex],
-                        key: ValueKey<int>(_messageIndex),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.white70,
-                          letterSpacing: 0.5,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -180,12 +268,11 @@ class _LoadingOverlayState extends State<LoadingOverlay>
                 child: SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 24.0),
-                    child: const Text(
+                    child: Text(
                       'For Fisheries Students',
-                      style: TextStyle(
-                        fontSize: 13,
+                      style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.white54,
+                        color: colorScheme.onPrimary.withValues(alpha: 0.54),
                         letterSpacing: 1.0,
                       ),
                     ),

@@ -27,11 +27,27 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
   };
 
   @override
-  Widget build(BuildContext context) {
-    if (widget.normalizedData.isEmpty) {
-      return const SizedBox.shrink();
-    }
+  void initState() {
+    super.initState();
+    _syncVisibleParameters();
+  }
 
+  @override
+  void didUpdateWidget(covariant PhysicalParametersChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncVisibleParameters();
+  }
+
+  void _syncVisibleParameters() {
+    for (var key in widget.normalizedData.keys) {
+      if (!_visibleParameters.containsKey(key)) {
+        _visibleParameters[key] = true;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 

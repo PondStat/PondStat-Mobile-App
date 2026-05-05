@@ -26,33 +26,33 @@ class ParameterItem {
 
 class MonitoringParameters {
   static List<ParameterItem> getDailyParameters(String species) {
-    double? phMin = 6.5;
+    double? phMin = 7.5;
     double? phMax = 8.5;
-    double? tempMin = 25.0;
+    double? tempMin = 26.0;
     double? tempMax = 32.0;
-    double? salMin;
-    double? salMax;
-    double? transMin;
-    double? transMax;
+    double? salMin = 15.0;
+    double? salMax = 35.0;
+    double? transMin = 20.0;
+    double? transMax = 40.0;
 
     if (species.toLowerCase() == 'shrimp') {
       phMin = 7.5;
       phMax = 8.5;
       tempMin = 28.0;
-      tempMax = 30.0;
-      salMin = 15.0;
-      salMax = 30.0;
-      transMin = 25.0;
+      tempMax = 32.0;
+      salMin = 10.0;
+      salMax = 25.0;
+      transMin = 30.0;
       transMax = 40.0;
     } else if (species.toLowerCase() == 'tilapia') {
-      phMin = 6.5;
-      phMax = 9.0;
-      tempMin = 25.0;
+      phMin = 7.5;
+      phMax = 8.5;
+      tempMin = 26.0;
       tempMax = 32.0;
-      salMin = 30.0;
+      salMin = 15.0;
       salMax = 35.0;
       transMin = 20.0;
-      transMax = 60.0;
+      transMax = 40.0;
     }
 
     return [
@@ -97,45 +97,36 @@ class MonitoringParameters {
 
   static final List<ParameterItem> samplingParameters = [
     const ParameterItem(
-      label: 'Feeding rate',
-      unit: '%',
-      icon: Icons.percent_rounded,
-      color: Colors.brown,
-      hint: 'e.g., 5',
+      label: 'ABW',
+      unit: 'g',
+      icon: Icons.scale_rounded,
+      color: Colors.lightGreen,
+      hint: 'Auto-calculated',
       isSinglePoint: true,
     ),
     const ParameterItem(
-      label: 'Total feed consumed',
-      unit: 'kg',
+      label: 'ADG',
+      unit: 'g/day',
+      icon: Icons.trending_up_rounded,
+      color: Colors.blue,
+      hint: 'e.g., 0.5',
+      isSinglePoint: true,
+    ),
+    const ParameterItem(
+      label: 'DFR',
+      unit: 'kg/day',
       icon: Icons.set_meal_rounded,
       color: Colors.brown,
       hint: 'e.g., 10',
       isSinglePoint: true,
     ),
     const ParameterItem(
-      label: 'Total weight gained',
-      unit: 'kg',
-      icon: Icons.monitor_weight_rounded,
-      color: Colors.brown,
-      hint: 'e.g., 2',
+      label: 'FCR',
+      unit: '',
+      icon: Icons.speed_rounded,
+      color: Colors.orange,
+      hint: 'e.g., 1.2',
       isSinglePoint: true,
-    ),
-    const ParameterItem(
-      label: 'Total weight of sampled fish',
-      unit: 'g',
-      icon: Icons.scale_rounded,
-      color: Colors.lightGreen,
-      hint: 'e.g., 500',
-      isSinglePoint: true,
-    ),
-    const ParameterItem(
-      label: 'Number of fish sampled',
-      unit: 'pcs',
-      icon: Icons.numbers_rounded,
-      color: Colors.blueGrey,
-      hint: 'e.g., 50',
-      isSinglePoint: true,
-      keyboardType: TextInputType.number,
     ),
   ];
 
@@ -148,11 +139,12 @@ class MonitoringParameters {
       hint: 'e.g., 10000',
     ),
     const ParameterItem(
-      label: 'Bacterial',
-      unit: 'CFU/mL',
-      icon: Icons.coronavirus_rounded,
-      color: Colors.red,
-      hint: 'e.g., 10^4',
+      label: 'Bacterial Analysis',
+      unit: 'Mixed',
+      icon: Icons.biotech_rounded,
+      color: Colors.teal,
+      hint: 'Tabbed analysis',
+      isSinglePoint: true,
     ),
   ];
 
