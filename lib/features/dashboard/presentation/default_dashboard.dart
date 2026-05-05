@@ -8,6 +8,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/secondary_button.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/no_pond_assigned.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
 import 'package:pondstat/features/dashboard/presentation/create_pond_sheet.dart';
@@ -896,8 +897,11 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
       icon: Icons.cloud_off_rounded,
       title: "Unable to Load",
       description: friendlyMessage,
-      buttonText: "Try Again",
-      onButtonPressed: () => setState(() {}),
+      action: SecondaryButton(
+        text: "Try Again",
+        icon: Icons.refresh_rounded,
+        onPressed: () => setState(() {}),
+      ),
     );
   }
 }

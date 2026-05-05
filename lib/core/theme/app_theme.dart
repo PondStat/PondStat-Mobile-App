@@ -49,9 +49,7 @@ extension ThemeContextExtension on BuildContext {
 class AppTheme {
   AppTheme._();
 
-  static const Color customBlue = Color(
-    0xFF0A74DA,
-  );
+  static const Color customBlue = Color(0xFF0A74DA);
   static const Color secondaryBlue = Color(0xFF4FA0F0);
 
   static const Color _slate50 = Color(0xFFF8FAFC);
@@ -124,9 +122,7 @@ class AppTheme {
         isDark ? _darkPondColors : _lightPondColors,
       ],
       appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.surface.withValues(
-          alpha: 0.95,
-        ),
+        backgroundColor: colorScheme.surface.withValues(alpha: 0.95),
         scrolledUnderElevation: 4,
         surfaceTintColor: colorScheme.surfaceTint,
         shadowColor: Colors.black.withValues(alpha: 0.1),
@@ -197,9 +193,7 @@ class AppTheme {
           color: colorScheme.primary,
           fontWeight: FontWeight.w800,
         ),
-        prefixIconColor: isDark
-            ? Colors.white70
-            : _slate500,
+        prefixIconColor: isDark ? Colors.white70 : _slate500,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style:

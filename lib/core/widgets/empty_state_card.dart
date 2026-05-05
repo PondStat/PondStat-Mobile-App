@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 
 class EmptyStateCard extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final Widget? illustration;
   final String title;
   final String description;
-  final String? buttonText;
-  final VoidCallback? onButtonPressed;
+  final Widget? action;
+  final bool isPrimary;
+  final bool isCompact;
 
   const EmptyStateCard({
     super.key,
-    required this.icon,
+    this.icon,
+    this.illustration,
     required this.title,
     required this.description,
-    this.buttonText,
-    this.onButtonPressed,
-  });
+    this.action,
+    this.isPrimary = false,
+    this.isCompact = false,
+  }) : assert(
+         icon != null || illustration != null,
+         'Either icon or illustration must be provided.',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -22,78 +29,69 @@ class EmptyStateCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
+    final double cardPadding = isCompact ? 16.0 : (isPrimary ? 48.0 : 32.0);
+    final double iconContainerPadding = isCompact ? 16.0 : 28.0;
+    final double iconSize = isCompact ? 48.0 : 64.0;
+    final double titleSize = isCompact ? 18.0 : 22.0;
+    final double spaceBetweenText = isCompact ? 8.0 : 12.0;
+    final double spaceAboveAction = isCompact
+        ? 24.0
+        : (isPrimary ? 40.0 : 32.0);
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: EdgeInsets.all(cardPadding),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(28),
+              padding: EdgeInsets.all(iconContainerPadding),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                color: theme.cardTheme.color,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 32,
-                    offset: const Offset(0, 16),
+                    color: colorScheme.primary.withValues(
+                      alpha: isDark ? 0.15 : 0.08,
+                    ),
+                    blurRadius: isCompact ? 16 : 32,
+                    offset: Offset(0, isCompact ? 8 : 16),
                   ),
                 ],
               ),
-              child: Icon(
-                icon,
-                size: 64,
-                color: isDark
-                    ? colorScheme.primary.withValues(alpha: 0.5)
-                    : Colors.grey.shade300,
-              ),
+              child:
+                  illustration ??
+                  Icon(
+                    icon,
+                    size: iconSize,
+                    color: isDark
+                        ? colorScheme.primary.withValues(alpha: 0.5)
+                        : colorScheme.primary.withValues(alpha: 0.25),
+                  ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: isCompact ? 24 : 32),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
+              style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w900,
                 color: colorScheme.onSurface,
                 letterSpacing: -0.5,
+                fontSize: titleSize,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: spaceBetweenText),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
                 height: 1.5,
               ),
             ),
-            if (buttonText != null && onButtonPressed != null) ...[
-              const SizedBox(height: 32),
-              OutlinedButton.icon(
-                onPressed: onButtonPressed,
-                icon: const Icon(Icons.add_rounded, size: 20),
-                label: Text(
-                  buttonText!,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: colorScheme.primary,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  side: BorderSide(
-                    color: colorScheme.primary.withValues(alpha: 0.2),
-                    width: 2,
-                  ),
-                ),
-              ),
+            if (action != null) ...[
+              SizedBox(height: spaceAboveAction),
+              action!,
             ],
           ],
         ),
