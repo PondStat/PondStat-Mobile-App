@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.dart';
+import 'package:pondstat/features/monitoring/presentation/edit_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
@@ -231,7 +232,7 @@ class _GrowthPageState extends State<GrowthPage> {
     );
   }
 
-  void _showEditGrowthDialog(GrowthMetrics m) {
+  void _showEditGrowthSheet(GrowthMetrics m) {
     if (m.abwDocId == null &&
         m.adgDocId == null &&
         m.dfrDocId == null &&
@@ -239,167 +240,23 @@ class _GrowthPageState extends State<GrowthPage> {
       return;
     }
 
-    final abwController = TextEditingController(text: m.abw.toString());
-    final adgController = TextEditingController(text: m.adg.toString());
-    final dfrController = TextEditingController(text: m.dfr.toString());
-    final fcrController = TextEditingController(text: m.fcr.toString());
-
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Text(
-            "Edit Sampling",
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (m.abwDocId != null)
-                  TextField(
-                    controller: abwController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: "ABW (g/pcs)",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                if (m.abwDocId != null) const SizedBox(height: 16),
-                if (m.adgDocId != null)
-                  TextField(
-                    controller: adgController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: "ADG (g/day)",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                if (m.adgDocId != null) const SizedBox(height: 16),
-                if (m.dfrDocId != null)
-                  TextField(
-                    controller: dfrController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: "DFR (%)",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                if (m.dfrDocId != null) const SizedBox(height: 16),
-                if (m.fcrDocId != null)
-                  TextField(
-                    controller: fcrController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: "FCR",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                final newAbw = double.tryParse(abwController.text);
-                final newAdg = double.tryParse(adgController.text);
-                final newDfr = double.tryParse(dfrController.text);
-                final newFcr = double.tryParse(fcrController.text);
-
-                if ((m.abwDocId != null && newAbw == null) ||
-                    (m.adgDocId != null && newAdg == null) ||
-                    (m.dfrDocId != null && newDfr == null) ||
-                    (m.fcrDocId != null && newFcr == null)) {
-                  SnackbarHelper.show(context, "Please enter valid numbers");
-                  return;
-                }
-
-                final user = FirebaseAuth.instance.currentUser;
-                final batch = FirebaseFirestore.instance.batch();
-
-                Future<void> queueUpdate(
-                  String? docId,
-                  double newValue,
-                  double oldValue,
-                ) async {
-                  if (docId == null || newValue == oldValue) return;
-                  final docRef = FirestoreHelper.measurementsCollection.doc(
-                    docId,
-                  );
-                  final docSnap = await docRef.get();
-                  if (docSnap.exists) {
-                    final data = docSnap.data() as Map<String, dynamic>;
-                    batch.update(docRef, {
-                      'value': newValue,
-                      'editedAt': FieldValue.serverTimestamp(),
-                      'editedBy': user?.uid,
-                      'editorName': user?.displayName,
-                    });
-                    final historyRef = FirestoreHelper
-                        .measurementHistoryCollection
-                        .doc();
-                    batch.set(historyRef, {
-                      'pondId': widget.pondId,
-                      'measurementId': docId,
-                      'parameter': data['parameter'],
-                      'action': 'update',
-                      'editedAt': FieldValue.serverTimestamp(),
-                      'editedBy': user?.uid,
-                      'editorName': user?.displayName ?? 'Unknown',
-                      'before': {'value': data['value']},
-                      'after': {'value': newValue},
-                    });
-                  }
-                }
-
-                await queueUpdate(m.abwDocId, newAbw ?? 0, m.abw);
-                await queueUpdate(m.adgDocId, newAdg ?? 0, m.adg);
-                await queueUpdate(m.dfrDocId, newDfr ?? 0, m.dfr);
-                await queueUpdate(m.fcrDocId, newFcr ?? 0, m.fcr);
-
-                try {
-                  await batch.commit();
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                  setState(() => _refreshKey++);
-                  SnackbarHelper.show(
-                    context,
-                    "Sampling updated",
-                    backgroundColor: Colors.green,
-                  );
-                } catch (e) {
-                  if (!context.mounted) return;
-                  SnackbarHelper.show(
-                    context,
-                    "Error updating: $e",
-                    backgroundColor: Colors.red,
-                  );
-                }
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => EditGrowthSheet(
+        metrics: m,
+        pondId: widget.pondId,
+        onSave: () {
+          setState(() => _refreshKey++);
+          SnackbarHelper.show(
+            context,
+            "Sampling updated",
+            backgroundColor: Colors.green,
+          );
+        },
+      ),
     );
   }
 
@@ -411,7 +268,7 @@ class _GrowthPageState extends State<GrowthPage> {
         key: ValueKey(_refreshKey),
         pondId: widget.pondId,
         canEdit: widget.canEdit,
-        onEdit: _showEditGrowthDialog,
+        onEdit: _showEditGrowthSheet,
         onDelete: _confirmDeleteGrowth,
       ),
       floatingActionButton: widget.canEdit
