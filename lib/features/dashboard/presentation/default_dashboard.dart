@@ -16,6 +16,8 @@ import 'package:pondstat/features/dashboard/presentation/edit_pond_sheet.dart';
 import 'package:pondstat/features/dashboard/presentation/pond_list_card.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/dashboard_repository.dart';
+import 'package:pondstat/features/notifications/data/notifications_repository.dart';
+import 'package:pondstat/features/notifications/presentation/notifications_inbox_page.dart';
 
 class DefaultDashboardScreen extends StatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -45,6 +47,9 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
     _userPondsStream = DashboardRepository().getUserPondsStream(
       AuthRepository().currentUser!.uid,
     );
+
+    // Sync FCM token on initialization
+    AuthRepository().updateFcmToken();
 
     _shimmerController = AnimationController(
       vsync: this,
@@ -441,6 +446,18 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
           ),
         ),
         actions: [
+          _NotificationBadge(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationsInboxPage(),
+                ),
+              );
+            },
+            isDark: isDark,
+            primaryBlue: primaryBlue,
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 20.0),
             child: Center(
@@ -902,6 +919,75 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
         icon: Icons.refresh_rounded,
         onPressed: () => setState(() {}),
       ),
+    );
+  }
+}
+
+class _NotificationBadge extends StatelessWidget {
+  final VoidCallback onTap;
+  final bool isDark;
+  final Color primaryBlue;
+
+  const _NotificationBadge({
+    required this.onTap,
+    required this.isDark,
+    required this.primaryBlue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final repository = NotificationsRepository();
+
+    return StreamBuilder<int>(
+      stream: repository.getUnreadCountStream(),
+      builder: (context, snapshot) {
+        final int unreadCount = snapshot.data ?? 0;
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: Icon(
+                unreadCount > 0
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_none_rounded,
+                color: isDark ? null : Colors.white,
+                size: 28,
+              ),
+              onPressed: onTap,
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 8,
+                top: 12,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? Colors.black : primaryBlue,
+                      width: 1.5,
+                    ),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    unreadCount > 9 ? '9+' : '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

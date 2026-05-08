@@ -59,6 +59,20 @@ class _WaterQualityPageState extends State<WaterQualityPage>
     String? notes,
   }) async {
     try {
+      final parameterItem = MonitoringParameters.getParameterByLabel(
+        label,
+        widget.species,
+      );
+
+      Map<String, dynamic>? alertPayload;
+      if (parameterItem != null) {
+        alertPayload = _safetyService.getAlertPayload(
+          parameter: parameterItem,
+          value: averageValue,
+          pondName: widget.pondName,
+        );
+      }
+
       await _repository.saveMeasurement(
         pondId: widget.pondId,
         label: label,
@@ -70,12 +84,9 @@ class _WaterQualityPageState extends State<WaterQualityPage>
         replicateValues: replicateValues,
         selectedDay: widget.selectedDay,
         notes: notes,
+        alert: alertPayload,
       );
 
-      final parameterItem = MonitoringParameters.getParameterByLabel(
-        label,
-        widget.species,
-      );
       if (parameterItem != null) {
         await _safetyService.checkAndNotify(
           parameter: parameterItem,

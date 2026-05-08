@@ -162,6 +162,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                 unit: data['unit'] ?? '',
                 icon: Icons.dashboard_customize_rounded,
                 color: Colors.blueGrey,
+                createdBy: data['createdBy'],
               ),
             );
           }

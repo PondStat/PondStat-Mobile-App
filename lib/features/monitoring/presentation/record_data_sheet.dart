@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
@@ -755,7 +756,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           .snapshots(),
       builder: (context, snapshot) {
         List<ParameterItem> allParams = List.from(hardcodedParams);
-        List<String?> docIds = List.filled(hardcodedParams.length, null);
+        List<String?> docIds = List.filled(hardcodedParams.length, null, growable: true);
 
         if (snapshot.hasData) {
           for (var doc in snapshot.data!.docs) {
@@ -766,6 +767,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 unit: data['unit'] ?? '',
                 icon: Icons.dashboard_customize_rounded,
                 color: Colors.blueGrey,
+                createdBy: data['createdBy'],
               ),
             );
             docIds.add(doc.id);
@@ -857,7 +859,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 ],
               ),
             ),
-            if (selectedDocId != null)
+            if (selectedDocId != null &&
+                selectedParameter?.createdBy ==
+                    FirebaseAuth.instance.currentUser?.uid)
               IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),

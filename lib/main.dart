@@ -17,11 +17,6 @@ void main() async {
   // Load user settings early
   await SettingsService().loadSettings();
 
-  // Initialize notifications (Mobile only)
-  if (!kIsWeb) {
-    await NotificationService().initialize();
-  }
-
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -42,6 +37,11 @@ void main() async {
     developer.log("✅ Firebase connected successfully!");
   } catch (e) {
     developer.log("❌ Firebase connection failed: $e");
+  }
+
+  // Initialize notifications (Mobile only)
+  if (!kIsWeb) {
+    await NotificationService().initialize();
   }
 
   runApp(const MyApp());

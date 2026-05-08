@@ -25,6 +25,7 @@ class MonitoringRepository {
     required Map<String, List<double>> replicateValues,
     required DateTime selectedDay,
     String? notes,
+    Map<String, dynamic>? alert,
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
@@ -47,8 +48,9 @@ class MonitoringRepository {
       'timeString': timeString,
       'pointValues': pointValues,
       'replicateValues': replicateValues,
-      if (notes != null && notes.isNotEmpty) 'notes': notes,
-    };
+      'notes': (notes?.isNotEmpty == true) ? notes : null,
+      'alert': alert,
+    }..removeWhere((key, value) => value == null);
 
     batch.set(measurementRef, measurementData);
 
