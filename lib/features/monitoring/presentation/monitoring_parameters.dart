@@ -10,6 +10,7 @@ class ParameterItem {
   final double? maxVal;
   final String hint;
   final bool isSinglePoint;
+  final String? createdBy;
 
   const ParameterItem({
     required this.label,
@@ -21,6 +22,7 @@ class ParameterItem {
     this.maxVal,
     this.hint = '',
     this.isSinglePoint = false,
+    this.createdBy,
   });
 }
 

@@ -8,7 +8,7 @@ class PondStatDropdownField<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final void Function(T?)? onChanged;
   final String? Function(T?)? validator;
-  
+
   // New exposed capabilities
   final FocusNode? focusNode;
   final AutovalidateMode? autovalidateMode;

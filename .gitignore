@@ -56,3 +56,5 @@ app.*.map.json
 !**/ios/Flutter/Flutter.framework/
 
 .gemini
+
+functions/node_modules

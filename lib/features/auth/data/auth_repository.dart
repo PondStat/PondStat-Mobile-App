@@ -1,7 +1,9 @@
+import 'dart:developer' as developer;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/core/services/notification_service.dart';
 
 class AuthException implements Exception {
   final String message;
@@ -62,9 +64,32 @@ class AuthRepository {
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
+
+      // Update FCM token on login
+      await updateFcmToken();
     }
 
     return userCredential;
+  }
+
+  Future<void> updateFcmToken() async {
+    final user = currentUser;
+    if (user == null) return;
+
+    final token = await NotificationService().getDeviceToken();
+    if (token != null) {
+      try {
+        await FirestoreHelper.usersCollection.doc(user.uid).set({
+          'fcmToken': token,
+          'lastTokenUpdate': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        developer.log('Error updating FCM token',
+            error: e, name: 'auth.repository');
+      }
+    }
+    // If token is null (e.g. permission denied), we DO NOT delete the existing token
+    // to avoid wiping notifications for other devices.
   }
 
   Future<void> signOut() async {
