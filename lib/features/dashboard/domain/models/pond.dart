@@ -1,5 +1,6 @@
-// lib/features/dashboard/domain/models/pond.dart
-class Pond {
+import 'package:equatable/equatable.dart';
+
+class Pond extends Equatable {
   final String id;
   final String name;
   final String species;
@@ -9,7 +10,7 @@ class Pond {
   final List<String> memberIds;
   final Map<String, String> roles;
 
-  Pond({
+  const Pond({
     required this.id,
     required this.name,
     required this.species,
@@ -45,4 +46,38 @@ class Pond {
       // createdAt is handled by server timestamp at creation time
     };
   }
+
+  Pond copyWith({
+    String? id,
+    String? name,
+    String? species,
+    int? stockingQuantity,
+    int? targetCulturePeriodDays,
+    String? ownerId,
+    List<String>? memberIds,
+    Map<String, String>? roles,
+  }) {
+    return Pond(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      species: species ?? this.species,
+      stockingQuantity: stockingQuantity ?? this.stockingQuantity,
+      targetCulturePeriodDays: targetCulturePeriodDays ?? this.targetCulturePeriodDays,
+      ownerId: ownerId ?? this.ownerId,
+      memberIds: memberIds ?? this.memberIds,
+      roles: roles ?? this.roles,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        name,
+        species,
+        stockingQuantity,
+        targetCulturePeriodDays,
+        ownerId,
+        memberIds,
+        roles,
+      ];
 }
