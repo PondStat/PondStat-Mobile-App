@@ -8,7 +8,8 @@ import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
-import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/record_form_fields.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/record_submit_button.dart';
 
 class RecordDataSheet extends StatefulWidget {
   final int tabIndex;
@@ -804,8 +805,6 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   }
 
   Widget _buildInputForm() {
-    final bool hasRange =
-        selectedParameter!.minVal != null && selectedParameter!.maxVal != null;
     final Color themeColor = selectedParameter!.color;
 
     return Column(
@@ -882,13 +881,32 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         const SizedBox(height: 28),
         _buildTimePickerCard(themeColor),
         const SizedBox(height: 32),
-        if (selectedParameter!.label == 'Bacterial Analysis')
-          _buildBacterialAnalysisUI(themeColor)
-        else ...[
-          _buildDataPointsHeader(hasRange, themeColor),
-          const SizedBox(height: 16),
-          _buildDataPointInputs(themeColor),
-        ],
+        RecordFormFields(
+          selectedParameter: selectedParameter!,
+          themeColor: themeColor,
+          points: points,
+          replicates: replicates,
+          valueControllers: valueControllers,
+          focusNodes: focusNodes,
+          yAvg1Controller: _yAvg1Controller,
+          yCfu1Controller: _yCfu1Controller,
+          yAvg2Controller: _yAvg2Controller,
+          yCfu2Controller: _yCfu2Controller,
+          gAvg1Controller: _gAvg1Controller,
+          gCfu1Controller: _gCfu1Controller,
+          gAvg2Controller: _gAvg2Controller,
+          gCfu2Controller: _gCfu2Controller,
+          calculatePointAverage: _calculatePointAverage,
+          onFieldSubmitted: (key) {
+            final keys = valueControllers.keys.toList();
+            final currentIndex = keys.indexOf(key);
+            if (currentIndex >= 0 && currentIndex < keys.length - 1) {
+              FocusScope.of(context).requestFocus(focusNodes[keys[currentIndex + 1]]);
+            } else {
+              FocusScope.of(context).unfocus();
+            }
+          },
+        ),
         const SizedBox(height: 24),
         PondStatTextField(
           controller: _notesController,
@@ -898,49 +916,12 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           maxLines: 3,
         ),
         const SizedBox(height: 32),
-
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  side: BorderSide(color: themeColor),
-                ),
-                onPressed: _isSaving
-                    ? null
-                    : () => _processAndSaveForm(keepOpen: true),
-                child: Text(
-                  _currentIndex < _currentParams.length - 1
-                      ? "Save & Next"
-                      : "Save & Finish",
-                  style: TextStyle(
-                    color: themeColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  colorScheme: Theme.of(
-                    context,
-                  ).colorScheme.copyWith(primary: themeColor),
-                ),
-                child: PrimaryButton(
-                  text: 'Save',
-                  icon: Icons.check_circle_outline_rounded,
-                  isLoading: _isSaving,
-                  onPressed: () => _processAndSaveForm(keepOpen: false),
-                ),
-              ),
-            ),
-          ],
+        RecordSubmitButton(
+          isSaving: _isSaving,
+          themeColor: themeColor,
+          isLastParameter: _currentIndex >= _currentParams.length - 1,
+          onSaveNext: () => _processAndSaveForm(keepOpen: true),
+          onSaveFinish: () => _processAndSaveForm(keepOpen: false),
         ),
       ],
     );
@@ -1013,407 +994,6 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDataPointsHeader(bool hasRange, Color themeColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Data Points",
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: textDark,
-                fontSize: 18,
-              ),
-            ),
-            if (hasRange) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: themeColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Safe Range: ${selectedParameter!.minVal} - ${selectedParameter!.maxVal}",
-                    style: TextStyle(
-                      color: textMuted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ] else if (selectedParameter!.minVal != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                "Minimum: ${selectedParameter!.minVal}",
-                style: TextStyle(
-                  color: textMuted,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ] else if (selectedParameter!.maxVal != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                "Maximum: ${selectedParameter!.maxVal}",
-                style: TextStyle(
-                  color: textMuted,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ],
-        ),
-        if (selectedParameter!.unit.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: themeColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              selectedParameter!.unit,
-              style: TextStyle(
-                color: themeColor,
-                fontWeight: FontWeight.w900,
-                fontSize: 12,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildDataPointInputs(Color themeColor) {
-    if (selectedParameter!.isSinglePoint) {
-      // For single point parameters, show 1 input value (treated as Point A, Replicate 1 behind the scenes)
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: _buildReplicateInput('A', 1, themeColor, customLabel: "Value"),
-      );
-    }
-
-    // For multi-point parameters, show each point with its 3 replicates and average
-    return Column(
-      children: [
-        for (int pIdx = 0; pIdx < points.length; pIdx++)
-          Container(
-            margin: EdgeInsets.only(bottom: pIdx < points.length - 1 ? 16 : 0),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withValues(alpha: 0.02)
-                  : Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white10
-                    : Colors.grey.shade200,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Point header
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    "Point ${points[pIdx]}",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                      color: textDark,
-                    ),
-                  ),
-                ),
-                // Replicate inputs
-                Row(
-                  children: [
-                    for (int rIdx = 0; rIdx < replicates.length; rIdx++)
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            right: rIdx < replicates.length - 1 ? 8 : 0,
-                          ),
-                          child: _buildReplicateInput(
-                            points[pIdx],
-                            replicates[rIdx],
-                            themeColor,
-                            isCompact: true,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                // Average display for this point
-                const SizedBox(height: 10),
-                _buildAverageDisplay(points[pIdx], themeColor),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildBacterialAnalysisUI(Color themeColor) {
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TabBar(
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                color: themeColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              labelColor: Colors.white,
-              unselectedLabelColor: textMuted,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-              tabs: const [
-                Tab(text: "Yellow Colonies"),
-                Tab(text: "Green Colonies"),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 380, // Fixed height for inputs
-            child: TabBarView(
-              children: [
-                // Yellow Tab
-                ListView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    PondStatTextField(
-                      controller: _yAvg1Controller,
-                      label: "Test 10-1 (Average)",
-                      hint: "e.g., 100",
-                      prefixIcon: Icons.circle_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: _yCfu1Controller,
-                      label: "Test 10-1 (CFU/ml)",
-                      hint: "e.g., 10000",
-                      prefixIcon: Icons.science_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: _yAvg2Controller,
-                      label: "Test 10-2 (Average)",
-                      hint: "e.g., 100",
-                      prefixIcon: Icons.circle_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: _yCfu2Controller,
-                      label: "Test 10-2 (CFU/ml)",
-                      hint: "e.g., 10000",
-                      prefixIcon: Icons.science_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                  ],
-                ),
-                // Green Tab
-                ListView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    PondStatTextField(
-                      controller: _gAvg1Controller,
-                      label: "Test 10-1 (Average)",
-                      hint: "e.g., 100",
-                      prefixIcon: Icons.circle_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: _gCfu1Controller,
-                      label: "Test 10-1 (CFU/ml)",
-                      hint: "e.g., 10000",
-                      prefixIcon: Icons.science_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: _gAvg2Controller,
-                      label: "Test 10-2 (Average)",
-                      hint: "e.g., 100",
-                      prefixIcon: Icons.circle_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: _gCfu2Controller,
-                      label: "Test 10-2 (CFU/ml)",
-                      hint: "e.g., 10000",
-                      prefixIcon: Icons.science_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReplicateInput(
-    String point,
-    int replicate,
-    Color themeColor, {
-    bool isCompact = false,
-    String? customLabel,
-  }) {
-    final key = '$point-$replicate';
-    final bool isFocused = focusNodes[key]?.hasFocus ?? false;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        color: isFocused ? Colors.white : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isFocused ? themeColor : Colors.transparent,
-          width: isFocused ? 2 : 0,
-        ),
-        boxShadow: isFocused
-            ? [
-                BoxShadow(
-                  color: themeColor.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : [],
-      ),
-      child: TextField(
-        controller: valueControllers[key],
-        focusNode: focusNodes[key],
-        keyboardType: selectedParameter!.keyboardType,
-        textInputAction: TextInputAction.next,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontWeight: FontWeight.w900,
-          fontSize: isCompact ? 14 : 18,
-          color: textDark,
-        ),
-        onSubmitted: (_) {
-          final keys = valueControllers.keys.toList();
-          final currentIndex = keys.indexOf(key);
-          if (currentIndex >= 0 && currentIndex < keys.length - 1) {
-            FocusScope.of(
-              context,
-            ).requestFocus(focusNodes[keys[currentIndex + 1]]);
-          } else {
-            FocusScope.of(context).unfocus();
-          }
-        },
-        decoration: InputDecoration(
-          labelText:
-              customLabel ??
-              (isCompact ? "R$replicate" : "Replicate $replicate"),
-          floatingLabelBehavior: FloatingLabelBehavior.always,
-          labelStyle: TextStyle(
-            color: isFocused ? themeColor : Colors.grey.shade500,
-            fontWeight: FontWeight.w800,
-            fontSize: isCompact ? 11 : 12,
-          ),
-          hintText: selectedParameter!.hint.isEmpty
-              ? ''
-              : selectedParameter!.hint.split(' ').last,
-          hintStyle: TextStyle(
-            color: Colors.grey.shade400,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.only(top: 8, bottom: 12),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAverageDisplay(String point, Color themeColor) {
-    final average = _calculatePointAverage(point);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: themeColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: themeColor.withValues(alpha: 0.3),
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.show_chart_rounded, color: themeColor, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                "Average for Point $point",
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  color: textMuted,
-                ),
-              ),
-            ],
-          ),
-          Text(
-            average != null ? average.toString() : "—",
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 16,
-              color: themeColor,
-            ),
-          ),
-        ],
       ),
     );
   }

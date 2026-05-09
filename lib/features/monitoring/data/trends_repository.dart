@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
 class TrendDataPoint {
@@ -40,7 +41,7 @@ class ParameterStats {
   });
 }
 
-class TrendsDataService {
+class TrendsRepository {
   static Map<String, List<NormalizedTrendPoint>> getNormalizedParameters(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
     String species,
@@ -182,3 +183,6 @@ class TrendsDataService {
     return statsList;
   }
 }
+final trendsRepositoryProvider = Provider<TrendsRepository>((ref) {
+  return TrendsRepository();
+});

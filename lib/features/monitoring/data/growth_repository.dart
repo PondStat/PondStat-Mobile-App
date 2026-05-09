@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
 class GrowthMetrics {
@@ -41,7 +42,7 @@ class GrowthMetrics {
   });
 }
 
-class GrowthDataService {
+class GrowthRepository {
   static Future<List<GrowthMetrics>> calculateGrowthMetrics(
     String pondId,
   ) async {
@@ -230,3 +231,7 @@ class GrowthDataService {
     return double.parse(value.toStringAsFixed(places));
   }
 }
+
+final growthRepositoryProvider = Provider<GrowthRepository>((ref) {
+  return GrowthRepository();
+});

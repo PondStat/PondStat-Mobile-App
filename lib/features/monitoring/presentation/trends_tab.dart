@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
-import 'package:pondstat/features/monitoring/presentation/trends_data_service.dart';
-import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
+import 'package:pondstat/features/monitoring/data/trends_repository.dart';
+import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/physical_parameters_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/chemical_parameters_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/biological_parameters_chart.dart';
@@ -61,7 +61,7 @@ class _TrendsTabState extends State<TrendsTab> {
         .snapshots();
 
     _growthMetricsFuture =
-        GrowthDataService.calculateGrowthMetrics(widget.pondId).then((metrics) {
+        GrowthRepository.calculateGrowthMetrics(widget.pondId).then((metrics) {
           final endOfDay = DateTime(
             widget.endDate.year,
             widget.endDate.month,
@@ -125,7 +125,7 @@ class _TrendsTabState extends State<TrendsTab> {
                   }
                 }
 
-                final physicalData = TrendsDataService.getNormalizedParameters(
+                final physicalData = TrendsRepository.getNormalizedParameters(
                   docs,
                   widget.species,
                   [
@@ -136,7 +136,7 @@ class _TrendsTabState extends State<TrendsTab> {
                   ],
                 );
 
-                final chemicalData = TrendsDataService.getNormalizedParameters(
+                final chemicalData = TrendsRepository.getNormalizedParameters(
                   docs,
                   widget.species,
                   [
@@ -154,7 +154,7 @@ class _TrendsTabState extends State<TrendsTab> {
                 );
 
                 final biologicalData =
-                    TrendsDataService.getNormalizedParameters(
+                    TrendsRepository.getNormalizedParameters(
                       docs,
                       widget.species,
                       [

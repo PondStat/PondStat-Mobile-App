@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
+import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 
 class FishGainsChart extends StatefulWidget {
   final List<GrowthMetrics> metrics;
