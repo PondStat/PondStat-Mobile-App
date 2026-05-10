@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
+import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 
 class GrowthTab extends StatefulWidget {
   final String pondId;
@@ -30,7 +30,7 @@ class _GrowthTabState extends State<GrowthTab> {
   @override
   void initState() {
     super.initState();
-    _growthMetricsFuture = GrowthDataService.calculateGrowthMetrics(
+    _growthMetricsFuture = GrowthRepository.calculateGrowthMetrics(
       widget.pondId,
     );
   }
@@ -39,7 +39,7 @@ class _GrowthTabState extends State<GrowthTab> {
   void didUpdateWidget(covariant GrowthTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pondId != widget.pondId) {
-      _growthMetricsFuture = GrowthDataService.calculateGrowthMetrics(
+      _growthMetricsFuture = GrowthRepository.calculateGrowthMetrics(
         widget.pondId,
       );
     }

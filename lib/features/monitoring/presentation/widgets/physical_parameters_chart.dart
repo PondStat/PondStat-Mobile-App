@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:pondstat/features/monitoring/presentation/trends_data_service.dart';
+import 'package:pondstat/features/monitoring/data/trends_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
 class PhysicalParametersChart extends StatefulWidget {

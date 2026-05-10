@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/schedule_header.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/schedule_list_item.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
@@ -286,7 +288,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
                 ),
               ),
             ),
-            _buildHeader(),
+            ScheduleHeader(pondName: widget.pondName),
             const SizedBox(height: 16),
             if (widget.canEdit)
               Container(
@@ -335,51 +337,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader() {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: primaryBlue.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.event_note_rounded, color: primaryBlue),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Schedule Manager",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: onSurface,
-                ),
-              ),
-              Text(
-                widget.pondName,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
-          onPressed: () => Navigator.maybePop(context),
-        ),
-      ],
     );
   }
 
@@ -634,8 +591,19 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
                     height: 1,
                     color: isDark ? Colors.white10 : Colors.grey.shade100,
                   ),
-                  itemBuilder: (context, index) =>
-                      _buildDayRow(_daysOfWeek[index]),
+                  itemBuilder: (context, index) {
+                    final day = _daysOfWeek[index];
+                    final bool morning = _schedule[day]?['morning'] ?? false;
+                    final bool afternoon = _schedule[day]?['afternoon'] ?? false;
+
+                    return ScheduleListItem(
+                      day: day,
+                      morningSelected: morning,
+                      afternoonSelected: afternoon,
+                      onToggleMorning: () => _toggleShift(day, 'morning'),
+                      onToggleAfternoon: () => _toggleShift(day, 'afternoon'),
+                    );
+                  },
                 ),
         ),
         _buildSaveButton(),
@@ -680,115 +648,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
               ),
             );
           }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDayRow(String day) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
-    final bool morning = _schedule[day]?['morning'] ?? false;
-    final bool afternoon = _schedule[day]?['afternoon'] ?? false;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 85,
-            child: Text(
-              day,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: onSurface,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildShiftButton(
-                    label: "Morning",
-                    icon: Icons.wb_sunny_rounded,
-                    isSelected: morning,
-                    onTap: () => _toggleShift(day, 'morning'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildShiftButton(
-                    label: "Afternoon",
-                    icon: Icons.wb_twilight_rounded,
-                    isSelected: afternoon,
-                    onTap: () => _toggleShift(day, 'afternoon'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShiftButton({
-    required String label,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final activeColor = label == "Morning"
-        ? Colors.amber.shade700
-        : Colors.indigo.shade600;
-    final activeBgColor = label == "Morning"
-        ? Colors.amber.shade50
-        : Colors.indigo.shade50;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBgColor : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? activeColor : Colors.grey.shade200,
-            width: 1.5,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: activeColor.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? activeColor : Colors.grey.shade400,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected ? activeColor : Colors.grey.shade500,
-              ),
-            ),
-          ],
         ),
       ),
     );

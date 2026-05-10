@@ -1,0 +1,5 @@
+flutter_native_splash:
+  color: "#ffffff"
+  image: "assets/PondStat_Logo.png"
+  color_dark: "#0F172A"
+  image_dark: "assets/PondStat_Logo.png"

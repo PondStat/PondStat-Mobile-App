@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+@Deprecated('Use firebase_providers and Repositories instead')
 class FirestoreHelper {
   static const String appId = 'pondstat-app-v1';
 

@@ -7,7 +7,7 @@ import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
-import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
+import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
 class GrowthPage extends StatefulWidget {

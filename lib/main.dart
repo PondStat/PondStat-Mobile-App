@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:developer' as developer;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:pondstat/core/theme/app_theme.dart';
 import 'package:pondstat/features/auth/presentation/auth_wrapper.dart';
-import 'package:pondstat/core/widgets/loading_overlay.dart';
 import 'package:pondstat/core/firebase/firebase_options.dart';
 import 'package:pondstat/core/services/notification_service.dart';
 import 'package:pondstat/core/services/settings_service.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Load user settings early
-  await SettingsService().loadSettings();
+  String? initializationError;
 
   try {
+    // Load user settings early
+    await SettingsService().loadSettings();
+
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -35,89 +38,91 @@ void main() async {
     }
 
     developer.log("✅ Firebase connected successfully!");
-  } catch (e) {
-    developer.log("❌ Firebase connection failed: $e");
+
+    // Initialize notifications (Mobile only)
+    if (!kIsWeb) {
+      await NotificationService().initialize();
+    }
+  } catch (e, stackTrace) {
+    developer.log(
+      "❌ Initialization failed: $e",
+      error: e,
+      stackTrace: stackTrace,
+    );
+    initializationError = e.toString();
+  } finally {
+    FlutterNativeSplash.remove();
   }
 
-  // Initialize notifications (Mobile only)
-  if (!kIsWeb) {
-    await NotificationService().initialize();
-  }
-
-  runApp(const MyApp());
+  runApp(ProviderScope(child: MyApp(initializationError: initializationError)));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String? initializationError;
+
+  const MyApp({super.key, this.initializationError});
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: SettingsService(),
       builder: (context, _) {
+        final themeMode = SettingsService().themeMode;
+
         return MaterialApp(
           title: 'PondStat',
           debugShowCheckedModeBanner: false,
-          themeMode: SettingsService().themeMode,
-          theme: AppTheme.lightTheme.copyWith(
-            textTheme: GoogleFonts.interTextTheme(
-              AppTheme.lightTheme.textTheme,
-            ),
-            appBarTheme: AppBarTheme(
-              titleTextStyle: GoogleFonts.poppins(
-                color: Colors.black87,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          darkTheme: AppTheme.darkTheme.copyWith(
-            textTheme: GoogleFonts.interTextTheme(AppTheme.darkTheme.textTheme),
-            appBarTheme: AppBarTheme(
-              titleTextStyle: GoogleFonts.poppins(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          home: const SplashScreen(),
+          themeMode: themeMode,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          home: initializationError != null
+              ? ErrorApp(error: initializationError!)
+              : const AuthWrapper(),
         );
       },
     );
   }
 }
 
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+class ErrorApp extends StatelessWidget {
+  final String error;
 
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const AuthWrapper(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-      }
-    });
-  }
+  const ErrorApp({super.key, required this.error});
 
   @override
   Widget build(BuildContext context) {
-    return const LoadingOverlay();
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 64),
+              const SizedBox(height: 16),
+              Text(
+                'Initialization Error',
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error,
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // A simple restart requires app to be closed and opened again
+                  // We provide a visual hint for the user
+                },
+                child: const Text('Please restart the application'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

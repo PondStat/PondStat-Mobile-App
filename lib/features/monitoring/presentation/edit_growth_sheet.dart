@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/utils/helpers.dart';
-import 'package:pondstat/features/monitoring/presentation/growth_data_service.dart';
+import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
 class EditGrowthSheet extends StatefulWidget {
