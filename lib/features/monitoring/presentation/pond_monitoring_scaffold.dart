@@ -4,6 +4,7 @@ import 'package:pondstat/features/dashboard/presentation/widgets/pond_background
 import 'package:pondstat/features/monitoring/presentation/widgets/monitoring_header.dart';
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_history_sheet.dart';
+import 'package:pondstat/core/widgets/empty_state_card.dart';
 
 import 'operations_page.dart';
 import 'overview_tab.dart';
@@ -39,8 +40,6 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
   DateTime? _selectedDay;
 
   bool get canEdit => widget.userRole == 'owner' || widget.userRole == 'editor';
-  final Color primaryBlue = const Color(0xFF0A74DA);
-  final Color secondaryBlue = const Color(0xFF4FA0F0);
 
   @override
   void initState() {
@@ -101,6 +100,10 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     final List<Widget> pages = [
       OperationsPage(
         pondId: widget.pondId,
@@ -153,16 +156,24 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
           selectedDay: _selectedDay!,
         )
       else
-        const Scaffold(
+        Scaffold(
           backgroundColor: Colors.transparent,
-          body: Center(
-            child: Text("Please select a day from the Overview tab"),
+          body: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Center(
+              child: EmptyStateCard(
+                icon: Icons.calendar_month_rounded,
+                title: "No Day Selected",
+                description:
+                    "Please return to the Overview tab and select a specific day on the calendar to view water quality parameters.",
+              ),
+            ),
           ),
         ),
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           const PondBackground(),
@@ -175,8 +186,6 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
                   onBackTap: () => Navigator.pop(context),
                   onHistoryTap: _showEditHistory,
                   onProfileTap: _showProfileSheet,
-                  primaryBlue: primaryBlue,
-                  secondaryBlue: secondaryBlue,
                 ),
                 Expanded(
                   child: IndexedStack(index: _currentIndex, children: pages),
@@ -188,13 +197,15 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
@@ -204,9 +215,11 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
             });
           },
           type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: primaryBlue,
-          unselectedItemColor: Colors.grey.shade400,
+          backgroundColor: colorScheme.surface,
+          selectedItemColor: colorScheme.primary,
+          unselectedItemColor: colorScheme.onSurfaceVariant.withValues(
+            alpha: 0.6,
+          ),
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 11,

@@ -7,8 +7,6 @@ class MonitoringHeader extends StatelessWidget {
   final VoidCallback onBackTap;
   final VoidCallback onHistoryTap;
   final VoidCallback onProfileTap;
-  final Color primaryBlue;
-  final Color secondaryBlue;
 
   const MonitoringHeader({
     super.key,
@@ -17,17 +15,17 @@ class MonitoringHeader extends StatelessWidget {
     required this.onBackTap,
     required this.onHistoryTap,
     required this.onProfileTap,
-    required this.primaryBlue,
-    required this.secondaryBlue,
   });
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = colorScheme.onSurface;
     final surfaceContainer = isDark
-        ? Theme.of(context).colorScheme.surfaceContainerHighest
+        ? colorScheme.surfaceContainerHighest
         : Colors.white;
 
     return Padding(
@@ -46,7 +44,7 @@ class MonitoringHeader extends StatelessWidget {
                 Text(
                   "MONITORING",
                   style: TextStyle(
-                    color: primaryBlue,
+                    color: colorScheme.primary,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
@@ -77,6 +75,7 @@ class MonitoringHeader extends StatelessWidget {
           GestureDetector(
             onTap: onProfileTap,
             child: _buildCircleContainer(
+              context: context,
               surfaceContainer: surfaceContainer,
               child: Padding(
                 padding: const EdgeInsets.all(2.0),
@@ -94,7 +93,7 @@ class MonitoringHeader extends StatelessWidget {
                               ? user!.displayName![0].toUpperCase()
                               : 'U',
                           style: TextStyle(
-                            color: primaryBlue,
+                            color: colorScheme.primary,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -118,6 +117,7 @@ class MonitoringHeader extends StatelessWidget {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return _buildCircleContainer(
+      context: context,
       surfaceContainer: surfaceContainer,
       child: IconButton(
         icon: Icon(
@@ -131,20 +131,24 @@ class MonitoringHeader extends StatelessWidget {
   }
 
   Widget _buildCircleContainer({
+    required BuildContext context,
     required Widget child,
     required Color surfaceContainer,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
         color: surfaceContainer,
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: child,
     );
