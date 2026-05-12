@@ -32,6 +32,24 @@ class _EditPondSheetState extends State<EditPondSheet> {
   String? _selectedSpecies;
   final List<String> _speciesOptions = ['Shrimp', 'Tilapia'];
 
+  bool get _isDirty {
+    final initialName = widget.initialData['name'] ?? '';
+    final initialQuantity =
+        widget.initialData['stockingQuantity']?.toString() ?? '';
+    final initialPeriod =
+        widget.initialData['targetCulturePeriodDays']?.toString() ?? '';
+    final initialSpecies = widget.initialData['species'];
+
+    return _pondNameController.text != initialName ||
+        _stockingQuantityController.text != initialQuantity ||
+        _culturePeriodController.text != initialPeriod ||
+        _selectedSpecies != initialSpecies;
+  }
+
+  void _onFieldChanged() {
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -49,10 +67,18 @@ class _EditPondSheetState extends State<EditPondSheet> {
     if (_speciesOptions.contains(species)) {
       _selectedSpecies = species;
     }
+
+    _pondNameController.addListener(_onFieldChanged);
+    _stockingQuantityController.addListener(_onFieldChanged);
+    _culturePeriodController.addListener(_onFieldChanged);
   }
 
   @override
   void dispose() {
+    _pondNameController.removeListener(_onFieldChanged);
+    _stockingQuantityController.removeListener(_onFieldChanged);
+    _culturePeriodController.removeListener(_onFieldChanged);
+
     _pondNameController.dispose();
     _stockingQuantityController.dispose();
     _culturePeriodController.dispose();
@@ -85,25 +111,47 @@ class _EditPondSheetState extends State<EditPondSheet> {
         targetCulturePeriodDays: culturePeriod,
       );
 
-      if (mounted) {
-        Navigator.of(context).pop();
-        SnackbarHelper.show(
-          context,
-          'Pond updated successfully!',
-          backgroundColor: Colors.green,
-        );
-      }
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      SnackbarHelper.show(
+        context,
+        'Pond updated successfully!',
+        backgroundColor: Colors.green,
+      );
     } catch (e) {
       debugPrint("Background sync error: $e");
-      if (mounted) {
-        setState(() => _isLoading = false);
-        SnackbarHelper.show(
-          context,
-          'Failed to update pond: $e',
-          backgroundColor: Colors.redAccent,
-        );
-      }
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      SnackbarHelper.show(
+        context,
+        'Failed to update pond: $e',
+        backgroundColor: Colors.redAccent,
+      );
     }
+  }
+
+  Future<bool> _showDiscardDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard changes?'),
+        content: const Text(
+          'You have unsaved changes. Are you sure you want to discard them?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   @override
@@ -111,145 +159,161 @@ class _EditPondSheetState extends State<EditPondSheet> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: isDark
-              ? const Border(top: BorderSide(color: Colors.white12))
-              : null,
-        ),
-        padding: EdgeInsets.only(
-          top: 12,
-          left: 24,
-          right: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 48,
-                    height: 5,
-                    margin: const EdgeInsets.only(bottom: 24),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white24 : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(10),
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldDiscard = await _showDiscardDialog();
+        if (shouldDiscard && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          decoration: BoxDecoration(
+            color:
+                theme.bottomSheetTheme.backgroundColor ??
+                theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: isDark
+                ? const Border(top: BorderSide(color: Colors.white12))
+                : null,
+          ),
+          padding: EdgeInsets.only(
+            top: 12,
+            left: 24,
+            right: 24,
+            bottom:
+                MediaQuery.viewInsetsOf(context).bottom +
+                MediaQuery.paddingOf(context).bottom +
+                24,
+          ),
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 5,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white24 : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
-                ),
-                _buildHeader(context, theme, isDark),
-                const SizedBox(height: 32),
-
-                PondStatTextField(
-                  controller: _pondNameController,
-                  label: 'Group Name',
-                  hint: 'e.g., Group A',
-                  prefixIcon: Icons.label_outline_rounded,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Enter a group name'
-                      : null,
-                ),
-                const SizedBox(height: 20),
-
-                PondStatDropdownField<String>(
-                  value: _selectedSpecies,
-                  label: 'Target Species',
-                  hint: 'Select species',
-                  prefixIcon: Icons.set_meal_outlined,
-                  items: _speciesOptions.map((String species) {
-                    return DropdownMenuItem<String>(
-                      value: species,
-                      child: Text(species, overflow: TextOverflow.ellipsis),
-                    );
-                  }).toList(),
-                  onChanged: _isLoading
-                      ? null
-                      : (val) => setState(() => _selectedSpecies = val),
-                  validator: (value) =>
-                      value == null ? 'Select a species' : null,
-                ),
-                const SizedBox(height: 20),
-
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: PondStatTextField(
-                        controller: _stockingQuantityController,
-                        label: 'Quantity',
-                        hint: '5000',
-                        prefixIcon: Icons.numbers_rounded,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        suffixIcon: Padding(
-                          padding: const EdgeInsets.only(right: 16, top: 18),
-                          child: Text(
-                            'pcs',
-                            style: TextStyle(
-                              color: isDark ? Colors.white38 : Colors.grey,
-                              fontWeight: FontWeight.bold,
+                  _buildHeader(context, theme, isDark),
+                  const SizedBox(height: 32),
+                  PondStatTextField(
+                    controller: _pondNameController,
+                    label: 'Group Name',
+                    hint: 'e.g., Group A',
+                    prefixIcon: Icons.label_outline_rounded,
+                    textInputAction: TextInputAction.next,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Enter a group name'
+                        : null,
+                  ),
+                  const SizedBox(height: 20),
+                  PondStatDropdownField<String>(
+                    value: _selectedSpecies,
+                    label: 'Target Species',
+                    hint: 'Select species',
+                    prefixIcon: Icons.set_meal_outlined,
+                    items: _speciesOptions.map((String species) {
+                      return DropdownMenuItem<String>(
+                        value: species,
+                        child: Text(species, overflow: TextOverflow.ellipsis),
+                      );
+                    }).toList(),
+                    onChanged: _isLoading
+                        ? null
+                        : (val) {
+                            setState(() => _selectedSpecies = val);
+                          },
+                    validator: (value) =>
+                        value == null ? 'Select a species' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: PondStatTextField(
+                          controller: _stockingQuantityController,
+                          label: 'Quantity',
+                          hint: '5000',
+                          prefixIcon: Icons.numbers_rounded,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          suffixIcon: Padding(
+                            padding: const EdgeInsets.only(right: 16, top: 18),
+                            child: Text(
+                              'pcs',
+                              style: TextStyle(
+                                color: isDark ? Colors.white38 : Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
+                          validator: (val) {
+                            if (val == null || val.isEmpty) return 'Required';
+                            if ((int.tryParse(val) ?? 0) <= 0) return 'Invalid';
+                            return null;
+                          },
                         ),
-                        validator: (val) {
-                          if (val == null || val.isEmpty) return 'Required';
-                          if ((int.tryParse(val) ?? 0) <= 0) return 'Invalid';
-                          return null;
-                        },
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: PondStatTextField(
-                        controller: _culturePeriodController,
-                        label: 'Culture Period',
-                        hint: '90',
-                        prefixIcon: Icons.calendar_month_rounded,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        suffixIcon: Padding(
-                          padding: const EdgeInsets.only(right: 16, top: 18),
-                          child: Text(
-                            'days',
-                            style: TextStyle(
-                              color: isDark ? Colors.white38 : Colors.grey,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: PondStatTextField(
+                          controller: _culturePeriodController,
+                          label: 'Culture Period',
+                          hint: '90',
+                          prefixIcon: Icons.calendar_month_rounded,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) =>
+                              _isLoading || !_isDirty ? null : _updatePond(),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          suffixIcon: Padding(
+                            padding: const EdgeInsets.only(right: 16, top: 18),
+                            child: Text(
+                              'days',
+                              style: TextStyle(
+                                color: isDark ? Colors.white38 : Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
+                          validator: (val) {
+                            if (val == null || val.isEmpty) return 'Required';
+                            if ((int.tryParse(val) ?? 0) <= 0) return 'Invalid';
+                            return null;
+                          },
                         ),
-                        validator: (val) {
-                          if (val == null || val.isEmpty) return 'Required';
-                          if ((int.tryParse(val) ?? 0) <= 0) return 'Invalid';
-                          return null;
-                        },
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 36),
-
-                PrimaryButton(
-                  text: 'Save Changes',
-                  icon: Icons.check_rounded,
-                  isLoading: _isLoading,
-                  onPressed: _isLoading ? () {} : _updatePond,
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 36),
+                  PrimaryButton(
+                    text: 'Save Changes',
+                    icon: Icons.check_rounded,
+                    isLoading: _isLoading,
+                    onPressed: (!_isDirty || _isLoading) ? null : _updatePond,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -309,7 +373,16 @@ class _EditPondSheetState extends State<EditPondSheet> {
               color: isDark ? Colors.white54 : Colors.grey,
               size: 20,
             ),
-            onPressed: _isLoading ? null : () => Navigator.pop(context),
+            onPressed: _isLoading
+                ? null
+                : () async {
+                    if (_isDirty) {
+                      final discard = await _showDiscardDialog();
+                      if (discard && context.mounted) Navigator.pop(context);
+                    } else {
+                      Navigator.pop(context);
+                    }
+                  },
           ),
         ),
       ],
