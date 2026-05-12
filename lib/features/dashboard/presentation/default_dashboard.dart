@@ -172,7 +172,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final bool isMatch = typedName.trim() == 'DELETE';
+            final bool isMatch = typedName.trim().toUpperCase() == 'DELETE';
             return AlertDialog(
               backgroundColor: theme.scaffoldBackgroundColor,
               shape: RoundedRectangleBorder(
@@ -310,80 +310,11 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   @override
   Widget build(BuildContext context) {
     final user = AuthRepository().currentUser;
+    if (user == null) return const SizedBox.shrink();
+
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-
-    if (user == null) {
-      return Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.lock_person_outlined,
-                  size: 56,
-                  color: isDark ? Colors.white38 : Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                "Session Expired",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Please log in again to view your ponds.",
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () async => await AuthRepository().signOut(),
-                icon: const Icon(Icons.login),
-                label: const Text(
-                  "Log In Again",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -503,257 +434,270 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: !_hasConnection
-                  ? Container(
-                      key: const ValueKey('offline'),
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      color: Colors.grey.shade600,
-                      child: const Text(
-                        "You have no internet connection",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    )
-                  : _showOnlineMessage
-                  ? Container(
-                      key: const ValueKey('online'),
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      color: Colors.green,
-                      child: const Text(
-                        "Back online!",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    )
-                  : const SizedBox.shrink(key: ValueKey('empty')),
-            ),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                const PondBackground(),
-                StreamBuilder<QuerySnapshot>(
-                  stream: _userPondsStream,
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData &&
-                        snapshot.connectionState == ConnectionState.waiting) {
-                      return _buildSkeletonLoader();
-                    }
-
-                    if (snapshot.hasError) {
-                      return _buildErrorState(snapshot.error.toString());
-                    }
-
-                    final ponds = snapshot.data?.docs ?? [];
-
-                    if (ponds.isEmpty) {
-                      return _buildEmptyState(context);
-                    }
-
-                    // Sort client-side by createdAt descending without mutating original list
-                    final sortedPonds = List<DocumentSnapshot>.from(ponds)
-                      ..sort((a, b) {
-                        final dataA = a.data() as Map<String, dynamic>;
-                        final dataB = b.data() as Map<String, dynamic>;
-                        final tA = dataA['createdAt'] as Timestamp?;
-                        final tB = dataB['createdAt'] as Timestamp?;
-                        if (tA == null && tB == null) return 0;
-                        if (tA == null) return 1;
-                        if (tB == null) return -1;
-                        return tB.compareTo(tA);
-                      });
-
-                    return NotificationListener<ScrollNotification>(
-                      onNotification: (ScrollNotification notification) {
-                        if (notification is ScrollStartNotification ||
-                            notification is ScrollUpdateNotification) {
-                          if (_isFabVisible) {
-                            setState(() => _isFabVisible = false);
-                          }
-                        } else if (notification is ScrollEndNotification) {
-                          if (!_isFabVisible) {
-                            setState(() => _isFabVisible = true);
-                          }
+          Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    const PondBackground(),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: _userPondsStream,
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData &&
+                            snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                          return _buildSkeletonLoader();
                         }
-                        return false;
-                      },
-                      child: RefreshIndicator(
-                        color: primaryBlue,
-                        backgroundColor: Colors.white,
-                        onRefresh: () async => await Future.delayed(
-                          const Duration(milliseconds: 800),
-                        ),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(
-                            16,
-                          ).copyWith(bottom: 100),
-                          itemCount: sortedPonds.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == 0) {
-                              return Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: 16.0,
-                                  left: 4.0,
-                                ),
-                                child: Text(
-                                  "Pond List",
-                                  style: TextStyle(
-                                    color: colorScheme.onSurface,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 22,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                              );
+
+                        if (snapshot.hasError) {
+                          return _buildErrorState(snapshot.error.toString());
+                        }
+
+                        final ponds = snapshot.data?.docs ?? [];
+
+                        if (ponds.isEmpty) {
+                          return _buildEmptyState(context);
+                        }
+
+                        // Sort client-side by createdAt descending without mutating original list
+                        final sortedPonds = List<DocumentSnapshot>.from(ponds)
+                          ..sort((a, b) {
+                            final dataA = a.data() as Map<String, dynamic>;
+                            final dataB = b.data() as Map<String, dynamic>;
+                            final tA = dataA['createdAt'] as Timestamp?;
+                            final tB = dataB['createdAt'] as Timestamp?;
+                            if (tA == null && tB == null) return 0;
+                            if (tA == null) return 1;
+                            if (tB == null) return -1;
+                            return tB.compareTo(tA);
+                          });
+
+                        return NotificationListener<ScrollNotification>(
+                          onNotification: (ScrollNotification notification) {
+                            if (notification is ScrollStartNotification ||
+                                notification is ScrollUpdateNotification) {
+                              if (_isFabVisible) {
+                                setState(() => _isFabVisible = false);
+                              }
+                            } else if (notification is ScrollEndNotification) {
+                              if (!_isFabVisible) {
+                                setState(() => _isFabVisible = true);
+                              }
                             }
-
-                            final pondDoc = sortedPonds[index - 1];
-                            final pondData =
-                                pondDoc.data() as Map<String, dynamic>;
-                            final String pondName =
-                                pondData['name'] ?? 'Unnamed Pond';
-                            final String userRole =
-                                pondData['roles']?[user.uid] ?? 'viewer';
-                            final bool isOwner = userRole == 'owner';
-
-                            final card = PondListCard(
-                              pondId: pondDoc.id,
-                              pondName: pondName,
-                              species: pondData['species'] ?? 'Unspecified',
-                              userRole: userRole,
-                              createdAt:
-                                  (pondData['createdAt'] as Timestamp?)
-                                      ?.toDate() ??
-                                  DateTime.now(),
-                              targetCulturePeriodDays:
-                                  pondData['targetCulturePeriodDays'] ?? 90,
-                            );
-
-                            if (isOwner) {
-                              return Slidable(
-                                key: Key(pondDoc.id),
-                                endActionPane: ActionPane(
-                                  motion: const ScrollMotion(),
-                                  extentRatio: 0.50,
-                                  children: [
-                                    CustomSlidableAction(
-                                      onPressed: (context) {
-                                        HapticFeedback.mediumImpact();
-                                        _showEditPondSheet(
-                                          context,
-                                          pondDoc.id,
-                                          pondData,
-                                        );
-                                      },
-                                      backgroundColor: Colors.transparent,
-                                      foregroundColor: Colors.white,
-                                      padding: EdgeInsets.zero,
-                                      child: Container(
-                                        margin: const EdgeInsets.only(
-                                          bottom: 16,
-                                          left: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: primaryBlue,
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.edit_rounded, size: 28),
-                                            SizedBox(height: 4),
-                                            Text(
-                                              'Edit',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    CustomSlidableAction(
-                                      onPressed: (context) async {
-                                        HapticFeedback.mediumImpact();
-                                        bool confirm =
-                                            await _confirmDelete(
-                                              context,
-                                              pondName,
-                                            ) ??
-                                            false;
-                                        if (confirm) {
-                                          _deletePond(pondDoc.id, pondName);
-                                        }
-                                      },
-                                      backgroundColor: Colors.transparent,
-                                      foregroundColor: Colors.white,
-                                      padding: EdgeInsets.zero,
-                                      child: Container(
-                                        margin: const EdgeInsets.only(
-                                          bottom: 16,
-                                          left: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.shade400,
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.delete_sweep_rounded,
-                                              size: 28,
-                                            ),
-                                            SizedBox(height: 4),
-                                            Text(
-                                              'Delete',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                child: card,
-                              );
-                            }
-
-                            return card;
+                            return false;
                           },
-                        ),
-                      ),
-                    );
-                  },
+                          child: RefreshIndicator(
+                            color: primaryBlue,
+                            backgroundColor: Colors.white,
+                            triggerMode: RefreshIndicatorTriggerMode.anywhere,
+                            onRefresh: () async => await Future.delayed(
+                              const Duration(milliseconds: 800),
+                            ),
+                            child: ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.all(
+                                16,
+                              ).copyWith(bottom: 100),
+                              itemCount: sortedPonds.length + 1,
+                              itemBuilder: (context, index) {
+                                if (index == 0) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: 16.0,
+                                      left: 4.0,
+                                    ),
+                                    child: Text(
+                                      "Pond List",
+                                      style: TextStyle(
+                                        color: colorScheme.onSurface,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 22,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                final pondDoc = sortedPonds[index - 1];
+                                final pondData =
+                                    pondDoc.data() as Map<String, dynamic>;
+                                final String pondName =
+                                    pondData['name'] ?? 'Unnamed Pond';
+                                final String userRole =
+                                    pondData['roles']?[user.uid] ?? 'viewer';
+                                final bool isOwner = userRole == 'owner';
+
+                                final card = PondListCard(
+                                  pondId: pondDoc.id,
+                                  pondName: pondName,
+                                  species: pondData['species'] ?? 'Unspecified',
+                                  userRole: userRole,
+                                  createdAt:
+                                      (pondData['createdAt'] as Timestamp?)
+                                          ?.toDate() ??
+                                      DateTime.now(),
+                                  targetCulturePeriodDays:
+                                      pondData['targetCulturePeriodDays'] ?? 90,
+                                );
+
+                                if (isOwner) {
+                                  return Slidable(
+                                    key: Key(pondDoc.id),
+                                    endActionPane: ActionPane(
+                                      motion: const ScrollMotion(),
+                                      extentRatio: 0.50,
+                                      children: [
+                                        CustomSlidableAction(
+                                          onPressed: (context) {
+                                            HapticFeedback.mediumImpact();
+                                            _showEditPondSheet(
+                                              context,
+                                              pondDoc.id,
+                                              pondData,
+                                            );
+                                          },
+                                          backgroundColor: Colors.transparent,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.zero,
+                                          child: Container(
+                                            margin: const EdgeInsets.only(
+                                              bottom: 16,
+                                              left: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: primaryBlue,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: const Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.edit_rounded,
+                                                  size: 28,
+                                                ),
+                                                SizedBox(height: 4),
+                                                Text(
+                                                  'Edit',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        CustomSlidableAction(
+                                          onPressed: (context) async {
+                                            HapticFeedback.mediumImpact();
+                                            bool confirm =
+                                                await _confirmDelete(
+                                                  context,
+                                                  pondName,
+                                                ) ??
+                                                false;
+                                            if (confirm) {
+                                              _deletePond(pondDoc.id, pondName);
+                                            }
+                                          },
+                                          backgroundColor: Colors.transparent,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.zero,
+                                          child: Container(
+                                            margin: const EdgeInsets.only(
+                                              bottom: 16,
+                                              left: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red.shade400,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: const Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.delete_sweep_rounded,
+                                                  size: 28,
+                                                ),
+                                                SizedBox(height: 4),
+                                                Text(
+                                                  'Delete',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    child: card,
+                                  );
+                                }
+
+                                return card;
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            ],
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: !_hasConnection
+                    ? Container(
+                        key: const ValueKey('offline'),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        color: Colors.grey.shade600,
+                        child: const Text(
+                          "You have no internet connection",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    : _showOnlineMessage
+                    ? Container(
+                        key: const ValueKey('online'),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        color: Colors.green,
+                        child: const Text(
+                          "Back online!",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(key: ValueKey('empty')),
+              ),
             ),
           ),
         ],
@@ -805,8 +749,10 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
 
   Widget _buildSkeletonLoader() {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final cardColor = theme.cardTheme.color ?? theme.cardColor;
     final dividerColor = theme.dividerColor;
+    final placeholderColor = isDark ? Colors.grey.shade800 : Colors.white;
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -852,7 +798,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                       height: 18,
                       width: titleWidth,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: placeholderColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -861,7 +807,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                       height: 12,
                       width: subWidth,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: placeholderColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -873,15 +819,15 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                           height: 24,
                           width: 80,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: placeholderColor,
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         Container(
                           height: 24,
                           width: 24,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
+                          decoration: BoxDecoration(
+                            color: placeholderColor,
                             shape: BoxShape.circle,
                           ),
                         ),
