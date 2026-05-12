@@ -28,14 +28,11 @@ class PondListCard extends StatefulWidget {
 class _PondListCardState extends State<PondListCard> {
   bool _isNavigating = false;
 
-  double _scale = 1.0;
-
   Future<void> _navigateToMonitoring(BuildContext context) async {
     if (_isNavigating) return;
 
     setState(() {
       _isNavigating = true;
-      _scale = 1.0;
     });
 
     HapticFeedback.mediumImpact();
@@ -65,154 +62,150 @@ class _PondListCardState extends State<PondListCard> {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
+    final currentDay = DateTime.now().difference(widget.createdAt).inDays;
+    // Cap current day to 0 if it's somehow negative (e.g. timezones)
+    final displayDay = currentDay < 0 ? 0 : currentDay;
+
     return Semantics(
       button: true,
       label:
-          "${widget.pondName} pond. Species: ${widget.species}. Your role is ${widget.userRole}.",
+          "${widget.pondName} pond. Species: ${widget.species}. Your role is ${widget.userRole}. Day $displayDay of ${widget.targetCulturePeriodDays}.",
       excludeSemantics: true,
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOutQuart,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(24),
+          border: isDark ? Border.all(color: Colors.white12) : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: colorScheme.primary.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          child: InkWell(
             borderRadius: BorderRadius.circular(24),
-            border: isDark ? Border.all(color: Colors.white12) : null,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-              BoxShadow(
-                color: colorScheme.primary.withValues(alpha: 0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(24),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(24),
-              onTapDown: (_) => setState(() => _scale = 0.97),
-              onTapUp: (_) => setState(() => _scale = 1.0),
-              onTapCancel: () => setState(() => _scale = 1.0),
-              onTap: () => _navigateToMonitoring(context),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Hero(
+            onTap: () => _navigateToMonitoring(context),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Container(
+                    height: 56,
+                    width: 56,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [colorScheme.secondary, colorScheme.primary],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Hero(
                       tag: 'pond-icon-${widget.pondId}',
                       child: Material(
                         type: MaterialType.transparency,
-                        child: Container(
-                          height: 56,
-                          width: 56,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                colorScheme.secondary,
-                                colorScheme.primary,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: colorScheme.primary.withValues(
-                                  alpha: 0.3,
-                                ),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: FaIcon(
-                            _getSpeciesIcon(widget.species),
-                            color: Colors.white,
-                            size: 28,
-                          ),
+                        child: FaIcon(
+                          _getSpeciesIcon(widget.species),
+                          color: Colors.white,
+                          size: 28,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.pondName,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 18,
-                              letterSpacing: -0.3,
-                              color: colorScheme.onSurface,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              FaIcon(
-                                _getSpeciesIcon(widget.species),
-                                size: 14,
-                                color: colorScheme.onSurfaceVariant.withValues(
-                                  alpha: 0.7,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  widget.species,
-                                  style: TextStyle(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildRoleBadge(colorScheme, isDark),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white12
-                                : Colors.grey.shade50,
-                            shape: BoxShape.circle,
+                        Text(
+                          widget.pondName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                            letterSpacing: -0.3,
+                            color: colorScheme.onSurface,
                           ),
-                          child: Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: isDark
-                                ? Colors.white38
-                                : Colors.grey.shade400,
-                            size: 14,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            FaIcon(
+                              _getSpeciesIcon(widget.species),
+                              size: 14,
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.7,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                widget.species,
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Day $displayDay of ${widget.targetCulturePeriodDays}',
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildRoleBadge(colorScheme, isDark),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white12 : Colors.grey.shade50,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: isDark ? Colors.white38 : Colors.grey.shade400,
+                          size: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
