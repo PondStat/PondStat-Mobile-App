@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class PondStatTextField extends StatelessWidget {
+class PondStatTextField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
   final String? hint;
@@ -16,6 +16,9 @@ class PondStatTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final bool obscureText;
   final List<TextInputFormatter>? inputFormatters;
+  final bool enabled;
+  final bool readOnly;
+  final Iterable<String>? autofillHints;
 
   const PondStatTextField({
     super.key,
@@ -33,7 +36,39 @@ class PondStatTextField extends StatelessWidget {
     this.suffixIcon,
     this.obscureText = false,
     this.inputFormatters,
+    this.enabled = true,
+    this.readOnly = false,
+    this.autofillHints,
   });
+
+  @override
+  State<PondStatTextField> createState() => _PondStatTextFieldState();
+}
+
+class _PondStatTextFieldState extends State<PondStatTextField> {
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = widget.focusNode ?? FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(PondStatTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusNode != oldWidget.focusNode) {
+      _focusNode = widget.focusNode ?? FocusNode();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.focusNode == null) {
+      _focusNode.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,46 +76,60 @@ class PondStatTextField extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              color: isDark
-                  ? colorScheme.onSurfaceVariant
-                  : const Color(0xFF64748B),
-              letterSpacing: 1.2,
+    return Opacity(
+      opacity: widget.enabled ? 1.0 : 0.5,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () {
+              if (widget.enabled && !widget.readOnly) {
+                _focusNode.requestFocus();
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                widget.label.toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: isDark
+                      ? colorScheme.onSurfaceVariant
+                      : colorScheme.onSurface.withValues(alpha: 0.6),
+                  letterSpacing: 1.2,
+                ),
+              ),
             ),
           ),
-        ),
-        TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          obscureText: obscureText,
-          textInputAction: textInputAction,
-          inputFormatters: inputFormatters,
-          onFieldSubmitted: onSubmitted,
-          onChanged: onChanged,
-          validator: validator,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
+          TextFormField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            keyboardType: widget.keyboardType,
+            maxLines: widget.maxLines,
+            obscureText: widget.obscureText,
+            textInputAction: widget.textInputAction,
+            inputFormatters: widget.inputFormatters,
+            onFieldSubmitted: widget.onSubmitted,
+            onChanged: widget.onChanged,
+            validator: widget.validator,
+            enabled: widget.enabled,
+            readOnly: widget.readOnly,
+            autofillHints: widget.autofillHints,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              prefixIcon: widget.prefixIcon != null
+                  ? Icon(widget.prefixIcon, size: 20)
+                  : null,
+              suffixIcon: widget.suffixIcon,
+              // Rest of the styling is inherited from app_theme.dart's inputDecorationTheme
+            ),
           ),
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
-            suffixIcon: suffixIcon,
-            // Rest of the styling is inherited from app_theme.dart's inputDecorationTheme
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
