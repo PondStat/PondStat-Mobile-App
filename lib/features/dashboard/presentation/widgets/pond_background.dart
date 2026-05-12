@@ -18,7 +18,7 @@ class _PondBackgroundState extends State<PondBackground>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 15),
-    )..repeat();
+    );
   }
 
   @override
@@ -28,27 +28,37 @@ class _PondBackgroundState extends State<PondBackground>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+    } else {
+      if (!_controller.isAnimating) {
+        _controller.repeat();
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
-    final bgColors = isDark
-        ? const [Color(0xFF0F172A), Color(0xFF1E293B)]
-        : const [Color(0xFFEAF4FF), Color(0xFFF7F9FC)];
+    final bgColors = [colorScheme.surface, colorScheme.surfaceContainerHighest];
 
-    final blob1Color = isDark
-        ? const Color(0xFF38BDF8).withValues(alpha: 0.04)
-        : const Color(0xFF0077C2).withValues(alpha: 0.10);
+    final blob1Color = colorScheme.primary.withValues(
+      alpha: isDark ? 0.04 : 0.10,
+    );
+    final blob2Color = colorScheme.secondary.withValues(
+      alpha: isDark ? 0.04 : 0.08,
+    );
+    final blob3Color = colorScheme.tertiary.withValues(
+      alpha: isDark ? 0.03 : 0.06,
+    );
 
-    final blob2Color = isDark
-        ? const Color(0xFF818CF8).withValues(alpha: 0.04)
-        : const Color(0xFF0099E5).withValues(alpha: 0.08);
-
-    final blob3Color = isDark
-        ? const Color(0xFF0EA5E9).withValues(alpha: 0.03)
-        : const Color(0xFF0077C2).withValues(alpha: 0.07);
-
-    final dotColor = isDark ? Colors.white : Colors.black;
+    final dotColor = colorScheme.onSurface;
     final dotOpacity = isDark ? 0.05 : 0.035;
 
     return RepaintBoundary(
@@ -76,27 +86,36 @@ class _PondBackgroundState extends State<PondBackground>
                 return Stack(
                   children: [
                     Positioned(
-                      top: (size.height * -0.1) + float1,
-                      left: (size.width * -0.2) + float2,
-                      child: _buildBlob(
-                        size: size.width * 0.9,
-                        color: blob1Color,
+                      top: size.height * -0.1,
+                      left: size.width * -0.2,
+                      child: Transform.translate(
+                        offset: Offset(float2, float1),
+                        child: _buildBlob(
+                          size: size.width * 0.9,
+                          color: blob1Color,
+                        ),
                       ),
                     ),
                     Positioned(
-                      top: (size.height * 0.3) + float3,
-                      right: (size.width * -0.3) + float1,
-                      child: _buildBlob(
-                        size: size.width * 0.8,
-                        color: blob2Color,
+                      top: size.height * 0.3,
+                      right: size.width * -0.3,
+                      child: Transform.translate(
+                        offset: Offset(float1, float3),
+                        child: _buildBlob(
+                          size: size.width * 0.8,
+                          color: blob2Color,
+                        ),
                       ),
                     ),
                     Positioned(
-                      bottom: (size.height * -0.15) + float2,
-                      left: (size.width * -0.15) + float3,
-                      child: _buildBlob(
-                        size: size.width * 1.0,
-                        color: blob3Color,
+                      bottom: size.height * -0.15,
+                      left: size.width * -0.15,
+                      child: Transform.translate(
+                        offset: Offset(float3, float2),
+                        child: _buildBlob(
+                          size: size.width * 1.0,
+                          color: blob3Color,
+                        ),
                       ),
                     ),
                   ],
@@ -124,9 +143,11 @@ class _PondBackgroundState extends State<PondBackground>
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color,
         borderRadius: BorderRadius.circular(size),
-        boxShadow: [BoxShadow(color: color, blurRadius: 80, spreadRadius: 10)],
+        gradient: RadialGradient(
+          colors: [color, color.withValues(alpha: 0.0)],
+          stops: const [0.0, 1.0],
+        ),
       ),
     );
   }
