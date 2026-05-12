@@ -153,23 +153,22 @@ class _TrendsTabState extends State<TrendsTab> {
                   ],
                 );
 
-                final biologicalData =
-                    TrendsRepository.getNormalizedParameters(
-                      docs,
-                      widget.species,
-                      [
-                        'Phytoplankton',
-                        'Test 10-1 (Average yellow colonies)',
-                        'Test yellow 10-1 (CFU/ml)',
-                        'Test 10-2 (Average yellow colonies)',
-                        'Test yellow 10-2 (CFU/ml)',
-                        'Test 10-1 (Average green colonies)',
-                        'Test green 10-1 (CFU/ml)',
-                        'Test 10-2 (Average green colonies)',
-                        'Test green 10-2 (CFU/ml)',
-                        ...customBiological,
-                      ],
-                    );
+                final biologicalData = TrendsRepository.getNormalizedParameters(
+                  docs,
+                  widget.species,
+                  [
+                    'Phytoplankton',
+                    'Test 10-1 (Average yellow colonies)',
+                    'Test yellow 10-1 (CFU/ml)',
+                    'Test 10-2 (Average yellow colonies)',
+                    'Test yellow 10-2 (CFU/ml)',
+                    'Test 10-1 (Average green colonies)',
+                    'Test green 10-1 (CFU/ml)',
+                    'Test 10-2 (Average green colonies)',
+                    'Test green 10-2 (CFU/ml)',
+                    ...customBiological,
+                  ],
+                );
 
                 return ListView(
                   padding: const EdgeInsets.symmetric(

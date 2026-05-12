@@ -183,6 +183,7 @@ class TrendsRepository {
     return statsList;
   }
 }
+
 final trendsRepositoryProvider = Provider<TrendsRepository>((ref) {
   return TrendsRepository();
 });

@@ -8,17 +8,15 @@ void main() {
   group('Firebase Providers', () {
     test('appBaseRefProvider constructs the correct path', () {
       final fakeFirestore = FakeFirebaseFirestore();
-      
+
       final container = ProviderContainer(
-        overrides: [
-          firebaseFirestoreProvider.overrideWithValue(fakeFirestore),
-        ],
+        overrides: [firebaseFirestoreProvider.overrideWithValue(fakeFirestore)],
       );
-      
+
       addTearDown(container.dispose);
-      
+
       final ref = container.read(appBaseRefProvider);
-      
+
       expect(ref.path, 'artifacts/${EnvConfig.appId}/public/data');
     });
   });

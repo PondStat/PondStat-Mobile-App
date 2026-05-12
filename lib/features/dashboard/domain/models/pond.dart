@@ -62,7 +62,8 @@ class Pond extends Equatable {
       name: name ?? this.name,
       species: species ?? this.species,
       stockingQuantity: stockingQuantity ?? this.stockingQuantity,
-      targetCulturePeriodDays: targetCulturePeriodDays ?? this.targetCulturePeriodDays,
+      targetCulturePeriodDays:
+          targetCulturePeriodDays ?? this.targetCulturePeriodDays,
       ownerId: ownerId ?? this.ownerId,
       memberIds: memberIds ?? this.memberIds,
       roles: roles ?? this.roles,
@@ -71,13 +72,13 @@ class Pond extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        species,
-        stockingQuantity,
-        targetCulturePeriodDays,
-        ownerId,
-        memberIds,
-        roles,
-      ];
+    id,
+    name,
+    species,
+    stockingQuantity,
+    targetCulturePeriodDays,
+    ownerId,
+    memberIds,
+    roles,
+  ];
 }

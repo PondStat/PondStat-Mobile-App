@@ -58,7 +58,11 @@ class RecordFormFields extends StatelessWidget {
     );
   }
 
-  Widget _buildDataPointsHeader(BuildContext context, bool hasRange, Color themeColor) {
+  Widget _buildDataPointsHeader(
+    BuildContext context,
+    bool hasRange,
+    Color themeColor,
+  ) {
     Color textDark = Theme.of(context).colorScheme.onSurface;
     Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
 
@@ -150,7 +154,13 @@ class RecordFormFields extends StatelessWidget {
       // For single point parameters, show 1 input value (treated as Point A, Replicate 1 behind the scenes)
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: _buildReplicateInput(context, 'A', 1, themeColor, customLabel: "Value"),
+        child: _buildReplicateInput(
+          context,
+          'A',
+          1,
+          themeColor,
+          customLabel: "Value",
+        ),
       );
     }
 
@@ -419,7 +429,11 @@ class RecordFormFields extends StatelessWidget {
     );
   }
 
-  Widget _buildAverageDisplay(BuildContext context, String point, Color themeColor) {
+  Widget _buildAverageDisplay(
+    BuildContext context,
+    String point,
+    Color themeColor,
+  ) {
     Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
     final average = calculatePointAverage(point);
 

@@ -46,6 +46,27 @@ extension ThemeContextExtension on BuildContext {
       Theme.of(this).extension<PondStatusColors>()!;
 }
 
+class AppMetrics {
+  AppMetrics._();
+
+  // Padding
+  static const double paddingSmall = 8.0;
+  static const double paddingMedium = 16.0;
+  static const double paddingLarge = 24.0;
+
+  // Border Radius
+  static const double radiusSmall = 8.0;
+  static const double radiusButton = 12.0;
+  static const double radiusMedium = 16.0;
+  static const double radiusLarge = 20.0;
+  static const double radiusExtraLarge = 32.0;
+
+  // Icon Size
+  static const double iconSmall = 16.0;
+  static const double iconMedium = 24.0;
+  static const double iconLarge = 32.0;
+}
+
 class AppTheme {
   AppTheme._();
 
@@ -56,6 +77,7 @@ class AppTheme {
   static const Color _slate100 = Color(0xFFF1F5F9);
   static const Color _slate400 = Color(0xFF94A3B8);
   static const Color _slate500 = Color(0xFF64748B);
+  static const Color _slate600 = Color(0xFF475569);
   static const Color _slate800 = Color(0xFF1E293B);
   static const Color _slate900 = Color(0xFF0F172A);
   static const Color _slate950 = Color(0xFF0B1120);
@@ -121,6 +143,43 @@ class AppTheme {
       extensions: <ThemeExtension<dynamic>>[
         isDark ? _darkPondColors : _lightPondColors,
       ],
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusLarge),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppMetrics.paddingMedium,
+          vertical: AppMetrics.paddingSmall / 2,
+        ),
+        iconColor: isDark ? Colors.white70 : _slate600,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: isDark ? _slate800 : _slate100,
+        disabledColor: isDark
+            ? _slate800.withValues(alpha: 0.5)
+            : _slate100.withValues(alpha: 0.5),
+        selectedColor: colorScheme.primary.withValues(alpha: 0.2),
+        secondarySelectedColor: colorScheme.primary,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppMetrics.paddingSmall,
+          vertical: 0,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusSmall),
+          side: const BorderSide(color: Colors.transparent),
+        ),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.surface.withValues(alpha: 0.95),
         scrolledUnderElevation: 4,
@@ -139,9 +198,9 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         color: isDark ? _slate800 : Colors.white,
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: AppMetrics.paddingMedium),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusLarge),
           side: BorderSide(
             color: isDark ? Colors.white12 : Colors.grey.shade100,
             width: 1,
@@ -152,37 +211,34 @@ class AppTheme {
         filled: true,
         fillColor: isDark ? _slate800 : _slate100,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 18,
+          horizontal: AppMetrics.paddingLarge,
+          vertical: AppMetrics.paddingMedium,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.0),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusMedium),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.0),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusMedium),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.0),
-          borderSide: BorderSide(
-            color: colorScheme.primary.withValues(alpha: 0.5),
-            width: 2,
-          ),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusMedium),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.0),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusMedium),
           borderSide: BorderSide(
             color: colorScheme.error.withValues(alpha: 0.5),
             width: 2,
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.0),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusMedium),
           borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
         hintStyle: TextStyle(
-          color: isDark ? Colors.white54 : _slate500,
+          color: isDark ? Colors.white70 : _slate600,
           fontWeight: FontWeight.w500,
         ),
         labelStyle: TextStyle(
@@ -193,18 +249,18 @@ class AppTheme {
           color: colorScheme.primary,
           fontWeight: FontWeight.w800,
         ),
-        prefixIconColor: isDark ? Colors.white70 : _slate500,
+        prefixIconColor: isDark ? Colors.white70 : _slate600,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style:
             ElevatedButton.styleFrom(
               elevation: 0,
               padding: const EdgeInsets.symmetric(
-                vertical: 18.0,
-                horizontal: 24.0,
+                vertical: AppMetrics.paddingMedium,
+                horizontal: AppMetrics.paddingLarge,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0),
+                borderRadius: BorderRadius.circular(AppMetrics.radiusMedium),
               ),
               textStyle: GoogleFonts.inter(fontWeight: FontWeight.bold),
             ).copyWith(
@@ -229,9 +285,12 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppMetrics.paddingMedium,
+            vertical: AppMetrics.paddingSmall,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
+            borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
           ),
           textStyle: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
@@ -240,7 +299,9 @@ class AppTheme {
         backgroundColor: colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusLarge),
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: _slate800,
@@ -248,9 +309,13 @@ class AppTheme {
           color: Colors.white,
           fontWeight: FontWeight.w600,
         ),
+        actionTextColor: customBlue,
         behavior: SnackBarBehavior.floating,
         elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppMetrics.radiusMedium),
+        ),
+        insetPadding: const EdgeInsets.all(AppMetrics.paddingMedium),
       ),
       dividerTheme: DividerThemeData(
         color: isDark ? Colors.white12 : Colors.grey.shade200,
@@ -260,7 +325,9 @@ class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: colorScheme.surface,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppMetrics.radiusExtraLarge),
+          ),
         ),
         elevation: 0,
       ),

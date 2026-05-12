@@ -11,7 +11,9 @@ final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
 });
 
-final appBaseRefProvider = Provider<DocumentReference<Map<String, dynamic>>>((ref) {
+final appBaseRefProvider = Provider<DocumentReference<Map<String, dynamic>>>((
+  ref,
+) {
   final firestore = ref.watch(firebaseFirestoreProvider);
   return firestore
       .collection('artifacts')

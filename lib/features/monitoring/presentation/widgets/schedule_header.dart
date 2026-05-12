@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class ScheduleHeader extends StatelessWidget {
   final String pondName;
 
-  const ScheduleHeader({
-    super.key,
-    required this.pondName,
-  });
+  const ScheduleHeader({super.key, required this.pondName});
 
   @override
   Widget build(BuildContext context) {

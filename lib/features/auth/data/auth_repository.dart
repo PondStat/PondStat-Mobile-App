@@ -84,8 +84,11 @@ class AuthRepository {
           'lastTokenUpdate': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } catch (e) {
-        developer.log('Error updating FCM token',
-            error: e, name: 'auth.repository');
+        developer.log(
+          'Error updating FCM token',
+          error: e,
+          name: 'auth.repository',
+        );
       }
     }
     // If token is null (e.g. permission denied), we DO NOT delete the existing token

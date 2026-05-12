@@ -594,7 +594,8 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
                   itemBuilder: (context, index) {
                     final day = _daysOfWeek[index];
                     final bool morning = _schedule[day]?['morning'] ?? false;
-                    final bool afternoon = _schedule[day]?['afternoon'] ?? false;
+                    final bool afternoon =
+                        _schedule[day]?['afternoon'] ?? false;
 
                     return ScheduleListItem(
                       day: day,

@@ -757,7 +757,11 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           .snapshots(),
       builder: (context, snapshot) {
         List<ParameterItem> allParams = List.from(hardcodedParams);
-        List<String?> docIds = List.filled(hardcodedParams.length, null, growable: true);
+        List<String?> docIds = List.filled(
+          hardcodedParams.length,
+          null,
+          growable: true,
+        );
 
         if (snapshot.hasData) {
           for (var doc in snapshot.data!.docs) {
@@ -901,7 +905,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             final keys = valueControllers.keys.toList();
             final currentIndex = keys.indexOf(key);
             if (currentIndex >= 0 && currentIndex < keys.length - 1) {
-              FocusScope.of(context).requestFocus(focusNodes[keys[currentIndex + 1]]);
+              FocusScope.of(
+                context,
+              ).requestFocus(focusNodes[keys[currentIndex + 1]]);
             } else {
               FocusScope.of(context).unfocus();
             }

@@ -33,10 +33,7 @@ class RecordSubmitButton extends StatelessWidget {
             onPressed: isSaving ? null : onSaveNext,
             child: Text(
               isLastParameter ? "Save & Finish" : "Save & Next",
-              style: TextStyle(
-                color: themeColor,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: themeColor, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -44,7 +41,9 @@ class RecordSubmitButton extends StatelessWidget {
         Expanded(
           child: Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: Theme.of(context).colorScheme.copyWith(primary: themeColor),
+              colorScheme: Theme.of(
+                context,
+              ).colorScheme.copyWith(primary: themeColor),
             ),
             child: PrimaryButton(
               text: 'Save',

@@ -69,14 +69,14 @@ class NotificationsRepository {
               .toList(),
         )
         .handleError((error, stackTrace) {
-      developer.log(
-        'Error in getNotificationsStream',
-        name: 'notifications.repository',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      throw error;
-    });
+          developer.log(
+            'Error in getNotificationsStream',
+            name: 'notifications.repository',
+            error: error,
+            stackTrace: stackTrace,
+          );
+          throw error;
+        });
   }
 
   Stream<int> getUnreadCountStream() {
@@ -88,14 +88,14 @@ class NotificationsRepository {
         .snapshots()
         .map((snapshot) => snapshot.docs.length)
         .handleError((error, stackTrace) {
-      developer.log(
-        'Error in getUnreadCountStream',
-        name: 'notifications.repository',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      throw error;
-    });
+          developer.log(
+            'Error in getUnreadCountStream',
+            name: 'notifications.repository',
+            error: error,
+            stackTrace: stackTrace,
+          );
+          throw error;
+        });
   }
 
   Future<void> markAsRead(String notificationId) async {
@@ -108,8 +108,11 @@ class NotificationsRepository {
       if (collection == null) return;
       await collection.doc(notificationId).update({'isRead': isRead});
     } catch (e) {
-      developer.log('Error updating notification read status',
-          error: e, name: 'notifications.repository');
+      developer.log(
+        'Error updating notification read status',
+        error: e,
+        name: 'notifications.repository',
+      );
     }
   }
 
@@ -128,8 +131,11 @@ class NotificationsRepository {
       }
       await batch.commit();
     } catch (e) {
-      developer.log('Error marking all as read',
-          error: e, name: 'notifications.repository');
+      developer.log(
+        'Error marking all as read',
+        error: e,
+        name: 'notifications.repository',
+      );
     }
   }
 
@@ -139,8 +145,11 @@ class NotificationsRepository {
       if (collection == null) return;
       await collection.doc(notificationId).delete();
     } catch (e) {
-      developer.log('Error deleting notification',
-          error: e, name: 'notifications.repository');
+      developer.log(
+        'Error deleting notification',
+        error: e,
+        name: 'notifications.repository',
+      );
     }
   }
 }

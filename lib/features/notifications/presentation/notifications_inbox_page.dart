@@ -10,7 +10,7 @@ import 'package:pondstat/core/widgets/empty_state_card.dart';
 /// 3. Open the inbox and see the new alert entry.
 /// 4. Tap the notification to mark it read – the dot should disappear and the badge count drop.
 /// 5. Swipe the notification to delete it – it should disappear from the list.
-/// 
+///
 /// NOTE: If notifications don't appear, check Firestore security rules for:
 /// users/{uid}/notifications subcollection.
 
@@ -33,7 +33,9 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
   }
 
   List<dynamic> _groupNotifications(List<NotificationModel> raw) {
-    final filtered = _showUnreadOnly ? raw.where((n) => !n.isRead).toList() : raw;
+    final filtered = _showUnreadOnly
+        ? raw.where((n) => !n.isRead).toList()
+        : raw;
     if (filtered.isEmpty) return [];
 
     final now = DateTime.now();
@@ -49,7 +51,11 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
     };
 
     for (final n in filtered) {
-      final date = DateTime(n.timestamp.year, n.timestamp.month, n.timestamp.day);
+      final date = DateTime(
+        n.timestamp.year,
+        n.timestamp.month,
+        n.timestamp.day,
+      );
       if (date == today) {
         groups['Today']!.add(n);
       } else if (date == yesterday) {
@@ -83,9 +89,11 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
         title: const Text('Notifications'),
         actions: [
           IconButton(
-            icon: Icon(_showUnreadOnly
-                ? Icons.filter_list_off_rounded
-                : Icons.filter_list_rounded),
+            icon: Icon(
+              _showUnreadOnly
+                  ? Icons.filter_list_off_rounded
+                  : Icons.filter_list_rounded,
+            ),
             tooltip: _showUnreadOnly ? 'Show all' : 'Show unread',
             onPressed: () => setState(() => _showUnreadOnly = !_showUnreadOnly),
           ),
@@ -124,8 +132,11 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline_rounded,
-                          size: 64, color: colorScheme.error),
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 64,
+                        color: colorScheme.error,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'Failed to load notifications',
