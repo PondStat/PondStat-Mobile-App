@@ -3,19 +3,17 @@ import 'package:flutter/material.dart';
 class CultureProgressCard extends StatelessWidget {
   final DateTime createdAt;
   final int targetCulturePeriodDays;
-  final Color primaryBlue;
-  final Color secondaryBlue;
 
   const CultureProgressCard({
     super.key,
     required this.createdAt,
     required this.targetCulturePeriodDays,
-    required this.primaryBlue,
-    required this.secondaryBlue,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryBlue = theme.colorScheme.primary;
     final now = DateTime.now();
     final startDay = DateTime(createdAt.year, createdAt.month, createdAt.day);
     final today = DateTime(now.year, now.month, now.day);
@@ -34,7 +32,7 @@ class CultureProgressCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
@@ -55,7 +53,7 @@ class CultureProgressCard extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 Container(
@@ -83,7 +81,7 @@ class CultureProgressCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               child: LinearProgressIndicator(
                 value: progress,
-                backgroundColor: Colors.grey.shade200,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 color: primaryBlue,
                 minHeight: 10,
               ),
@@ -95,7 +93,7 @@ class CultureProgressCard extends StatelessWidget {
                 Text(
                   "Day 1",
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: theme.colorScheme.onSurfaceVariant,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -103,7 +101,7 @@ class CultureProgressCard extends StatelessWidget {
                 Text(
                   "Target: $targetCulturePeriodDays Days",
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: theme.colorScheme.onSurfaceVariant,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),

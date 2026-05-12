@@ -137,8 +137,6 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
             _focusedDay = focusedDay;
           });
         },
-        primaryBlue: primaryBlue,
-        secondaryBlue: secondaryBlue,
       ),
       GrowthPage(
         pondId: widget.pondId,
