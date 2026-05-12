@@ -91,7 +91,9 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          color:
+              theme.bottomSheetTheme.backgroundColor ??
+              theme.colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           border: isDark
               ? const Border(top: BorderSide(color: Colors.white12))
@@ -101,11 +103,15 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
           top: 12,
           left: 24,
           right: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          bottom:
+              MediaQuery.viewInsetsOf(context).bottom +
+              MediaQuery.paddingOf(context).bottom +
+              24,
         ),
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -194,7 +200,9 @@ class _CreatePondSheetState extends State<CreatePondSheet> {
                         hint: '90',
                         prefixIcon: Icons.calendar_month_rounded,
                         keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) =>
+                            _isLoading ? null : _createNewPond(),
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
