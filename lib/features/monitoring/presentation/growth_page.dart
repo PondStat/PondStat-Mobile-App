@@ -50,45 +50,54 @@ class _GrowthPageState extends State<GrowthPage> {
               required Map<String, List<double>> replicateValues,
               String? notes,
             }) async {
-              final now = DateTime.now();
-              final sixDaysAgo = now.subtract(const Duration(days: 6));
-              final snapshot = await FirestoreHelper.measurementsCollection
-                  .where('pondId', isEqualTo: widget.pondId)
-                  .where('parameter', isEqualTo: label)
-                  .where(
-                    'timestamp',
-                    isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
-                  )
-                  .get();
+              try {
+                final now = DateTime.now();
+                final sixDaysAgo = now.subtract(const Duration(days: 6));
+                final snapshot = await FirestoreHelper.measurementsCollection
+                    .where('pondId', isEqualTo: widget.pondId)
+                    .where('parameter', isEqualTo: label)
+                    .where(
+                      'timestamp',
+                      isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
+                    )
+                    .get();
 
-              if (snapshot.docs.isNotEmpty) {
-                throw Exception(
-                  "You have already recorded $label within the last 7 days.",
+                if (snapshot.docs.isNotEmpty) {
+                  throw Exception(
+                    "You have already recorded $label within the last 7 days.",
+                  );
+                }
+
+                final repository = MonitoringRepository();
+                await repository.saveMeasurement(
+                  pondId: widget.pondId,
+                  label: label,
+                  unit: unit,
+                  timeString: timeString,
+                  averageValue: averageValue,
+                  type: type,
+                  pointValues: pointValues,
+                  replicateValues: replicateValues,
+                  selectedDay: now,
+                  notes: notes,
+                );
+                if (!sheetContext.mounted) return;
+                setState(() {
+                  _refreshKey++;
+                });
+                SnackbarHelper.show(
+                  sheetContext,
+                  "Growth sampling recorded",
+                  backgroundColor: Colors.green,
+                );
+              } catch (e) {
+                if (!sheetContext.mounted) return;
+                SnackbarHelper.show(
+                  sheetContext,
+                  e.toString().replaceAll("Exception: ", ""),
+                  backgroundColor: Colors.redAccent,
                 );
               }
-
-              final repository = MonitoringRepository();
-              await repository.saveMeasurement(
-                pondId: widget.pondId,
-                label: label,
-                unit: unit,
-                timeString: timeString,
-                averageValue: averageValue,
-                type: type,
-                pointValues: pointValues,
-                replicateValues: replicateValues,
-                selectedDay: now,
-                notes: notes,
-              );
-              if (!sheetContext.mounted) return;
-              setState(() {
-                _refreshKey++;
-              });
-              SnackbarHelper.show(
-                sheetContext,
-                "Growth sampling recorded",
-                backgroundColor: Colors.green,
-              );
             },
       ),
     );
@@ -102,129 +111,101 @@ class _GrowthPageState extends State<GrowthPage> {
         bool isDeleting = false;
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      shape: BoxShape.circle,
+            return PopScope(
+              canPop: !isDeleting,
+              child: AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                title: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.red,
+                        size: 24,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.red,
-                      size: 24,
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        "Delete Sampling?",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      "Delete Sampling?",
+                  ],
+                ),
+                content: const Text(
+                  "Are you sure you want to delete this sampling data? This action cannot be undone.",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: isDeleting ? null : () => Navigator.pop(context),
+                    child: const Text(
+                      "Cancel",
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade50,
+                      foregroundColor: Colors.red,
+                      elevation: 0,
+                    ),
+                    onPressed: isDeleting
+                        ? null
+                        : () async {
+                            setStateDialog(() => isDeleting = true);
+                            final user = FirebaseAuth.instance.currentUser;
+
+                            try {
+                              await GrowthRepository.deleteGrowthSampling(
+                                m,
+                                user,
+                                widget.pondId,
+                              );
+                              HapticFeedback.heavyImpact();
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
+                              setState(() => _refreshKey++);
+                              SnackbarHelper.show(context, "Sampling deleted");
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              setStateDialog(() => isDeleting = false);
+                              SnackbarHelper.show(
+                                context,
+                                "Error deleting: $e",
+                                backgroundColor: Colors.red,
+                              );
+                            }
+                          },
+                    child: isDeleting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.red,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "Delete",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                  ),
                 ],
               ),
-              content: const Text(
-                "Are you sure you want to delete this sampling data? This action cannot be undone.",
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isDeleting ? null : () => Navigator.pop(context),
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade50,
-                    foregroundColor: Colors.red,
-                    elevation: 0,
-                  ),
-                  onPressed: isDeleting
-                      ? null
-                      : () async {
-                          setStateDialog(() => isDeleting = true);
-                          final user = FirebaseAuth.instance.currentUser;
-                          final batch = FirebaseFirestore.instance.batch();
-
-                          final docIds = [
-                            m.abwDocId,
-                            m.adgDocId,
-                            m.dfrDocId,
-                            m.fcrDocId,
-                          ];
-                          for (final docId in docIds) {
-                            if (docId != null) {
-                              final docRef = FirestoreHelper
-                                  .measurementsCollection
-                                  .doc(docId);
-                              final docSnap = await docRef.get();
-                              if (docSnap.exists) {
-                                final historyRef = FirestoreHelper
-                                    .measurementHistoryCollection
-                                    .doc();
-                                final data =
-                                    docSnap.data() as Map<String, dynamic>;
-                                batch.set(historyRef, {
-                                  'pondId': widget.pondId,
-                                  'measurementId': docId,
-                                  'parameter': data['parameter'],
-                                  'action': 'delete',
-                                  'editedAt': FieldValue.serverTimestamp(),
-                                  'editedBy': user?.uid,
-                                  'editorName': user?.displayName ?? 'Unknown',
-                                  'before': {'value': data['value']},
-                                  'after': null,
-                                });
-                                batch.delete(docRef);
-                              }
-                            }
-                          }
-
-                          try {
-                            await batch.commit();
-                            HapticFeedback.heavyImpact();
-                            if (!context.mounted) return;
-                            Navigator.pop(context);
-                            setState(() => _refreshKey++);
-                            SnackbarHelper.show(context, "Sampling deleted");
-                          } catch (e) {
-                            if (!context.mounted) return;
-                            setStateDialog(() => isDeleting = false);
-                            SnackbarHelper.show(
-                              context,
-                              "Error deleting: $e",
-                              backgroundColor: Colors.red,
-                            );
-                          }
-                        },
-                  child: isDeleting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.red,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          "Delete",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                ),
-              ],
             );
           },
         );
@@ -262,6 +243,8 @@ class _GrowthPageState extends State<GrowthPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: GrowthTab(
@@ -275,11 +258,11 @@ class _GrowthPageState extends State<GrowthPage> {
           ? FloatingActionButton.extended(
               heroTag: 'growth_fab',
               onPressed: () => _showRecordGrowth(),
-              backgroundColor: Colors.indigo.shade400,
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text(
+              backgroundColor: colorScheme.primary,
+              icon: Icon(Icons.add_rounded, color: colorScheme.onPrimary),
+              label: Text(
                 "Record Sampling",
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: colorScheme.onPrimary),
               ),
             )
           : null,

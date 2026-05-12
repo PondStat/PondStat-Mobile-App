@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
@@ -229,6 +230,39 @@ class GrowthRepository {
 
   static double _round(double value, int places) {
     return double.parse(value.toStringAsFixed(places));
+  }
+
+  static Future<void> deleteGrowthSampling(
+    GrowthMetrics m,
+    User? user,
+    String pondId,
+  ) async {
+    final batch = FirebaseFirestore.instance.batch();
+
+    final docIds = [m.abwDocId, m.adgDocId, m.dfrDocId, m.fcrDocId];
+    for (final docId in docIds) {
+      if (docId != null) {
+        final docRef = FirestoreHelper.measurementsCollection.doc(docId);
+        final docSnap = await docRef.get();
+        if (docSnap.exists) {
+          final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
+          final data = docSnap.data() as Map<String, dynamic>;
+          batch.set(historyRef, {
+            'pondId': pondId,
+            'measurementId': docId,
+            'parameter': data['parameter'],
+            'action': 'delete',
+            'editedAt': FieldValue.serverTimestamp(),
+            'editedBy': user?.uid,
+            'editorName': user?.displayName ?? 'Unknown',
+            'before': {'value': data['value']},
+            'after': null,
+          });
+          batch.delete(docRef);
+        }
+      }
+    }
+    await batch.commit();
   }
 }
 
