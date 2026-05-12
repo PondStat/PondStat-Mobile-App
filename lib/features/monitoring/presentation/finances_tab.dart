@@ -13,7 +13,8 @@ class FinancesTab extends StatefulWidget {
   State<FinancesTab> createState() => _FinancesTabState();
 }
 
-class _FinancesTabState extends State<FinancesTab> {
+class _FinancesTabState extends State<FinancesTab>
+    with AutomaticKeepAliveClientMixin {
   int _selectedFilterIndex = 0;
   final List<String> _filters = [
     "Group Expenses",
@@ -22,6 +23,9 @@ class _FinancesTabState extends State<FinancesTab> {
   ];
 
   final Color primaryBlue = const Color(0xFF0A74DA);
+
+  @override
+  bool get wantKeepAlive => true;
 
   void _showComingSoonModal(String title) {
     HapticFeedback.lightImpact();
@@ -100,6 +104,7 @@ class _FinancesTabState extends State<FinancesTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: Colors.transparent,

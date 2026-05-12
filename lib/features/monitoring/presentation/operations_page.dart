@@ -18,6 +18,10 @@ class OperationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -27,25 +31,31 @@ class OperationsPage extends StatelessWidget {
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: isDark
+                  ? colorScheme.surfaceContainerHigh
+                  : Colors.grey.shade200,
               borderRadius: BorderRadius.circular(16),
             ),
             child: TabBar(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
               indicator: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? colorScheme.surfaceContainer : Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: const Color(0xFF0A74DA),
+              labelColor: colorScheme.primary,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-              unselectedLabelColor: Colors.grey.shade600,
+              unselectedLabelColor: colorScheme.onSurfaceVariant,
               unselectedLabelStyle: const TextStyle(
                 fontWeight: FontWeight.w600,
               ),

@@ -21,7 +21,8 @@ class SchedulesTab extends StatefulWidget {
   State<SchedulesTab> createState() => _SchedulesTabState();
 }
 
-class _SchedulesTabState extends State<SchedulesTab> {
+class _SchedulesTabState extends State<SchedulesTab>
+    with AutomaticKeepAliveClientMixin {
   final Color primaryBlue = const Color(0xFF0A74DA);
   final List<String> _daysOfWeek = [
     'Monday',
@@ -32,6 +33,9 @@ class _SchedulesTabState extends State<SchedulesTab> {
     'Saturday',
     'Sunday',
   ];
+
+  @override
+  bool get wantKeepAlive => true;
 
   void _showAssignSheet() {
     HapticFeedback.lightImpact();
@@ -54,6 +58,7 @@ class _SchedulesTabState extends State<SchedulesTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StreamBuilder<QuerySnapshot>(
