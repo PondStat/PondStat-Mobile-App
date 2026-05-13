@@ -67,9 +67,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   bool _isSaving = false;
   final MonitoringRepository _repository = MonitoringRepository();
 
-  final Color primaryBlue = const Color(0xFF0A74DA);
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
+  Color get primaryColor => Theme.of(context).colorScheme.primary;
 
   @override
   void initState() {
@@ -466,10 +466,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF0A74DA),
-                        width: 2,
-                      ),
+                      borderSide: BorderSide(color: primaryColor, width: 2),
                     ),
                   ),
                   items: const [
@@ -507,7 +504,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryBlue,
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -560,10 +557,13 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: Theme.of(context).colorScheme.errorContainer,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.error,
+              ),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -586,8 +586,8 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade50,
-              foregroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.errorContainer,
+              foregroundColor: Theme.of(context).colorScheme.error,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -697,18 +697,25 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300, width: 2),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+            width: 2,
+          ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_rounded, color: Colors.grey.shade400, size: 28),
+            Icon(
+              Icons.add_rounded,
+              color: Theme.of(context).colorScheme.outline,
+              size: 28,
+            ),
             const SizedBox(height: 6),
             Text(
               "Custom",
               style: TextStyle(
-                color: Colors.grey.shade500,
+                color: Theme.of(context).colorScheme.outline,
                 fontWeight: FontWeight.w800,
                 fontSize: 12,
               ),
@@ -869,12 +876,12 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: Theme.of(context).colorScheme.errorContainer,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.delete_outline_rounded,
-                    color: Colors.red,
+                    color: Theme.of(context).colorScheme.error,
                     size: 20,
                   ),
                 ),
@@ -949,9 +956,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Theme.of(context).colorScheme.surfaceContainerHighest
-              : Colors.white,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -961,9 +966,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
           ],
           border: Border.all(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white10
-                : Colors.grey.shade100,
+            color: Theme.of(context).colorScheme.outlineVariant,
           ),
         ),
         child: Row(
@@ -974,7 +977,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).colorScheme.surface,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -1015,45 +1018,54 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           Navigator.pop(context);
         }
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        padding: EdgeInsets.only(
-          top: 12,
-          left: 20,
-          right: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 48,
-                  height: 5,
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(10),
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: EdgeInsets.only(
+            top: 12,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 48,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
-              ),
-              _buildSheetHeader(),
-              const SizedBox(height: 16),
-              _buildContentSwitcher(),
-            ],
+                _buildSheetHeader(),
+                const SizedBox(height: 16),
+                _buildContentSwitcher(),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  void _goToPreviousParameter() {
+  Future<void> _goToPreviousParameter() async {
     if (_currentIndex > 0) {
+      if (_hasUnsavedData()) {
+        final shouldDiscard = await _onWillPop();
+        if (!shouldDiscard) return;
+      }
+      HapticFeedback.selectionClick();
       _clearInputs();
       setState(() {
         _currentIndex--;
@@ -1065,8 +1077,13 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     }
   }
 
-  void _goToNextParameter() {
+  Future<void> _goToNextParameter() async {
     if (_currentIndex < _currentParams.length - 1) {
+      if (_hasUnsavedData()) {
+        final shouldDiscard = await _onWillPop();
+        if (!shouldDiscard) return;
+      }
+      HapticFeedback.selectionClick();
       _clearInputs();
       setState(() {
         _currentIndex++;
@@ -1087,7 +1104,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.arrow_back_rounded, size: 20, color: textDark),
@@ -1126,8 +1143,8 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                           ? _goToPreviousParameter
                           : null,
                       color: _currentIndex > 0
-                          ? primaryBlue
-                          : Colors.grey.shade300,
+                          ? primaryColor
+                          : Theme.of(context).colorScheme.outlineVariant,
                     ),
                     IconButton(
                       icon: const Icon(Icons.chevron_right_rounded),
@@ -1135,8 +1152,8 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                           ? _goToNextParameter
                           : null,
                       color: _currentIndex < _currentParams.length - 1
-                          ? primaryBlue
-                          : Colors.grey.shade300,
+                          ? primaryColor
+                          : Theme.of(context).colorScheme.outlineVariant,
                     ),
                   ],
                 ),
@@ -1145,7 +1162,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.close_rounded, size: 20, color: textMuted),
