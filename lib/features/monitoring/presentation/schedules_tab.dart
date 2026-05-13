@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/primary_button.dart';
 
 class SchedulesTab extends StatefulWidget {
   final String pondId;
@@ -105,6 +107,27 @@ class _SchedulesTabState extends State<SchedulesTab>
                 }
               }
             }
+          }
+
+          // Check if all schedules are empty
+          bool isCompletelyEmpty = true;
+          for (var day in _daysOfWeek) {
+            if (groupedSchedules[day]!['morning']!.isNotEmpty ||
+                groupedSchedules[day]!['afternoon']!.isNotEmpty) {
+              isCompletelyEmpty = false;
+              break;
+            }
+          }
+
+          if (isCompletelyEmpty && !widget.canEdit) {
+            return const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: EmptyStateCard(
+                icon: Icons.event_busy_rounded,
+                title: 'No Schedules Assigned',
+                description: 'There are currently no shifts scheduled for this pond.',
+              ),
+            );
           }
 
           return ListView.builder(
@@ -820,13 +843,13 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                   ),
                   decoration: BoxDecoration(
                     color: _selectedShift == 'morning'
-                        ? Colors.amber.shade50
-                        : Colors.indigo.shade50,
+                        ? (isDark ? Colors.amber.withValues(alpha: 0.1) : Colors.amber.shade50)
+                        : (isDark ? Colors.indigo.withValues(alpha: 0.1) : Colors.indigo.shade50),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: _selectedShift == 'morning'
-                          ? Colors.amber.shade200
-                          : Colors.indigo.shade200,
+                          ? (isDark ? Colors.amber.withValues(alpha: 0.3) : Colors.amber.shade200)
+                          : (isDark ? Colors.indigo.withValues(alpha: 0.3) : Colors.indigo.shade200),
                     ),
                   ),
                   child: DropdownButtonHideUnderline(
@@ -836,15 +859,15 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                       icon: Icon(
                         Icons.expand_more_rounded,
                         color: _selectedShift == 'morning'
-                            ? Colors.amber.shade700
-                            : Colors.indigo.shade700,
+                            ? (isDark ? Colors.amber.shade300 : Colors.amber.shade700)
+                            : (isDark ? Colors.indigo.shade300 : Colors.indigo.shade700),
                       ),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: _selectedShift == 'morning'
-                            ? Colors.amber.shade800
-                            : Colors.indigo.shade800,
+                            ? (isDark ? Colors.amber.shade300 : Colors.amber.shade800)
+                            : (isDark ? Colors.indigo.shade300 : Colors.indigo.shade800),
                       ),
                       onChanged: (val) {
                         if (val != null) setState(() => _selectedShift = val);
@@ -1021,38 +1044,10 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
           const SizedBox(height: 16),
 
           // Save Button
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey.shade300,
-                disabledForegroundColor: Colors.grey.shade500,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              onPressed: _hasChanges() && !_isSaving ? _saveChanges : null,
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 3,
-                      ),
-                    )
-                  : const Text(
-                      "Save Shift Assignments",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
+          PrimaryButton(
+            text: "Save Shift Assignments",
+            onPressed: _hasChanges() ? _saveChanges : null,
+            isLoading: _isSaving,
           ),
         ],
       ),
