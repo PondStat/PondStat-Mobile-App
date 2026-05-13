@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/widgets/empty_state_card.dart';
 
 class ExpensesTab extends StatefulWidget {
   final String pondId;
@@ -141,6 +144,8 @@ class _ExpensesTabState extends State<ExpensesTab> {
   }
 
   Widget _buildSummaryCard(double total, int members, double share) {
+    final currencyFormat = NumberFormat.currency(symbol: '₱', decimalDigits: 2);
+    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -183,7 +188,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "₱${total.toStringAsFixed(2)}",
+                        currencyFormat.format(total),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 28,
@@ -248,7 +253,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      "₱${share.toStringAsFixed(2)}",
+                      currencyFormat.format(share),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -285,6 +290,9 @@ class _ExpensesTabState extends State<ExpensesTab> {
     final colorScheme = Theme.of(context).colorScheme;
     final onSurface = colorScheme.onSurface;
 
+    final compactCurrencyFormat =
+        NumberFormat.currency(symbol: '₱', decimalDigits: 0);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -305,18 +313,18 @@ class _ExpensesTabState extends State<ExpensesTab> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.teal.withValues(alpha: 0.1)
-                      : Colors.teal.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.shopping_cart_rounded,
-                  color: Colors.teal,
-                  size: 18,
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: isDark
+                    ? Colors.teal.withValues(alpha: 0.2)
+                    : Colors.teal.shade100,
+                foregroundColor: Colors.teal.shade700,
+                child: Text(
+                  buyer.isNotEmpty ? buyer[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -370,16 +378,16 @@ class _ExpensesTabState extends State<ExpensesTab> {
                   _buildMetric("Qty", qty.toString()),
                   _buildMetric(
                     "Unit Price",
-                    "₱${unitPrice.toStringAsFixed(0)}",
+                    compactCurrencyFormat.format(unitPrice),
                   ),
                   _buildMetric(
                     "Total",
-                    "₱${total.toStringAsFixed(0)}",
+                    compactCurrencyFormat.format(total),
                     isBold: true,
                   ),
                   _buildMetric(
                     "Share",
-                    "₱${share.toStringAsFixed(0)}",
+                    compactCurrencyFormat.format(share),
                     isPrimary: true,
                   ),
                 ],
@@ -424,28 +432,14 @@ class _ExpensesTabState extends State<ExpensesTab> {
   }
 
   Widget _buildEmptyState() {
-    final colorScheme = Theme.of(context).colorScheme;
-    return SliverFillRemaining(
+    return const SliverFillRemaining(
       hasScrollBody: false,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.receipt_long_rounded,
-              size: 64,
-              color: colorScheme.outlineVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "No expenses recorded yet",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+      child: Padding(
+        padding: EdgeInsets.all(24.0),
+        child: EmptyStateCard(
+          icon: Icons.receipt_long_rounded,
+          title: "No expenses recorded yet",
+          description: "Expenses added for this pond will appear here.",
         ),
       ),
     );
@@ -474,7 +468,15 @@ class _ExpensesTabState extends State<ExpensesTab> {
           TextButton(
             onPressed: () async {
               await repository.deleteExpense(id);
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                HapticFeedback.mediumImpact();
+                SnackbarHelper.show(
+                  context,
+                  "Expense deleted",
+                  backgroundColor: Colors.green,
+                );
+                Navigator.pop(context);
+              }
             },
             child: const Text(
               "Delete",
