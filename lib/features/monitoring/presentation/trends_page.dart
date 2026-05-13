@@ -29,6 +29,7 @@ class TrendsPage extends StatefulWidget {
 class _TrendsPageState extends State<TrendsPage> {
   late DateTime _startDate;
   late DateTime _endDate;
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -54,13 +55,12 @@ class _TrendsPageState extends State<TrendsPage> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) {
+        final brightness = Theme.of(context).brightness;
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF0A74DA),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black87,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF0A74DA),
+              brightness: brightness,
             ),
           ),
           child: child!,
@@ -236,7 +236,7 @@ class _TrendsPageState extends State<TrendsPage> {
                     children: [
                       SingleChildScrollView(
                         child: Padding(
-                          padding: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.only(top: 12, bottom: 100),
                           child: PeriodicParametersChart(
                             pondId: widget.pondId,
                             species: widget.species,
@@ -248,7 +248,7 @@ class _TrendsPageState extends State<TrendsPage> {
                       ),
                       SingleChildScrollView(
                         child: Padding(
-                          padding: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.only(top: 12, bottom: 100),
                           child: PeriodicParametersChart(
                             pondId: widget.pondId,
                             species: widget.species,
@@ -260,7 +260,7 @@ class _TrendsPageState extends State<TrendsPage> {
                       ),
                       SingleChildScrollView(
                         child: Padding(
-                          padding: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.only(top: 12, bottom: 100),
                           child: PeriodicParametersChart(
                             pondId: widget.pondId,
                             species: widget.species,
@@ -270,12 +270,15 @@ class _TrendsPageState extends State<TrendsPage> {
                           ),
                         ),
                       ),
-                      TrendsTab(
-                        pondId: widget.pondId,
-                        species: widget.species,
-                        userRole: widget.userRole,
-                        startDate: _startDate,
-                        endDate: _endDate,
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 100),
+                        child: TrendsTab(
+                          pondId: widget.pondId,
+                          species: widget.species,
+                          userRole: widget.userRole,
+                          startDate: _startDate,
+                          endDate: _endDate,
+                        ),
                       ),
                     ],
                   ),
@@ -286,12 +289,23 @@ class _TrendsPageState extends State<TrendsPage> {
         ),
         floatingActionButton: FloatingActionButton.extended(
           heroTag: 'export_btn',
-          onPressed: () => _exportReport(context),
-          backgroundColor: const Color(0xFF0A74DA),
-          icon: const Icon(Icons.ios_share_rounded, color: Colors.white),
-          label: const Text(
-            "Export CSV",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          onPressed: _isExporting ? null : () => _exportReport(context),
+          backgroundColor:
+              _isExporting ? Colors.grey.shade400 : const Color(0xFF0A74DA),
+          icon: _isExporting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.ios_share_rounded, color: Colors.white),
+          label: Text(
+            _isExporting ? "Exporting..." : "Export CSV",
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
       ),
