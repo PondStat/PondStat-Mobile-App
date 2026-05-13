@@ -78,6 +78,12 @@ class _TrendsPageState extends State<TrendsPage> {
   }
 
   Future<void> _exportReport(BuildContext context) async {
+    if (_isExporting) return;
+    
+    setState(() {
+      _isExporting = true;
+    });
+    
     try {
       SnackbarHelper.show(context, "Generating report...");
 
@@ -98,13 +104,14 @@ class _TrendsPageState extends State<TrendsPage> {
       }
 
       List<List<dynamic>> rows = [
-        ["Date", "Time", "Type", "Parameter", "Value", "Unit"],
+        ["ISO Timestamp", "Date", "Time", "Type", "Parameter", "Value", "Unit"],
       ];
 
       for (var doc in querySnapshot.docs) {
         final data = doc.data();
         final ts =
             (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final isoStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(ts);
         final dateStr = DateFormat('yyyy-MM-dd').format(ts);
         final timeStr = DateFormat('HH:mm').format(ts);
         final type = data['type']?.toString() ?? 'N/A';
@@ -112,7 +119,7 @@ class _TrendsPageState extends State<TrendsPage> {
         final value = data['value']?.toString() ?? 'N/A';
         final unit = data['unit']?.toString() ?? '';
 
-        rows.add([dateStr, timeStr, type, parameter, value, unit]);
+        rows.add([isoStr, dateStr, timeStr, type, parameter, value, unit]);
       }
 
       String csvData = csv.encode(rows);
@@ -142,6 +149,12 @@ class _TrendsPageState extends State<TrendsPage> {
         "Failed to export report: $e",
         backgroundColor: Colors.red.shade600,
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+        });
+      }
     }
   }
 

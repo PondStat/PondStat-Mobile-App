@@ -7,11 +7,15 @@ import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.
 class ChemicalParametersChart extends StatefulWidget {
   final Map<String, List<NormalizedTrendPoint>> normalizedData;
   final String species;
+  final DateTime startDate;
+  final DateTime endDate;
 
   const ChemicalParametersChart({
     super.key,
     required this.normalizedData,
     required this.species,
+    required this.startDate,
+    required this.endDate,
   });
 
   @override
@@ -102,7 +106,7 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
   LineChartData _buildChartData(bool isDark) {
     List<LineChartBarData> lineBars = [];
 
-    final Set<DateTime> allTimestamps = {};
+    final Set<DateTime> allTimestamps = {widget.startDate, widget.endDate};
     for (var list in widget.normalizedData.values) {
       allTimestamps.addAll(list.map((p) => p.timestamp));
     }
