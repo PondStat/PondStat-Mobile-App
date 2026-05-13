@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/measurement_list_view.dart';
 import 'package:pondstat/features/monitoring/presentation/record_data_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_parameter_sheet.dart';
@@ -115,6 +116,8 @@ class _WaterQualityPageState extends State<WaterQualityPage>
       return;
     }
 
+    HapticFeedback.lightImpact();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -148,7 +151,7 @@ class _WaterQualityPageState extends State<WaterQualityPage>
     );
   }
 
-  Widget _buildTabContent(String type, String dateKey) {
+  Widget _buildTabContent(String type, String dateKey, Color primaryColor) {
     return Column(
       children: [
         Expanded(
@@ -158,7 +161,7 @@ class _WaterQualityPageState extends State<WaterQualityPage>
             dateKey: dateKey,
             canEdit: widget.canEdit,
             onEdit: _showEditDataDialog,
-            primaryBlue: primaryBlue,
+            primaryBlue: primaryColor,
           ),
         ),
       ],
@@ -169,29 +172,41 @@ class _WaterQualityPageState extends State<WaterQualityPage>
   Widget build(BuildContext context) {
     final dateKey =
         "${widget.selectedDay.year}-${widget.selectedDay.month}-${widget.selectedDay.day}";
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    String fabLabel = "Record Daily";
+    if (_tabController.index == 1) {
+      fabLabel = "Record Weekly";
+    } else if (_tabController.index == 2) {
+      fabLabel = "Record Biweekly";
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
         children: [
-          TabBar(
-            controller: _tabController,
-            labelColor: primaryBlue,
-            unselectedLabelColor: Colors.grey.shade400,
-            indicatorColor: primaryBlue,
-            tabs: const [
-              Tab(text: "Daily"),
-              Tab(text: "Weekly"),
-              Tab(text: "Biweekly"),
-            ],
+          PreferredSize(
+            preferredSize: const Size.fromHeight(kToolbarHeight),
+            child: TabBar(
+              isScrollable: false,
+              controller: _tabController,
+              labelColor: primaryColor,
+              unselectedLabelColor: Colors.grey.shade400,
+              indicatorColor: primaryColor,
+              tabs: const [
+                Tab(text: "Daily"),
+                Tab(text: "Weekly"),
+                Tab(text: "Biweekly"),
+              ],
+            ),
           ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildTabContent('daily', dateKey),
-                _buildTabContent('weekly', dateKey),
-                _buildTabContent('biweekly', dateKey),
+                _buildTabContent('daily', dateKey, primaryColor),
+                _buildTabContent('weekly', dateKey, primaryColor),
+                _buildTabContent('biweekly', dateKey, primaryColor),
               ],
             ),
           ),
@@ -202,8 +217,8 @@ class _WaterQualityPageState extends State<WaterQualityPage>
               heroTag: 'water_quality_fab',
               onPressed: _showAddDataOverlay,
               icon: const Icon(Icons.add),
-              label: const Text("Record Data"),
-              backgroundColor: primaryBlue,
+              label: Text(fabLabel),
+              backgroundColor: primaryColor,
               foregroundColor: Colors.white,
             )
           : null,
