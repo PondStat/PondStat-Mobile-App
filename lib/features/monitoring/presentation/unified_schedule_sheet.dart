@@ -6,6 +6,8 @@ import 'package:pondstat/features/monitoring/presentation/widgets/schedule_heade
 import 'package:pondstat/features/monitoring/presentation/widgets/schedule_list_item.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/core/widgets/empty_state_card.dart';
 
 class UnifiedScheduleSheet extends StatefulWidget {
   final String pondId;
@@ -26,7 +28,6 @@ class UnifiedScheduleSheet extends StatefulWidget {
 class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
     with TickerProviderStateMixin {
   late TabController _tabController;
-  final Color primaryBlue = const Color(0xFF0A74DA);
 
   // --- Assign State ---
   bool _isLoadingUsers = true;
@@ -171,16 +172,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
     });
   }
 
-  bool _hasAnyShiftSelected() {
-    for (var day in _daysOfWeek) {
-      if (_schedule[day]!['morning'] == true ||
-          _schedule[day]!['afternoon'] == true) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   Future<void> _saveSchedule() async {
     if (_selectedUserId == null) return;
 
@@ -253,6 +244,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return PopScope(
       canPop: !_hasChanges || _isSaving,
@@ -264,9 +256,9 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
         }
       },
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
         padding: EdgeInsets.only(
           top: 12,
@@ -299,7 +291,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
                 child: TabBar(
                   controller: _tabController,
                   indicator: BoxDecoration(
-                    color: Colors.white,
+                    color: colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -310,7 +302,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
                     ],
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: primaryBlue,
+                  labelColor: colorScheme.primary,
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold),
                   unselectedLabelColor: Colors.grey.shade600,
                   unselectedLabelStyle: const TextStyle(
@@ -396,41 +388,24 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildEmptyOverview() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.event_busy_rounded, size: 64, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
-            "No Schedules Set",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Colors.blueGrey.shade900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Use the Assign tab to create schedules.",
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+    return const Center(
+      child: EmptyStateCard(
+        icon: Icons.event_busy_rounded,
+        title: "No Schedules Set",
+        description: "Use the Assign tab to create schedules.",
       ),
     );
   }
 
   Widget _buildDayCard(String day, List<Map<String, dynamic>> members) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,18 +414,20 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: primaryBlue.withValues(alpha: 0.05),
+              color: colorScheme.primary.withValues(alpha: 0.05),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(16),
               ),
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+              border: Border(
+                bottom: BorderSide(color: colorScheme.outlineVariant),
+              ),
             ),
             child: Text(
               day,
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 15,
-                color: primaryBlue,
+                color: colorScheme.primary,
               ),
             ),
           ),
@@ -474,7 +451,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -618,9 +595,9 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -655,36 +632,14 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   }
 
   Widget _buildSaveButton() {
-    final bool canSave = _hasChanges && !_isSaving && _hasAnyShiftSelected();
+    final bool canSave = _hasChanges && !_isSaving;
 
     return SizedBox(
       width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey.shade300,
-          disabledForegroundColor: Colors.grey.shade500,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 0,
-        ),
+      child: PrimaryButton(
+        text: "Save Schedule",
+        isLoading: _isSaving,
         onPressed: canSave ? _saveSchedule : null,
-        child: _isSaving
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
-                ),
-              )
-            : const Text(
-                "Save Schedule",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
       ),
     );
   }
