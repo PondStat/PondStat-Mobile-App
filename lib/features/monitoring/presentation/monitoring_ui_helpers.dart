@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 class SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
@@ -17,9 +18,27 @@ class SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Container(
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.95)),
-      child: _tabBar,
+    final theme = Theme.of(context);
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withValues(alpha: 0.8),
+            boxShadow:
+                overlapsContent
+                    ? [
+                        BoxShadow(
+                          color: theme.shadowColor.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+          ),
+          child: _tabBar,
+        ),
+      ),
     );
   }
 
@@ -41,17 +60,13 @@ class SlideGradientTransform extends GradientTransform {
   }
 }
 
-extension GradientContainer on Container {
-  Container applyGradient() {
-    return Container(
-      decoration: (decoration as BoxDecoration?)?.copyWith(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0A74DA), Color(0xFF4FA0F0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: child,
-    );
-  }
+BoxDecoration getPrimaryGradient(BuildContext context) {
+  final theme = Theme.of(context);
+  return BoxDecoration(
+    gradient: LinearGradient(
+      colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+  );
 }

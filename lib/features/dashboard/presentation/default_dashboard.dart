@@ -718,6 +718,11 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                   offset: const Offset(0, 8),
                 ),
               ],
+              gradient: LinearGradient(
+                colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
             child: FloatingActionButton.extended(
               heroTag: 'dashboard_fab',
@@ -741,7 +746,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
               ),
               extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
             ),
-          ).applyGradient(),
+          ),
         ),
       ),
     );
@@ -952,17 +957,3 @@ class SlideGradientTransform extends GradientTransform {
   }
 }
 
-extension GradientContainer on Container {
-  Container applyGradient() {
-    return Container(
-      decoration: (decoration as BoxDecoration?)?.copyWith(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0A74DA), Color(0xFF4FA0F0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: child,
-    );
-  }
-}
