@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class MonitoringHeader extends StatelessWidget {
@@ -32,11 +33,17 @@ class MonitoringHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back_rounded, color: onSurface),
-            onPressed: onBackTap,
+          Transform.translate(
+            offset: const Offset(-8, 0),
+            child: IconButton(
+              icon: Icon(Icons.arrow_back_rounded, color: onSurface),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onBackTap();
+              },
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 0),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,38 +74,51 @@ class MonitoringHeader extends StatelessWidget {
           _buildCircleIconButton(
             context: context,
             icon: Icons.receipt_long_rounded,
-            onPressed: onHistoryTap,
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              onHistoryTap();
+            },
             tooltip: 'Log History',
             surfaceContainer: surfaceContainer,
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onProfileTap,
-            child: _buildCircleContainer(
-              context: context,
-              surfaceContainer: surfaceContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(2.0),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: isDark
-                      ? Colors.white12
-                      : Colors.grey.shade100,
-                  backgroundImage: user?.photoURL != null
-                      ? NetworkImage(user!.photoURL!)
-                      : null,
-                  child: user?.photoURL == null
-                      ? Text(
-                          user?.displayName?.isNotEmpty == true
-                              ? user!.displayName![0].toUpperCase()
-                              : 'U',
-                          style: TextStyle(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        )
-                      : null,
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onProfileTap();
+              },
+              customBorder: const CircleBorder(),
+              child: _buildCircleContainer(
+                context: context,
+                surfaceContainer: surfaceContainer,
+                child: Padding(
+                  padding: const EdgeInsets.all(2.0),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isDark
+                        ? Colors.white12
+                        : Colors.grey.shade100,
+                    backgroundImage: user?.photoURL != null
+                        ? NetworkImage(user!.photoURL!)
+                        : null,
+                    onBackgroundImageError: user?.photoURL != null 
+                        ? (exception, stackTrace) {} 
+                        : null,
+                    child: user?.photoURL == null
+                        ? Text(
+                            user?.displayName?.isNotEmpty == true
+                                ? user!.displayName![0].toUpperCase()
+                                : 'U',
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          )
+                        : null,
+                  ),
                 ),
               ),
             ),
