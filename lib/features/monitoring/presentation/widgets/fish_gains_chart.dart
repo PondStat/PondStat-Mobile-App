@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
@@ -43,13 +44,84 @@ class _FishGainsChartState extends State<FishGainsChart> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    if (widget.metrics.length == 1) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(24),
+          border: isDark ? Border.all(color: Colors.white12) : Border.all(color: theme.colorScheme.outlineVariant),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "FISH GAINS",
+              style: TextStyle(
+                color: Colors.blueGrey,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 220,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${widget.metrics.first.abw.toStringAsFixed(1)} g',
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w900,
+                      color: _colors['ABW'],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Only 1 data point recorded',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Add more measurements to see growth trends.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: theme.colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(24),
-        border: isDark ? Border.all(color: Colors.white12) : null,
+        border: isDark ? Border.all(color: Colors.white12) : Border.all(color: theme.colorScheme.outlineVariant),
         boxShadow: isDark
             ? []
             : [
@@ -228,9 +300,9 @@ class _FishGainsChartState extends State<FishGainsChart> {
       lineBarsData: lineBars,
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (touchedSpot) => isDark
-              ? Colors.black87
-              : Colors.blueGrey.shade900.withValues(alpha: 0.9),
+          fitInsideHorizontally: true,
+          fitInsideVertically: true,
+          getTooltipColor: (touchedSpot) => Theme.of(context).colorScheme.inverseSurface,
           tooltipBorderRadius: BorderRadius.circular(8),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((barSpot) {
@@ -292,6 +364,7 @@ class _FishGainsChartState extends State<FishGainsChart> {
 
         return GestureDetector(
           onTap: () {
+            HapticFeedback.selectionClick();
             setState(() {
               _visibleParameters[param] = !isVisible;
             });
