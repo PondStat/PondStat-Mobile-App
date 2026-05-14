@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/features/monitoring/presentation/measurement_card.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+import 'package:pondstat/core/widgets/empty_state_card.dart';
 
 class MeasurementListView extends StatefulWidget {
   final String pondId;
@@ -164,6 +166,7 @@ class _MeasurementListViewState extends State<MeasurementListView> {
                     final data =
                         filteredDocs[index].data() as Map<String, dynamic>;
                     return MeasurementCard(
+                      key: ValueKey(filteredDocs[index].id),
                       time: data['timeString'] ?? 'Unknown Time',
                       title: data['parameter'] ?? 'Unknown Parameter',
                       content:
@@ -184,7 +187,8 @@ class _MeasurementListViewState extends State<MeasurementListView> {
   }
 
   Widget _buildFilterChip(String label, String? filterValue) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     // We know filterValue might be null (for 'All') or a string.
     final isSelected = _selectedFilter == filterValue;
@@ -196,11 +200,12 @@ class _MeasurementListViewState extends State<MeasurementListView> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 13,
-            color: isSelected ? Colors.white : Colors.grey.shade700,
+            color: isSelected ? Colors.white : theme.colorScheme.onSurfaceVariant,
           ),
         ),
         selected: isSelected,
         onSelected: (selected) {
+          HapticFeedback.selectionClick();
           if (selected) {
             setState(() => _selectedFilter = filterValue);
           } else if (_selectedFilter == filterValue) {
@@ -224,47 +229,10 @@ class _MeasurementListViewState extends State<MeasurementListView> {
   }
 
   Widget _buildEmptyState() {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.assignment_outlined,
-              size: 48,
-              color: Colors.grey.shade400,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            "No ${widget.type} records",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Tap 'Record Data' to log a measurement.",
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
-          ),
-        ],
-      ),
+    return EmptyStateCard(
+      icon: Icons.assignment_outlined,
+      title: "No ${widget.type} records",
+      description: "Tap 'Record Data' to log a measurement.",
     );
   }
 }
