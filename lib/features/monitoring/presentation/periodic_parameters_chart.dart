@@ -319,6 +319,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         }
         final records = snap.data ?? [];
         if (records.isEmpty) return _buildEmptyCard(param, isDark, theme);
+        if (records.length == 1) return _buildSinglePointCard(records.first, param, isDark, theme);
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -426,15 +427,16 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: isHighlighted ? color : colorScheme.onSurface,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: isHighlighted ? color : colorScheme.onSurface,
+                ),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -584,6 +586,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           ),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
+              fitInsideHorizontally: true,
+              fitInsideVertically: true,
               getTooltipColor: (_) => colorScheme.inverseSurface,
               tooltipBorder: BorderSide(
                 color: param.getColor(context).withValues(alpha: 0.3),
@@ -695,6 +699,55 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         ),
       );
 
+  Widget _buildSinglePointCard(
+    _DailyRecord record,
+    ParameterItem param,
+    bool isDark,
+    ThemeData theme,
+  ) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: _buildCard(
+      isDark: isDark,
+      color: param.getColor(context),
+      theme: theme,
+      child: SizedBox(
+        height: 220,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '${record.averageValue.toStringAsFixed(2)}${param.unit.isEmpty ? '' : ' ${param.unit}'}',
+              style: TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.w900,
+                color: param.getColor(context),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Only 1 data point recorded',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Add more measurements to see a trend line.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Widget _buildEmptyCard(
     ParameterItem param,
     bool isDark,
@@ -768,7 +821,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
       color: theme.colorScheme.surfaceContainer,
       borderRadius: BorderRadius.circular(24),
       border: Border.all(color: theme.colorScheme.outlineVariant),
-      boxShadow: [
+      boxShadow: isDark ? [] : [
         BoxShadow(
           color: Colors.black.withValues(alpha: 0.04),
           blurRadius: 20,
