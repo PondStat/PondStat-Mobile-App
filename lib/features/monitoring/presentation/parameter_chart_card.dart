@@ -104,17 +104,32 @@ class ParameterChartCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            height: 180,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 1,
-                  getDrawingHorizontalLine: (value) =>
-                      FlLine(color: colorScheme.outlineVariant, strokeWidth: 1),
-                ),
+          stats.dataPoints.length < 2
+              ? SizedBox(
+                  height: 180,
+                  child: Center(
+                    child: Text(
+                      "Not enough data to show a trend",
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                )
+              : SizedBox(
+                  height: 180,
+                  child: LineChart(
+                    LineChartData(
+                      minY: stats.min - ((stats.max - stats.min == 0 ? 1 : stats.max - stats.min) * 0.2),
+                      maxY: stats.max + ((stats.max - stats.min == 0 ? 1 : stats.max - stats.min) * 0.2),
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: stats.max - stats.min == 0 ? 1 : ((stats.max - stats.min) * 1.4 / 4),
+                        getDrawingHorizontalLine: (value) =>
+                            FlLine(color: colorScheme.outlineVariant, strokeWidth: 1),
+                      ),
                 titlesData: FlTitlesData(
                   show: true,
                   rightTitles: const AxisTitles(
@@ -205,6 +220,8 @@ class ParameterChartCard extends StatelessWidget {
                 ],
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
+                    fitInsideHorizontally: true,
+                    fitInsideVertically: true,
                     getTooltipColor: (touchedSpot) =>
                         colorScheme.inverseSurface,
                     tooltipBorderRadius: BorderRadius.circular(8),
