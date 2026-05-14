@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/trends_repository.dart';
@@ -59,14 +60,16 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: isDark ? Border.all(color: Colors.white12) : null,
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+        ),
         boxShadow: isDark
             ? []
             : [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: theme.colorScheme.shadow.withValues(alpha: 0.04),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -127,11 +130,11 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       lineBars.add(
         LineChartBarData(
           spots: spots,
-          isCurved: true,
+          isCurved: points.length > 1,
           color: paramColor,
           barWidth: 3,
           isStrokeCapRound: true,
-          dotData: const FlDotData(show: false),
+          dotData: FlDotData(show: points.length == 1),
           belowBarData: BarAreaData(show: false),
         ),
       );
@@ -203,6 +206,8 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       lineBarsData: lineBars,
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
+          fitInsideHorizontally: true,
+          fitInsideVertically: true,
           getTooltipColor: (touchedSpot) => isDark
               ? Colors.black87
               : Colors.blueGrey.shade900.withValues(alpha: 0.9),
@@ -272,6 +277,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
 
         return GestureDetector(
           onTap: () {
+            HapticFeedback.lightImpact();
             setState(() {
               _visibleParameters[param] = !isVisible;
             });
