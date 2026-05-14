@@ -117,7 +117,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
         parameterName,
         widget.species,
       );
-      final color = paramItem?.color ?? Colors.grey;
+      final paramColor = paramItem?.getColor(context) ?? Colors.grey;
 
       final spots = points.map((p) {
         final x = timestampIndices[p.timestamp]!.toDouble();
@@ -128,7 +128,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
         LineChartBarData(
           spots: spots,
           isCurved: true,
-          color: color,
+          color: paramColor,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
@@ -229,7 +229,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
                   widget.species,
                 );
                 final unit = paramItem?.unit ?? '';
-                final color = paramItem?.color ?? Colors.white;
+                final paramColor = paramItem?.getColor(context) ?? Colors.white;
 
                 final point = widget.normalizedData[matchedParam]!.firstWhere(
                   (p) => p.timestamp == timestamp,
@@ -238,7 +238,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
                 return LineTooltipItem(
                   "$matchedParam\n${point.actualValue} $unit",
                   TextStyle(
-                    color: color,
+                    color: paramColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -267,7 +267,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
           param,
           widget.species,
         );
-        final color = paramItem?.color ?? Colors.grey;
+        final paramColor = paramItem?.getColor(context) ?? Colors.grey;
         final isVisible = _visibleParameters[param]!;
 
         return GestureDetector(
@@ -284,7 +284,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
                 height: 12,
                 decoration: BoxDecoration(
                   color: isVisible
-                      ? color
+                      ? paramColor
                       : (isDark ? Colors.white24 : Colors.grey.shade300),
                   shape: BoxShape.circle,
                 ),

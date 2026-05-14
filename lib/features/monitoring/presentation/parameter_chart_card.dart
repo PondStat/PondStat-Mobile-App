@@ -20,7 +20,7 @@ class ParameterChartCard extends StatelessWidget {
       stats.parameter,
       species,
     );
-    final color = paramItem?.color ?? Colors.blue;
+    final color = paramItem?.getColor(context) ?? Colors.blue;
     final unit = paramItem?.unit ?? '';
 
     final colorScheme = Theme.of(context).colorScheme;

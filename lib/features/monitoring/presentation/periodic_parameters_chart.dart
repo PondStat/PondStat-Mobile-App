@@ -161,8 +161,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                 label: data['label'],
                 unit: data['unit'] ?? '',
                 icon: Icons.dashboard_customize_rounded,
-                color: Colors.blueGrey,
-                createdBy: data['createdBy'],
+                category: ParameterCategory.custom,                createdBy: data['createdBy'],
               ),
             );
           }
@@ -259,12 +258,12 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: selected ? param.color : colorScheme.outlineVariant,
+                color: selected ? param.getColor(context) : colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: selected
                     ? [
                         BoxShadow(
-                          color: param.color.withValues(alpha: 0.35),
+                          color: param.getColor(context).withValues(alpha: 0.35),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -313,7 +312,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
       stream: _getStream(param),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return _buildLoadingCard(isDark, param.color, theme);
+          return _buildLoadingCard(isDark, param.getColor(context), theme);
         }
         if (snap.hasError) {
           return _buildErrorCard(snap.error.toString(), isDark, theme);
@@ -328,12 +327,12 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               const SizedBox(height: 16),
               _buildCard(
                 isDark: isDark,
-                color: param.color,
+                color: param.getColor(context),
                 theme: theme,
                 child: _buildLineChart(records, param, isDark, theme),
               ),
               if (!param.isSinglePoint &&
-                  (param.minVal != null || param.maxVal != null)) ...[
+                  (param.optimalMin != null || param.optimalMax != null)) ...[
                 const SizedBox(height: 8),
                 _buildRangeLegend(param, isDark, theme),
               ],
@@ -361,7 +360,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         _buildStatChip(
           label: 'Latest',
           value: '${latest.toStringAsFixed(2)}$unit',
-          color: param.color,
+          color: param.getColor(context),
           isDark: isDark,
           theme: theme,
           isHighlighted: true,
@@ -370,7 +369,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         _buildStatChip(
           label: 'Avg',
           value: '${avg.toStringAsFixed(2)}$unit',
-          color: param.color,
+          color: param.getColor(context),
           isDark: isDark,
           theme: theme,
         ),
@@ -378,7 +377,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         _buildStatChip(
           label: 'Min',
           value: '${min.toStringAsFixed(2)}$unit',
-          color: param.color,
+          color: param.getColor(context),
           isDark: isDark,
           theme: theme,
         ),
@@ -386,7 +385,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         _buildStatChip(
           label: 'Max',
           value: '${max.toStringAsFixed(2)}$unit',
-          color: param.color,
+          color: param.getColor(context),
           isDark: isDark,
           theme: theme,
         ),
@@ -458,8 +457,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     final values = records.map((r) => r.averageValue).toList();
     double minY = values.reduce((a, b) => a < b ? a : b);
     double maxY = values.reduce((a, b) => a > b ? a : b);
-    if (param.minVal != null && param.minVal! < minY) minY = param.minVal!;
-    if (param.maxVal != null && param.maxVal! > maxY) maxY = param.maxVal!;
+    if (param.optimalMin != null && param.optimalMin! < minY) minY = param.optimalMin!;
+    if (param.optimalMax != null && param.optimalMax! > maxY) maxY = param.optimalMax!;
     final yPad = ((maxY - minY) * 0.15).clamp(0.5, double.infinity);
     minY -= yPad;
     maxY += yPad;
@@ -467,10 +466,10 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     final gridColor = colorScheme.outlineVariant;
 
     List<HorizontalLine> extraLines = [];
-    if (param.minVal != null) {
+    if (param.optimalMin != null) {
       extraLines.add(
         HorizontalLine(
-          y: param.minVal!,
+          y: param.optimalMin!,
           color: Colors.green.withValues(alpha: 0.6),
           strokeWidth: 1.5,
           dashArray: [6, 4],
@@ -488,10 +487,10 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         ),
       );
     }
-    if (param.maxVal != null) {
+    if (param.optimalMax != null) {
       extraLines.add(
         HorizontalLine(
-          y: param.maxVal!,
+          y: param.optimalMax!,
           color: Colors.red.withValues(alpha: 0.6),
           strokeWidth: 1.5,
           dashArray: [6, 4],
@@ -587,7 +586,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (_) => colorScheme.inverseSurface,
               tooltipBorder: BorderSide(
-                color: param.color.withValues(alpha: 0.3),
+                color: param.getColor(context).withValues(alpha: 0.3),
               ),
               tooltipBorderRadius: BorderRadius.circular(12),
               getTooltipItems: (spots) => spots.map((s) {
@@ -597,7 +596,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                 return LineTooltipItem(
                   '${dt.month}/${dt.day}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}\n${s.y.toStringAsFixed(2)}$unit',
                   TextStyle(
-                    color: param.color,
+                    color: param.getColor(context),
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
                   ),
@@ -610,7 +609,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               spots: spots,
               isCurved: true,
               curveSmoothness: 0.35,
-              color: param.color,
+              color: param.getColor(context),
               barWidth: 2.5,
               isStrokeCapRound: true,
               dotData: FlDotData(
@@ -619,15 +618,15 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                   radius: 3.5,
                   color: colorScheme.surface,
                   strokeWidth: 2,
-                  strokeColor: param.color,
+                  strokeColor: param.getColor(context),
                 ),
               ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    param.color.withValues(alpha: 0.22),
-                    param.color.withValues(alpha: 0.0),
+                    param.getColor(context).withValues(alpha: 0.22),
+                    param.getColor(context).withValues(alpha: 0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -644,11 +643,11 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        if (param.minVal != null) ...[
+        if (param.optimalMin != null) ...[
           _legendDash(Colors.green),
           const SizedBox(width: 4),
           Text(
-            'Min ${param.minVal}${param.unit.isEmpty ? '' : ' ${param.unit}'}',
+            'Min ${param.optimalMin}${param.unit.isEmpty ? '' : ' ${param.unit}'}',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -657,11 +656,11 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
           ),
           const SizedBox(width: 16),
         ],
-        if (param.maxVal != null) ...[
+        if (param.optimalMax != null) ...[
           _legendDash(Colors.red),
           const SizedBox(width: 4),
           Text(
-            'Max ${param.maxVal}${param.unit.isEmpty ? '' : ' ${param.unit}'}',
+            'Max ${param.optimalMax}${param.unit.isEmpty ? '' : ' ${param.unit}'}',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -704,7 +703,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     padding: const EdgeInsets.symmetric(horizontal: 20),
     child: _buildCard(
       isDark: isDark,
-      color: param.color,
+      color: param.getColor(context),
       theme: theme,
       child: SizedBox(
         height: 220,
@@ -714,7 +713,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
             Icon(
               Icons.bar_chart_rounded,
               size: 48,
-              color: param.color.withValues(alpha: 0.3),
+              color: param.getColor(context).withValues(alpha: 0.3),
             ),
             const SizedBox(height: 12),
             Text(

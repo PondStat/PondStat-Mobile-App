@@ -80,10 +80,10 @@ class TrendsRepository {
 
       // Determine min/max for normalization
       double min =
-          paramItem?.minVal ??
+          paramItem?.absoluteMin ??
           points.map((p) => p.value).reduce((a, b) => a < b ? a : b);
       double max =
-          paramItem?.maxVal ??
+          paramItem?.absoluteMax ??
           points.map((p) => p.value).reduce((a, b) => a > b ? a : b);
 
       // Ensure min != max to avoid division by zero
@@ -161,8 +161,8 @@ class TrendsRepository {
       int outliers = 0;
       if (paramItem != null) {
         for (var val in values) {
-          if ((paramItem.minVal != null && val < paramItem.minVal!) ||
-              (paramItem.maxVal != null && val > paramItem.maxVal!)) {
+          if ((paramItem.absoluteMin != null && val < paramItem.absoluteMin!) ||
+              (paramItem.absoluteMax != null && val > paramItem.absoluteMax!)) {
             outliers++;
           }
         }

@@ -25,9 +25,9 @@ class SafetyService {
         parameter: parameter.label,
         value: value,
         unit: parameter.unit,
-        minValue: parameter.minVal ?? 0,
-        maxValue: parameter.maxVal ?? 0,
-        status: value < (parameter.minVal ?? 0) ? 'below' : 'above',
+        minValue: parameter.absoluteMin ?? 0,
+        maxValue: parameter.absoluteMax ?? 0,
+        status: value < (parameter.absoluteMin ?? 0) ? 'below' : 'above',
       );
     }
   }
@@ -40,17 +40,17 @@ class SafetyService {
   }) {
     String? status;
 
-    if (parameter.minVal != null && value < parameter.minVal!) {
+    if (parameter.absoluteMin != null && value < parameter.absoluteMin!) {
       status = 'below';
-    } else if (parameter.maxVal != null && value > parameter.maxVal!) {
+    } else if (parameter.absoluteMax != null && value > parameter.absoluteMax!) {
       status = 'above';
     }
 
     if (status != null) {
       final String title = '⚠️ ${parameter.label} Alert - $pondName';
       final String body = status == 'below'
-          ? '${parameter.label} is LOW: $value ${parameter.unit}\nSafe range: ${parameter.minVal ?? 0} - ${parameter.maxVal ?? 0} ${parameter.unit}'
-          : '${parameter.label} is HIGH: $value ${parameter.unit}\nSafe range: ${parameter.minVal ?? 0} - ${parameter.maxVal ?? 0} ${parameter.unit}';
+          ? '${parameter.label} is LOW: $value ${parameter.unit}\nSafe range: ${parameter.absoluteMin ?? 0} - ${parameter.absoluteMax ?? 0} ${parameter.unit}'
+          : '${parameter.label} is HIGH: $value ${parameter.unit}\nSafe range: ${parameter.absoluteMin ?? 0} - ${parameter.absoluteMax ?? 0} ${parameter.unit}';
 
       return {'title': title, 'body': body};
     }

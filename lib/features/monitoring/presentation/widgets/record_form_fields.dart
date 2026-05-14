@@ -43,7 +43,7 @@ class RecordFormFields extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool hasRange =
-        selectedParameter.minVal != null && selectedParameter.maxVal != null;
+        selectedParameter.absoluteMin != null && selectedParameter.absoluteMax != null;
 
     if (selectedParameter.label == 'Bacterial Analysis') {
       return _buildBacterialAnalysisUI(context, themeColor);
@@ -95,7 +95,7 @@ class RecordFormFields extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    "Safe Range: ${selectedParameter.minVal} - ${selectedParameter.maxVal}",
+                    "Safe Range: ${selectedParameter.absoluteMin} - ${selectedParameter.absoluteMax}",
                     style: TextStyle(
                       color: textMuted,
                       fontSize: 13,
@@ -104,20 +104,20 @@ class RecordFormFields extends StatelessWidget {
                   ),
                 ],
               ),
-            ] else if (selectedParameter.minVal != null) ...[
+            ] else if (selectedParameter.absoluteMin != null) ...[
               const SizedBox(height: 4),
               Text(
-                "Minimum: ${selectedParameter.minVal}",
+                "Minimum: ${selectedParameter.absoluteMin}",
                 style: TextStyle(
                   color: textMuted,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-            ] else if (selectedParameter.maxVal != null) ...[
+            ] else if (selectedParameter.absoluteMax != null) ...[
               const SizedBox(height: 4),
               Text(
-                "Maximum: ${selectedParameter.maxVal}",
+                "Maximum: ${selectedParameter.absoluteMax}",
                 style: TextStyle(
                   color: textMuted,
                   fontSize: 13,

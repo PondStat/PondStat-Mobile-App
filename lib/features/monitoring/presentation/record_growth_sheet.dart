@@ -525,22 +525,22 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
                         }),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: p.color.withValues(alpha: 0.1),
+                            color: p.getColor(context).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: p.color.withValues(alpha: 0.3),
+                              color: p.getColor(context).withValues(alpha: 0.3),
                             ),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(p.icon, color: p.color, size: 32),
+                              Icon(p.icon, color: p.getColor(context), size: 32),
                               const SizedBox(height: 8),
                               Text(
                                 p.label,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: p.color,
+                                  color: p.getColor(context),
                                 ),
                               ),
                             ],
@@ -558,7 +558,7 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: selectedParameter!.color,
+                          color: selectedParameter!.getColor(context),
                         ),
                       ),
                       const SizedBox(height: 24),

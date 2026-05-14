@@ -644,14 +644,14 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [param.color.withValues(alpha: 0.85), param.color],
+            colors: [param.getColor(context).withValues(alpha: 0.85), param.getColor(context)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: param.color.withValues(alpha: 0.25),
+              color: param.getColor(context).withValues(alpha: 0.25),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -778,7 +778,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 label: data['label'],
                 unit: data['unit'] ?? '',
                 icon: Icons.dashboard_customize_rounded,
-                color: Colors.blueGrey,
+                category: ParameterCategory.custom,
                 createdBy: data['createdBy'],
               ),
             );
@@ -816,7 +816,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   }
 
   Widget _buildInputForm() {
-    final Color themeColor = selectedParameter!.color;
+    final Color themeColor = selectedParameter!.getColor(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
