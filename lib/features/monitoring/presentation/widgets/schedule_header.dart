@@ -7,18 +7,19 @@ class ScheduleHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    const primaryBlue = Color(0xFF0A74DA);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final onSurface = colorScheme.onSurface;
 
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: primaryBlue.withValues(alpha: 0.1),
+            color: colorScheme.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.event_note_rounded, color: primaryBlue),
+          child: Icon(Icons.event_note_rounded, color: colorScheme.primary),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -27,6 +28,8 @@ class ScheduleHeader extends StatelessWidget {
             children: [
               Text(
                 "Schedule Manager",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -35,8 +38,10 @@ class ScheduleHeader extends StatelessWidget {
               ),
               Text(
                 pondName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: colorScheme.onSurfaceVariant,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -44,9 +49,22 @@ class ScheduleHeader extends StatelessWidget {
             ],
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
-          onPressed: () => Navigator.maybePop(context),
+        const SizedBox(width: 8),
+        InkWell(
+          onTap: () => Navigator.maybePop(context),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.close_rounded,
+              color: colorScheme.onSurfaceVariant,
+              size: 20,
+            ),
+          ),
         ),
       ],
     );
