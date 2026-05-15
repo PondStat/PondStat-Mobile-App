@@ -32,7 +32,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final Color secondaryBlue = const Color(0xFF4FA0F0);
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
-  final Color backgroundLight = const Color(0xFFF8FAFC);
+  Color get backgroundLight => Theme.of(context).scaffoldBackgroundColor;
 
   @override
   void initState() {
@@ -111,7 +111,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final shouldDiscard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
@@ -261,7 +261,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         icon: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
@@ -342,7 +342,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
@@ -355,19 +355,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           child: CircleAvatar(
                             radius: 60,
                             backgroundColor: Colors.blue.shade50,
-                            backgroundImage: photoUrl != null
-                                ? NetworkImage(photoUrl)
-                                : null,
-                            child: photoUrl == null
-                                ? Text(
+                            child: photoUrl != null
+                                ? ClipOval(
+                                    child: Image.network(
+                                      photoUrl,
+                                      width: 120,
+                                      height: 120,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return CircularProgressIndicator(color: primaryBlue);
+                                      },
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Text(
+                                          StringUtils.getInitials(displayName),
+                                          style: TextStyle(
+                                            fontSize: 40,
+                                            fontWeight: FontWeight.w900,
+                                            color: primaryBlue,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : Text(
                                     StringUtils.getInitials(displayName),
                                     style: TextStyle(
                                       fontSize: 40,
                                       fontWeight: FontWeight.w900,
                                       color: primaryBlue,
                                     ),
-                                  )
-                                : null,
+                                  ),
                           ),
                         ),
                         GestureDetector(
@@ -387,7 +405,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 end: Alignment.bottomRight,
                               ),
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 3),
+                              border: Border.all(color: Theme.of(context).colorScheme.surface, width: 3),
                               boxShadow: [
                                 BoxShadow(
                                   color: primaryBlue.withValues(alpha: 0.4),
@@ -487,9 +505,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    backgroundColor: hasChanges
-                        ? primaryBlue
-                        : Colors.grey.shade300,
+                    backgroundColor: primaryBlue,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -537,10 +553,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isFocused ? primaryBlue : Colors.white,
+          color: isFocused ? primaryBlue : Theme.of(context).colorScheme.surface,
           width: 2,
         ),
         boxShadow: [
