@@ -8,6 +8,18 @@ enum ParameterCategory {
   custom,
 }
 
+class ParameterNames {
+  static const String totalWeightSampled = 'Total weight of sampled fish';
+  static const String numFishSampled = 'Number of fish sampled';
+  static const String feedingRate = 'Feeding rate';
+  static const String totalFeedConsumed = 'Total feed consumed';
+  static const String totalWeightGained = 'Total weight gained';
+  static const String abw = 'ABW';
+  static const String adg = 'ADG';
+  static const String dfr = 'DFR';
+  static const String fcr = 'FCR';
+}
+
 extension ParameterCategoryExtension on ParameterCategory {
   Color resolveColor(BuildContext context) {
 
