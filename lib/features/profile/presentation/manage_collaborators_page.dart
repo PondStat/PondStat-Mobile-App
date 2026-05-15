@@ -31,7 +31,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
   final Color secondaryBlue = const Color(0xFF4FA0F0);
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
-  final Color backgroundLight = const Color(0xFFF8FAFC);
+  Color get backgroundLight => Theme.of(context).scaffoldBackgroundColor;
 
   @override
   void initState() {
@@ -168,7 +168,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
@@ -275,7 +275,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                       icon: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
@@ -328,7 +328,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                 margin: const EdgeInsets.all(20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
@@ -356,7 +356,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             decoration: BoxDecoration(
-                              color: isFocused ? Colors.white : backgroundLight,
+                              color: isFocused ? Theme.of(context).colorScheme.surface : backgroundLight,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isFocused
@@ -660,18 +660,19 @@ class _CollaboratorTileState extends State<CollaboratorTile>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        padding: const EdgeInsets.only(
-          bottom: 32,
-          top: 12,
-          left: 24,
-          right: 24,
-        ),
-        child: Column(
+      builder: (context) => SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: const EdgeInsets.only(
+            bottom: 32,
+            top: 12,
+            left: 24,
+            right: 24,
+          ),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -690,14 +691,14 @@ class _CollaboratorTileState extends State<CollaboratorTile>
               children: [
                 CircleAvatar(
                   backgroundColor: _getAvatarColor(
-                    userData?['fullName'] ?? 'U',
+                    (userData?['fullName']?.toString().trim().isEmpty ?? true) ? 'U' : userData!['fullName'],
                   ).withValues(alpha: 0.2),
                   radius: 20,
                   child: Text(
-                    StringUtils.getInitials(userData?['fullName'] ?? 'U'),
+                    StringUtils.getInitials((userData?['fullName']?.toString().trim().isEmpty ?? true) ? 'U' : userData!['fullName']),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: _getAvatarColor(userData?['fullName'] ?? 'U'),
+                      color: _getAvatarColor((userData?['fullName']?.toString().trim().isEmpty ?? true) ? 'U' : userData!['fullName']),
                     ),
                   ),
                 ),
@@ -760,6 +761,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -847,7 +849,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.grey.shade100),
           ),
@@ -892,7 +894,8 @@ class _CollaboratorTileState extends State<CollaboratorTile>
       );
     }
 
-    final name = userData?['fullName'] ?? 'Unknown User';
+    final rawName = userData?['fullName']?.toString().trim() ?? '';
+    final name = rawName.isEmpty ? 'Unknown User' : rawName;
     final email = userData?['email'] ?? '';
     final initials = StringUtils.getInitials(name);
     final avatarColor = widget.isMe
@@ -902,7 +905,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
     Widget tileContent = Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -1048,12 +1051,17 @@ class _CollaboratorTileState extends State<CollaboratorTile>
             size: 28,
           ),
         ),
+        onUpdate: (details) {
+          if (details.reached && !details.previousReached) {
+            HapticFeedback.lightImpact();
+          }
+        },
         confirmDismiss: (direction) async {
           HapticFeedback.selectionClick();
           return await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
               ),
