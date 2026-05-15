@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 import 'dart:developer' as developer;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -50,17 +51,28 @@ void main() async {
       stackTrace: stackTrace,
     );
     initializationError = e.toString();
-  } finally {
-    FlutterNativeSplash.remove();
   }
 
   runApp(ProviderScope(child: MyApp(initializationError: initializationError)));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final String? initializationError;
 
   const MyApp({super.key, this.initializationError});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,8 +87,8 @@ class MyApp extends StatelessWidget {
           themeMode: themeMode,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          home: initializationError != null
-              ? ErrorApp(error: initializationError!)
+          home: widget.initializationError != null
+              ? ErrorApp(error: widget.initializationError!)
               : const AuthWrapper(),
         );
       },
@@ -101,23 +113,27 @@ class ErrorApp extends StatelessWidget {
               const Icon(Icons.error_outline, color: Colors.red, size: 64),
               const SizedBox(height: 16),
               Text(
-                'Initialization Error',
-                style: Theme.of(context).textTheme.titleLarge,
+                'Connection Error',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
-                error,
+                'We are having trouble connecting to the servers. Please check your internet connection and try again.',
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.exit_to_app_rounded),
                 onPressed: () {
-                  // A simple restart requires app to be closed and opened again
-                  // We provide a visual hint for the user
+                  SystemNavigator.pop();
                 },
-                child: const Text('Please restart the application'),
+                label: const Text('Exit App'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ],
           ),
