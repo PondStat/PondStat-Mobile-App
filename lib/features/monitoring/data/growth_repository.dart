@@ -237,30 +237,37 @@ class GrowthRepository {
     User? user,
     String pondId,
   ) async {
+    final docIds = [m.abwDocId, m.adgDocId, m.dfrDocId, m.fcrDocId].whereType<String>().toList();
+    if (docIds.isEmpty) return;
+
+    // Fetch all docs in parallel
+    final snapshots = await Future.wait(
+      docIds.map((id) => FirestoreHelper.measurementsCollection.doc(id).get()),
+    );
+
     final batch = FirebaseFirestore.instance.batch();
 
-    final docIds = [m.abwDocId, m.adgDocId, m.dfrDocId, m.fcrDocId];
-    for (final docId in docIds) {
-      if (docId != null) {
-        final docRef = FirestoreHelper.measurementsCollection.doc(docId);
-        final docSnap = await docRef.get();
-        if (docSnap.exists) {
-          final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
-          final data = docSnap.data() as Map<String, dynamic>;
-          batch.set(historyRef, {
-            'pondId': pondId,
-            'measurementId': docId,
-            'parameter': data['parameter'],
-            'action': 'delete',
-            'editedAt': FieldValue.serverTimestamp(),
-            'editedBy': user?.uid,
-            'editorName': user?.displayName ?? 'Unknown',
-            'before': {'value': data['value']},
-            'after': null,
-          });
-          batch.delete(docRef);
-        }
-      }
+    for (var i = 0; i < docIds.length; i++) {
+      final id = docIds[i];
+      final docSnap = snapshots[i];
+      if (!docSnap.exists) continue;
+
+      final data = docSnap.data() as Map<String, dynamic>;
+      final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
+      
+      batch.set(historyRef, {
+        'pondId': pondId,
+        'measurementId': id,
+        'parameter': data['parameter'],
+        'action': 'delete',
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': user?.uid,
+        'editorName': user?.displayName ?? 'Unknown',
+        'before': {'value': data['value']},
+        'after': null,
+      });
+      
+      batch.delete(docSnap.reference);
     }
     await batch.commit();
   }

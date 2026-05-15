@@ -116,43 +116,66 @@ class _EditGrowthSheetState extends State<EditGrowthSheet> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      final batch = FirebaseFirestore.instance.batch();
 
-      Future<void> queueUpdate(
-        String? docId,
-        double newValue,
-        double oldValue,
-      ) async {
-        if (docId == null || newValue == oldValue) return;
-        final docRef = FirestoreHelper.measurementsCollection.doc(docId);
-        final docSnap = await docRef.get();
-        if (docSnap.exists) {
-          final data = docSnap.data() as Map<String, dynamic>;
-          batch.update(docRef, {
-            'value': newValue,
-            'editedAt': FieldValue.serverTimestamp(),
-            'editedBy': user?.uid,
-            'editorName': user?.displayName,
-          });
-          final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
-          batch.set(historyRef, {
-            'pondId': widget.pondId,
-            'measurementId': docId,
-            'parameter': data['parameter'],
-            'action': 'update',
-            'editedAt': FieldValue.serverTimestamp(),
-            'editedBy': user?.uid,
-            'editorName': user?.displayName ?? 'Unknown',
-            'before': {'value': data['value']},
-            'after': {'value': newValue},
-          });
-        }
+      final docIds = [
+        if (newAbw != widget.metrics.abw) widget.metrics.abwDocId,
+        if (newAdg != widget.metrics.adg) widget.metrics.adgDocId,
+        if (newDfr != widget.metrics.dfr) widget.metrics.dfrDocId,
+        if (newFcr != widget.metrics.fcr) widget.metrics.fcrDocId,
+      ].whereType<String>().toList();
+
+      if (docIds.isEmpty) {
+        setState(() => _isSaving = false);
+        return;
       }
 
-      await queueUpdate(widget.metrics.abwDocId, newAbw, widget.metrics.abw);
-      await queueUpdate(widget.metrics.adgDocId, newAdg, widget.metrics.adg);
-      await queueUpdate(widget.metrics.dfrDocId, newDfr, widget.metrics.dfr);
-      await queueUpdate(widget.metrics.fcrDocId, newFcr, widget.metrics.fcr);
+      // Fetch all docs in parallel
+      final snapshots = await Future.wait(
+        docIds.map((id) => FirestoreHelper.measurementsCollection.doc(id).get()),
+      );
+
+      final batch = FirebaseFirestore.instance.batch();
+
+      for (var i = 0; i < docIds.length; i++) {
+        final id = docIds[i];
+        final docSnap = snapshots[i];
+        if (!docSnap.exists) continue;
+
+        final data = docSnap.data() as Map<String, dynamic>;
+        
+        double? newValue;
+        if (id == widget.metrics.abwDocId) {
+          newValue = newAbw;
+        } else if (id == widget.metrics.adgDocId) {
+          newValue = newAdg;
+        } else if (id == widget.metrics.dfrDocId) {
+          newValue = newDfr;
+        } else if (id == widget.metrics.fcrDocId) {
+          newValue = newFcr;
+        }
+
+        if (newValue == null) continue;
+
+        batch.update(docSnap.reference, {
+          'value': newValue,
+          'editedAt': FieldValue.serverTimestamp(),
+          'editedBy': user?.uid,
+          'editorName': user?.displayName,
+        });
+
+        final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
+        batch.set(historyRef, {
+          'pondId': widget.pondId,
+          'measurementId': id,
+          'parameter': data['parameter'],
+          'action': 'update',
+          'editedAt': FieldValue.serverTimestamp(),
+          'editedBy': user?.uid,
+          'editorName': user?.displayName ?? 'Unknown',
+          'before': {'value': data['value']},
+          'after': {'value': newValue},
+        });
+      }
 
       await batch.commit();
 

@@ -1,0 +1,109 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function isPondMember(pondId) {
+      return isAuthenticated() &&
+        uid() in get(/databases/$(database)/documents/artifacts/pondstat-app-v1/public/data/ponds/$(pondId)).data.memberIds;
+    }
+
+    function isPondOwner(pondId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/artifacts/pondstat-app-v1/public/data/ponds/$(pondId)).data.ownerId == uid();
+    }
+
+    function isPondEditor(pondId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/artifacts/pondstat-app-v1/public/data/ponds/$(pondId)).data.roles[uid()] == 'editor';
+    }
+
+    function canEditPond(pondId) {
+      return isPondOwner(pondId) || isPondEditor(pondId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /artifacts/{appId}/public/data {
+
+      // ── USERS ──
+      match /users/{userId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && uid() == userId;
+        allow update: if isAuthenticated() && uid() == userId;
+        allow delete: if false;
+
+        // ── NOTIFICATIONS (IN-APP INBOX) ──
+        match /notifications/{notificationId} {
+          allow read: if isAuthenticated() && uid() == userId;
+          allow create: if false; // Only Cloud Function writes
+          allow update: if isAuthenticated() && uid() == userId;
+          allow delete: if isAuthenticated() && uid() == userId;
+        }
+      }
+
+      // ── PONDS ──
+      match /ponds/{pondId} {
+        allow read: if isAuthenticated() && uid() in resource.data.memberIds;
+        allow create: if isAuthenticated()
+          && request.resource.data.ownerId == uid()
+          && request.resource.data.memberIds.hasOnly([uid()])
+          && request.resource.data.roles[uid()] == 'owner';
+        allow update: if isAuthenticated() && (resource.data.ownerId == uid() || resource.data.roles[uid()] == 'editor');
+        allow delete: if isAuthenticated() && resource.data.ownerId == uid();
+      }
+
+      // ── MEASUREMENTS ──
+      match /measurements/{measurementId} {
+        allow read: if isPondMember(resource.data.pondId);
+        allow create: if isPondMember(request.resource.data.pondId)
+          && request.resource.data.recordedBy == uid();
+        allow update: if canEditPond(resource.data.pondId);
+        allow delete: if canEditPond(resource.data.pondId);
+      }
+
+      // ── MEASUREMENT HISTORY ──
+      match /measurement_history/{historyId} {
+        allow read: if isPondMember(resource.data.pondId);
+        allow create: if isPondMember(request.resource.data.pondId);
+        allow update, delete: if false;
+      }
+
+      // ── SCHEDULES ──
+      match /schedules/{scheduleId} {
+        allow read: if isPondMember(resource.data.pondId);
+        allow create: if canEditPond(request.resource.data.pondId);
+        allow update: if canEditPond(resource.data.pondId);
+        allow delete: if canEditPond(resource.data.pondId);
+      }
+
+      // ── EXPENSES ──
+      match /expenses/{expenseId} {
+        allow read: if isPondMember(resource.data.pondId);
+        allow create: if canEditPond(request.resource.data.pondId)
+          && request.resource.data.buyerId == uid();
+        allow update: if canEditPond(resource.data.pondId);
+        allow delete: if canEditPond(resource.data.pondId);
+      }
+
+      // ── CUSTOM PARAMETERS ──
+      match /custom_parameters/{paramId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated()
+          && request.resource.data.createdBy == uid();
+        allow delete: if isAuthenticated()
+          && resource.data.createdBy == uid();
+      }
+    }
+  }
+}

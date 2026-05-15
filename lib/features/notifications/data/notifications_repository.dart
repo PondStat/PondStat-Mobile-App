@@ -125,11 +125,19 @@ class NotificationsRepository {
 
       if (unread.docs.isEmpty) return;
 
-      final batch = _firestore.batch();
-      for (var doc in unread.docs) {
-        batch.update(doc.reference, {'isRead': true});
+      const batchSize = 400;
+      final docs = unread.docs;
+
+      for (var i = 0; i < docs.length; i += batchSize) {
+        final end = (i + batchSize < docs.length) ? i + batchSize : docs.length;
+        final chunk = docs.sublist(i, end);
+
+        final batch = _firestore.batch();
+        for (var doc in chunk) {
+          batch.update(doc.reference, {'isRead': true});
+        }
+        await batch.commit();
       }
-      await batch.commit();
     } catch (e) {
       developer.log(
         'Error marking all as read',
