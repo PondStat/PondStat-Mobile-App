@@ -97,18 +97,10 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
             tooltip: _showUnreadOnly ? 'Show all' : 'Show unread',
             onPressed: () => setState(() => _showUnreadOnly = !_showUnreadOnly),
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'markAllRead') {
-                repository.markAllAsRead();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'markAllRead',
-                child: Text('Mark all as read'),
-              ),
-            ],
+          IconButton(
+            icon: const Icon(Icons.done_all_rounded),
+            tooltip: 'Mark all as read',
+            onPressed: () => repository.markAllAsRead(),
           ),
         ],
       ),
@@ -197,13 +189,23 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                 if (item is String) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 24, bottom: 8, left: 4),
-                    child: Text(
-                      item,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          item,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }
@@ -246,38 +248,107 @@ class _NotificationTile extends StatelessWidget {
     required this.onDelete,
   });
 
+  IconData _getIconData(NotificationModel n) {
+    final lowerTitle = n.title.toLowerCase();
+    final lowerBody = n.body.toLowerCase();
+    if (lowerTitle.contains('alert') ||
+        lowerTitle.contains('warning') ||
+        lowerBody.contains('alert') ||
+        lowerBody.contains('warning')) {
+      return Icons.warning_amber_rounded;
+    } else if (lowerTitle.contains('error') ||
+        lowerTitle.contains('fail') ||
+        lowerBody.contains('error') ||
+        lowerBody.contains('fail')) {
+      return Icons.error_outline_rounded;
+    } else if (lowerTitle.contains('success') ||
+        lowerBody.contains('success')) {
+      return Icons.check_circle_outline_rounded;
+    }
+    return Icons.info_outline_rounded;
+  }
+
+  Color _getIconColor(NotificationModel n, ColorScheme colorScheme) {
+    final lowerTitle = n.title.toLowerCase();
+    final lowerBody = n.body.toLowerCase();
+    if (lowerTitle.contains('alert') ||
+        lowerTitle.contains('warning') ||
+        lowerBody.contains('alert') ||
+        lowerBody.contains('warning')) {
+      return Colors.orange;
+    } else if (lowerTitle.contains('error') ||
+        lowerTitle.contains('fail') ||
+        lowerBody.contains('error') ||
+        lowerBody.contains('fail')) {
+      return colorScheme.error;
+    } else if (lowerTitle.contains('success') ||
+        lowerBody.contains('success')) {
+      return Colors.green;
+    }
+    return colorScheme.primary;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final dynamicIcon = _getIconData(notification);
+    final dynamicColor = _getIconColor(notification, colorScheme);
 
     return Dismissible(
       key: Key(notification.id),
       direction: DismissDirection.horizontal,
       background: Container(
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: colorScheme.secondaryContainer,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(
-          notification.isRead
-              ? Icons.mark_as_unread_rounded
-              : Icons.mark_email_read_rounded,
-          color: colorScheme.onSecondaryContainer,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              notification.isRead
+                  ? Icons.mark_as_unread_rounded
+                  : Icons.mark_email_read_rounded,
+              color: colorScheme.onSecondaryContainer,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              notification.isRead ? 'Mark Unread' : 'Mark Read',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
       secondaryBackground: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: colorScheme.errorContainer,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(
-          Icons.delete_outline_rounded,
-          color: colorScheme.onErrorContainer,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Delete',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: colorScheme.onErrorContainer,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.delete_outline_rounded,
+              color: colorScheme.onErrorContainer,
+            ),
+          ],
         ),
       ),
       confirmDismiss: (direction) async {
@@ -321,14 +392,14 @@ class _NotificationTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: notification.isRead
                         ? colorScheme.surfaceContainerHighest
-                        : colorScheme.primary.withValues(alpha: 0.1),
+                        : dynamicColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.warning_amber_rounded,
+                    dynamicIcon,
                     color: notification.isRead
                         ? colorScheme.onSurfaceVariant
-                        : colorScheme.primary,
+                        : dynamicColor,
                     size: 20,
                   ),
                 ),
