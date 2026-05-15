@@ -43,7 +43,8 @@ class RecordFormFields extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool hasRange =
-        selectedParameter.absoluteMin != null && selectedParameter.absoluteMax != null;
+        selectedParameter.absoluteMin != null &&
+        selectedParameter.absoluteMax != null;
 
     if (selectedParameter.label == 'Bacterial Analysis') {
       return _buildBacterialAnalysisUI(context, themeColor);
@@ -82,27 +83,37 @@ class RecordFormFields extends StatelessWidget {
               ),
             ),
             if (hasRange) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: themeColor,
-                      shape: BoxShape.circle,
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: themeColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: themeColor,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Safe Range: ${selectedParameter.absoluteMin} - ${selectedParameter.absoluteMax}",
-                    style: TextStyle(
-                      color: textMuted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(width: 6),
+                    Text(
+                      "Safe Range: ${selectedParameter.absoluteMin} - ${selectedParameter.absoluteMax}",
+                      style: TextStyle(
+                        color: textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ] else if (selectedParameter.absoluteMin != null) ...[
               const SizedBox(height: 4),
@@ -160,6 +171,7 @@ class RecordFormFields extends StatelessWidget {
           1,
           themeColor,
           customLabel: "Value",
+          isLast: true,
         ),
       );
     }
@@ -212,6 +224,9 @@ class RecordFormFields extends StatelessWidget {
                             replicates[rIdx],
                             themeColor,
                             isCompact: true,
+                            isLast:
+                                (pIdx == points.length - 1) &&
+                                (rIdx == replicates.length - 1),
                           ),
                         ),
                       ),
@@ -365,67 +380,101 @@ class RecordFormFields extends StatelessWidget {
     Color themeColor, {
     bool isCompact = false,
     String? customLabel,
+    bool isLast = false,
   }) {
     Color textDark = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     final key = '$point-$replicate';
     final bool isFocused = focusNodes[key]?.hasFocus ?? false;
+    final controller = valueControllers[key]!;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        color: isFocused ? Colors.white : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isFocused ? themeColor : Colors.transparent,
-          width: isFocused ? 2 : 0,
-        ),
-        boxShadow: isFocused
-            ? [
-                BoxShadow(
-                  color: themeColor.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : [],
-      ),
-      child: TextField(
-        controller: valueControllers[key],
-        focusNode: focusNodes[key],
-        keyboardType: selectedParameter.keyboardType,
-        textInputAction: TextInputAction.next,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontWeight: FontWeight.w900,
-          fontSize: isCompact ? 14 : 18,
-          color: textDark,
-        ),
-        onSubmitted: (_) {
-          onFieldSubmitted(key);
-        },
-        decoration: InputDecoration(
-          labelText:
-              customLabel ??
-              (isCompact ? "R$replicate" : "Replicate $replicate"),
-          floatingLabelBehavior: FloatingLabelBehavior.always,
-          labelStyle: TextStyle(
-            color: isFocused ? themeColor : Colors.grey.shade500,
-            fontWeight: FontWeight.w800,
-            fontSize: isCompact ? 11 : 12,
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, child) {
+        bool hasError = false;
+        if (value.text.isNotEmpty) {
+          final parsedValue = double.tryParse(value.text);
+          if (parsedValue != null) {
+            if (selectedParameter.absoluteMin != null &&
+                parsedValue < selectedParameter.absoluteMin!) {
+              hasError = true;
+            }
+            if (selectedParameter.absoluteMax != null &&
+                parsedValue > selectedParameter.absoluteMax!) {
+              hasError = true;
+            }
+          }
+        }
+
+        final activeColor = hasError ? theme.colorScheme.error : themeColor;
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: isFocused
+                ? theme.colorScheme.surface
+                : (isDark
+                      ? theme.colorScheme.surfaceContainerHighest
+                      : const Color(0xFFF8FAFC)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isFocused || hasError ? activeColor : Colors.transparent,
+              width: isFocused || hasError ? 2 : 0,
+            ),
+            boxShadow: isFocused
+                ? [
+                    BoxShadow(
+                      color: activeColor.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [],
           ),
-          hintText: selectedParameter.hint.isEmpty
-              ? ''
-              : selectedParameter.hint.split(' ').last,
-          hintStyle: TextStyle(
-            color: Colors.grey.shade400,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
+          child: TextField(
+            controller: controller,
+            focusNode: focusNodes[key],
+            keyboardType: selectedParameter.keyboardType,
+            textInputAction: isLast
+                ? TextInputAction.done
+                : TextInputAction.next,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: isCompact ? 14 : 18,
+              color: hasError ? theme.colorScheme.error : textDark,
+            ),
+            onSubmitted: (_) {
+              onFieldSubmitted(key);
+            },
+            decoration: InputDecoration(
+              labelText:
+                  customLabel ??
+                  (isCompact ? "R$replicate" : "Replicate $replicate"),
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              labelStyle: TextStyle(
+                color: hasError
+                    ? theme.colorScheme.error
+                    : (isFocused ? activeColor : Colors.grey.shade500),
+                fontWeight: FontWeight.w800,
+                fontSize: isCompact ? 11 : 12,
+              ),
+              hintText: selectedParameter.hint.isEmpty
+                  ? ''
+                  : selectedParameter.hint.split(' ').last,
+              hintStyle: TextStyle(
+                color: Colors.grey.shade400,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.only(top: 8, bottom: 12),
+            ),
           ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.only(top: 8, bottom: 12),
-        ),
-      ),
+        );
+      },
     );
   }
 
