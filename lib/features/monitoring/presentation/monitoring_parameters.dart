@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum ParameterCategory {
-  physical,
-  chemical,
-  biological,
-  growth,
-  custom,
-}
+enum ParameterCategory { physical, chemical, biological, growth, custom }
 
 class ParameterNames {
   static const String totalWeightSampled = 'Total weight of sampled fish';
@@ -22,7 +16,6 @@ class ParameterNames {
 
 extension ParameterCategoryExtension on ParameterCategory {
   Color resolveColor(BuildContext context) {
-
     switch (this) {
       case ParameterCategory.physical:
         return Colors.orange;
@@ -89,21 +82,36 @@ class ParameterItem {
 
 class MonitoringParameters {
   static List<ParameterItem> getDailyParameters(String species) {
-    double? phOptMin, phOptMax, tempOptMin, tempOptMax, salOptMin, salOptMax, transOptMin, transOptMax;
+    double? phOptMin,
+        phOptMax,
+        tempOptMin,
+        tempOptMax,
+        salOptMin,
+        salOptMax,
+        transOptMin,
+        transOptMax;
 
     switch (species.toLowerCase()) {
       case 'shrimp':
-        phOptMin = 7.5; phOptMax = 8.5;
-        tempOptMin = 28.0; tempOptMax = 32.0;
-        salOptMin = 10.0; salOptMax = 25.0;
-        transOptMin = 30.0; transOptMax = 40.0;
+        phOptMin = 7.5;
+        phOptMax = 8.5;
+        tempOptMin = 28.0;
+        tempOptMax = 32.0;
+        salOptMin = 10.0;
+        salOptMax = 25.0;
+        transOptMin = 30.0;
+        transOptMax = 40.0;
         break;
       case 'tilapia':
       default:
-        phOptMin = 6.5; phOptMax = 9.0;
-        tempOptMin = 26.0; tempOptMax = 32.0;
-        salOptMin = 5.0; salOptMax = 15.0; 
-        transOptMin = 20.0; transOptMax = 40.0;
+        phOptMin = 6.5;
+        phOptMax = 9.0;
+        tempOptMin = 26.0;
+        tempOptMax = 32.0;
+        salOptMin = 5.0;
+        salOptMax = 15.0;
+        transOptMin = 20.0;
+        transOptMax = 40.0;
         break;
     }
 
@@ -118,7 +126,8 @@ class MonitoringParameters {
         optimalMin: phOptMin,
         optimalMax: phOptMax,
         hint: 'e.g., 7.2',
-        warningMessage: 'pH levels outside the optimal range can stress the $species.',
+        warningMessage:
+            'pH levels outside the optimal range can stress the $species.',
       ),
       ParameterItem(
         label: 'Temperature',
@@ -130,7 +139,8 @@ class MonitoringParameters {
         optimalMin: tempOptMin,
         optimalMax: tempOptMax,
         hint: 'e.g., 28.5',
-        warningMessage: 'Temperature extremes can lead to disease or mortality.',
+        warningMessage:
+            'Temperature extremes can lead to disease or mortality.',
       ),
       ParameterItem(
         label: 'Salinity',
@@ -154,7 +164,8 @@ class MonitoringParameters {
         optimalMin: transOptMin,
         optimalMax: transOptMax,
         hint: 'e.g., 30',
-        warningMessage: 'Low transparency indicates heavy blooms, high indicates poor primary productivity.',
+        warningMessage:
+            'Low transparency indicates heavy blooms, high indicates poor primary productivity.',
       ),
     ];
   }

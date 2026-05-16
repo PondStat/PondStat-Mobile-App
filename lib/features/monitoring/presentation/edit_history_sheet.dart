@@ -166,7 +166,8 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
                     child: EmptyStateCard(
                       icon: Icons.history_rounded,
                       title: "No history yet",
-                      description: "Changes made to the sampling metrics will appear here.",
+                      description:
+                          "Changes made to the sampling metrics will appear here.",
                     ),
                   );
                 }

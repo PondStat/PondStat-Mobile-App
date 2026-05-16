@@ -11,68 +11,17 @@ import 'package:pondstat/core/firebase/firebase_options.dart';
 import 'package:pondstat/core/services/notification_service.dart';
 import 'package:pondstat/core/services/settings_service.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:pondstat/core/widgets/loading_overlay.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  String? initializationError;
-
-  try {
-    // Load user settings early
-    await SettingsService().loadSettings();
-
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
-    if (!kIsWeb) {
-      try {
-        FirebaseFirestore.instance.settings = const Settings(
-          persistenceEnabled: true,
-          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-        );
-        developer.log("✅ Offline persistence enabled");
-      } catch (e) {
-        developer.log("⚠️ Could not enable offline persistence: $e");
-      }
-    }
-
-    developer.log("✅ Firebase connected successfully!");
-
-    // Initialize notifications (Mobile only)
-    if (!kIsWeb) {
-      await NotificationService().initialize();
-    }
-  } catch (e, stackTrace) {
-    developer.log(
-      "❌ Initialization failed: $e",
-      error: e,
-      stackTrace: stackTrace,
-    );
-    initializationError = e.toString();
-  }
-
-  runApp(ProviderScope(child: MyApp(initializationError: initializationError)));
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatefulWidget {
-  final String? initializationError;
-
-  const MyApp({super.key, this.initializationError});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FlutterNativeSplash.remove();
-    });
-  }
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -87,12 +36,91 @@ class _MyAppState extends State<MyApp> {
           themeMode: themeMode,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          home: widget.initializationError != null
-              ? ErrorApp(error: widget.initializationError!)
-              : const AuthWrapper(),
+          home: const StartupScreen(),
         );
       },
     );
+  }
+}
+
+class StartupScreen extends StatefulWidget {
+  const StartupScreen({super.key});
+
+  @override
+  State<StartupScreen> createState() => _StartupScreenState();
+}
+
+class _StartupScreenState extends State<StartupScreen> {
+  String? _initializationError;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      await SettingsService().loadSettings();
+
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
+      if (!kIsWeb) {
+        try {
+          FirebaseFirestore.instance.settings = const Settings(
+            persistenceEnabled: true,
+            cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+          );
+          developer.log("✅ Offline persistence enabled");
+        } catch (e) {
+          developer.log("⚠️ Could not enable offline persistence: $e");
+        }
+      }
+
+      developer.log("✅ Firebase connected successfully!");
+
+      if (!kIsWeb) {
+        await NotificationService().initialize();
+      }
+
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (e, stackTrace) {
+      developer.log(
+        "❌ Initialization failed: $e",
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (mounted) {
+        setState(() {
+          _initializationError = e.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_initializationError != null) {
+      return ErrorApp(error: _initializationError!);
+    }
+
+    if (_isInitialized) {
+      return const AuthWrapper();
+    }
+
+    return const LoadingOverlay();
   }
 }
 
@@ -114,7 +142,9 @@ class ErrorApp extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'Connection Error',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -131,8 +161,13 @@ class ErrorApp extends StatelessWidget {
                 },
                 label: const Text('Exit App'),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],

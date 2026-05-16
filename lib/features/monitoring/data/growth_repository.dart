@@ -73,7 +73,8 @@ class GrowthRepository {
     if (pondData['createdAt'] != null) {
       pondStartDate = (pondData['createdAt'] as Timestamp).toDate();
     } else {
-      pondStartDate = (allDocs.first.data()!['timestamp'] as Timestamp).toDate();
+      pondStartDate = (allDocs.first.data()!['timestamp'] as Timestamp)
+          .toDate();
     }
 
     final weeklyBuckets = _bucketizeByWeek(allDocs, pondStartDate);
@@ -81,10 +82,8 @@ class GrowthRepository {
     return _calculateWeeklyMetrics(weeklyBuckets, fishCount);
   }
 
-  static Future<List<DocumentSnapshot<Map<String, dynamic>>>> _fetchRelevantMeasurements(
-    String pondId,
-    List<String> relevantParams,
-  ) async {
+  static Future<List<DocumentSnapshot<Map<String, dynamic>>>>
+  _fetchRelevantMeasurements(String pondId, List<String> relevantParams) async {
     final measurementsSnapshot = await FirestoreHelper.measurementsCollection
         .where('pondId', isEqualTo: pondId)
         .get();
@@ -203,7 +202,8 @@ class GrowthRepository {
 
         final prevTotalWeight =
             prevBucket[ParameterNames.totalWeightSampled] as double;
-        final prevSampleCount = prevBucket[ParameterNames.numFishSampled] as double;
+        final prevSampleCount =
+            prevBucket[ParameterNames.numFishSampled] as double;
         final prevExplicitAbw = prevBucket[ParameterNames.abw] as double;
 
         final prevAbw = prevExplicitAbw > 0
@@ -255,7 +255,12 @@ class GrowthRepository {
     User? user,
     String pondId,
   ) async {
-    final docIds = [m.abwDocId, m.adgDocId, m.dfrDocId, m.fcrDocId].whereType<String>().toList();
+    final docIds = [
+      m.abwDocId,
+      m.adgDocId,
+      m.dfrDocId,
+      m.fcrDocId,
+    ].whereType<String>().toList();
     if (docIds.isEmpty) return;
 
     // Fetch all docs in parallel
@@ -272,7 +277,7 @@ class GrowthRepository {
 
       final data = docSnap.data() as Map<String, dynamic>;
       final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
-      
+
       batch.set(historyRef, {
         'pondId': pondId,
         'measurementId': id,
@@ -284,7 +289,7 @@ class GrowthRepository {
         'before': {'value': data['value']},
         'after': null,
       });
-      
+
       batch.delete(docSnap.reference);
     }
     await batch.commit();

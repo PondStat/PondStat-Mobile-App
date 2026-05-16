@@ -145,7 +145,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
 
   Widget _buildSummaryCard(double total, int members, double share) {
     final currencyFormat = NumberFormat.currency(symbol: '₱', decimalDigits: 2);
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -290,8 +290,10 @@ class _ExpensesTabState extends State<ExpensesTab> {
     final colorScheme = Theme.of(context).colorScheme;
     final onSurface = colorScheme.onSurface;
 
-    final compactCurrencyFormat =
-        NumberFormat.currency(symbol: '₱', decimalDigits: 0);
+    final compactCurrencyFormat = NumberFormat.currency(
+      symbol: '₱',
+      decimalDigits: 0,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

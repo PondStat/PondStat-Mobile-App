@@ -200,7 +200,9 @@ class _MeasurementListViewState extends State<MeasurementListView> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 13,
-            color: isSelected ? Colors.white : theme.colorScheme.onSurfaceVariant,
+            color: isSelected
+                ? Colors.white
+                : theme.colorScheme.onSurfaceVariant,
           ),
         ),
         selected: isSelected,

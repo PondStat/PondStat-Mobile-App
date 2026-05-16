@@ -74,7 +74,9 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(24),
-        border: isDark ? Border.all(color: Colors.white12) : Border.all(color: theme.colorScheme.outlineVariant),
+        border: isDark
+            ? Border.all(color: Colors.white12)
+            : Border.all(color: theme.colorScheme.outlineVariant),
         boxShadow: isDark
             ? []
             : [
@@ -103,7 +105,9 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
               GestureDetector(
                 onTap: _toggleAllParameters,
                 child: Text(
-                  _visibleParameters.values.every((v) => v) ? "Deselect All" : "Select All",
+                  _visibleParameters.values.every((v) => v)
+                      ? "Deselect All"
+                      : "Select All",
                   style: TextStyle(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w700,
@@ -286,7 +290,8 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
         touchTooltipData: LineTouchTooltipData(
           fitInsideHorizontally: true,
           fitInsideVertically: true,
-          getTooltipColor: (touchedSpot) => Theme.of(context).colorScheme.inverseSurface,
+          getTooltipColor: (touchedSpot) =>
+              Theme.of(context).colorScheme.inverseSurface,
           tooltipBorderRadius: BorderRadius.circular(8),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((barSpot) {
@@ -390,4 +395,3 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
     );
   }
 }
-

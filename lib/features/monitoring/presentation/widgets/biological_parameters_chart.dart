@@ -103,7 +103,9 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
               GestureDetector(
                 onTap: _toggleAllParameters,
                 child: Text(
-                  _visibleParameters.values.every((v) => v) ? "Deselect All" : "Select All",
+                  _visibleParameters.values.every((v) => v)
+                      ? "Deselect All"
+                      : "Select All",
                   style: TextStyle(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w700,
@@ -286,7 +288,8 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
         touchTooltipData: LineTouchTooltipData(
           fitInsideHorizontally: true,
           fitInsideVertically: true,
-          getTooltipColor: (touchedSpot) => Theme.of(context).colorScheme.inverseSurface,
+          getTooltipColor: (touchedSpot) =>
+              Theme.of(context).colorScheme.inverseSurface,
           tooltipBorderRadius: BorderRadius.circular(8),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((barSpot) {

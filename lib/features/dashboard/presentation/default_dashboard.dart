@@ -956,4 +956,3 @@ class SlideGradientTransform extends GradientTransform {
     );
   }
 }
-

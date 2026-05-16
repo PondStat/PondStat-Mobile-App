@@ -161,7 +161,8 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
                 label: data['label'],
                 unit: data['unit'] ?? '',
                 icon: Icons.dashboard_customize_rounded,
-                category: ParameterCategory.custom,                createdBy: data['createdBy'],
+                category: ParameterCategory.custom,
+                createdBy: data['createdBy'],
               ),
             );
           }
@@ -258,12 +259,16 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: selected ? param.getColor(context) : colorScheme.outlineVariant,
+                color: selected
+                    ? param.getColor(context)
+                    : colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: selected
                     ? [
                         BoxShadow(
-                          color: param.getColor(context).withValues(alpha: 0.35),
+                          color: param
+                              .getColor(context)
+                              .withValues(alpha: 0.35),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -319,7 +324,9 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
         }
         final records = snap.data ?? [];
         if (records.isEmpty) return _buildEmptyCard(param, isDark, theme);
-        if (records.length == 1) return _buildSinglePointCard(records.first, param, isDark, theme);
+        if (records.length == 1) {
+          return _buildSinglePointCard(records.first, param, isDark, theme);
+        }
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -459,8 +466,12 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     final values = records.map((r) => r.averageValue).toList();
     double minY = values.reduce((a, b) => a < b ? a : b);
     double maxY = values.reduce((a, b) => a > b ? a : b);
-    if (param.optimalMin != null && param.optimalMin! < minY) minY = param.optimalMin!;
-    if (param.optimalMax != null && param.optimalMax! > maxY) maxY = param.optimalMax!;
+    if (param.optimalMin != null && param.optimalMin! < minY) {
+      minY = param.optimalMin!;
+    }
+    if (param.optimalMax != null && param.optimalMax! > maxY) {
+      maxY = param.optimalMax!;
+    }
     final yPad = ((maxY - minY) * 0.15).clamp(0.5, double.infinity);
     minY -= yPad;
     maxY += yPad;
@@ -821,13 +832,15 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
       color: theme.colorScheme.surfaceContainer,
       borderRadius: BorderRadius.circular(24),
       border: Border.all(color: theme.colorScheme.outlineVariant),
-      boxShadow: isDark ? [] : [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
-          blurRadius: 20,
-          offset: const Offset(0, 6),
-        ),
-      ],
+      boxShadow: isDark
+          ? []
+          : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+            ],
     ),
     child: child,
   );

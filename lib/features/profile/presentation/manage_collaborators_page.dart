@@ -356,7 +356,9 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             decoration: BoxDecoration(
-                              color: isFocused ? Theme.of(context).colorScheme.surface : backgroundLight,
+                              color: isFocused
+                                  ? Theme.of(context).colorScheme.surface
+                                  : backgroundLight,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isFocused
@@ -673,95 +675,107 @@ class _CollaboratorTileState extends State<CollaboratorTile>
             right: 24,
           ),
           child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 48,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(10),
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: _getAvatarColor(
-                    (userData?['fullName']?.toString().trim().isEmpty ?? true) ? 'U' : userData!['fullName'],
-                  ).withValues(alpha: 0.2),
-                  radius: 20,
-                  child: Text(
-                    StringUtils.getInitials((userData?['fullName']?.toString().trim().isEmpty ?? true) ? 'U' : userData!['fullName']),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: _getAvatarColor((userData?['fullName']?.toString().trim().isEmpty ?? true) ? 'U' : userData!['fullName']),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _getAvatarColor(
+                      (userData?['fullName']?.toString().trim().isEmpty ?? true)
+                          ? 'U'
+                          : userData!['fullName'],
+                    ).withValues(alpha: 0.2),
+                    radius: 20,
+                    child: Text(
+                      StringUtils.getInitials(
+                        (userData?['fullName']?.toString().trim().isEmpty ??
+                                true)
+                            ? 'U'
+                            : userData!['fullName'],
+                      ),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: _getAvatarColor(
+                          (userData?['fullName']?.toString().trim().isEmpty ??
+                                  true)
+                              ? 'U'
+                              : userData!['fullName'],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Manage Access",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.blueGrey.shade900,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Manage Access",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.blueGrey.shade900,
+                          ),
                         ),
-                      ),
-                      Text(
-                        userData?['fullName'] ?? 'User',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                        Text(
+                          userData?['fullName'] ?? 'User',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            _buildRoleOption(
-              'viewer',
-              'Viewer',
-              'Can view pond data and measurements.',
-              Icons.visibility_rounded,
-              Colors.grey.shade700,
-            ),
-            _buildRoleOption(
-              'editor',
-              'Editor',
-              'Can add, edit, and manage measurements.',
-              Icons.edit_rounded,
-              Colors.blue.shade700,
-            ),
-            _buildRoleOption(
-              'owner',
-              'Owner',
-              'Full control. Can delete the pond and manage users.',
-              Icons.admin_panel_settings_rounded,
-              Colors.orange.shade700,
-            ),
-            const Divider(height: 32),
-            _buildRoleOption(
-              'remove',
-              'Remove Access',
-              'Revoke all access immediately.',
-              Icons.person_remove_rounded,
-              Colors.red.shade600,
-              isDestructive: true,
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildRoleOption(
+                'viewer',
+                'Viewer',
+                'Can view pond data and measurements.',
+                Icons.visibility_rounded,
+                Colors.grey.shade700,
+              ),
+              _buildRoleOption(
+                'editor',
+                'Editor',
+                'Can add, edit, and manage measurements.',
+                Icons.edit_rounded,
+                Colors.blue.shade700,
+              ),
+              _buildRoleOption(
+                'owner',
+                'Owner',
+                'Full control. Can delete the pond and manage users.',
+                Icons.admin_panel_settings_rounded,
+                Colors.orange.shade700,
+              ),
+              const Divider(height: 32),
+              _buildRoleOption(
+                'remove',
+                'Remove Access',
+                'Revoke all access immediately.',
+                Icons.person_remove_rounded,
+                Colors.red.shade600,
+                isDestructive: true,
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

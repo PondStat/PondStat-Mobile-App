@@ -187,7 +187,9 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
       children: [
         for (int pIdx = 0; pIdx < widget.points.length; pIdx++)
           Container(
-            margin: EdgeInsets.only(bottom: pIdx < widget.points.length - 1 ? 16 : 0),
+            margin: EdgeInsets.only(
+              bottom: pIdx < widget.points.length - 1 ? 16 : 0,
+            ),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Theme.of(context).brightness == Brightness.dark
@@ -267,14 +269,18 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: _bacterialTabIndex == 0 ? themeColor : Colors.transparent,
+                      color: _bacterialTabIndex == 0
+                          ? themeColor
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
                       child: Text(
                         "Yellow Colonies",
                         style: TextStyle(
-                          color: _bacterialTabIndex == 0 ? Colors.white : textMuted,
+                          color: _bacterialTabIndex == 0
+                              ? Colors.white
+                              : textMuted,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -288,14 +294,18 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: _bacterialTabIndex == 1 ? themeColor : Colors.transparent,
+                      color: _bacterialTabIndex == 1
+                          ? themeColor
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
                       child: Text(
                         "Green Colonies",
                         style: TextStyle(
-                          color: _bacterialTabIndex == 1 ? Colors.white : textMuted,
+                          color: _bacterialTabIndex == 1
+                              ? Colors.white
+                              : textMuted,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -311,24 +321,58 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           child: _bacterialTabIndex == 0
-              ? _buildBacterialTabContent(
-                  context,
-                  [
-                    (widget.yAvg1Controller, "Test 10-1 (Average)", Icons.circle_rounded, "e.g., 100"),
-                    (widget.yCfu1Controller, "Test 10-1 (CFU/ml)", Icons.science_rounded, "e.g., 10000"),
-                    (widget.yAvg2Controller, "Test 10-2 (Average)", Icons.circle_rounded, "e.g., 100"),
-                    (widget.yCfu2Controller, "Test 10-2 (CFU/ml)", Icons.science_rounded, "e.g., 10000"),
-                  ],
-                )
-              : _buildBacterialTabContent(
-                  context,
-                  [
-                    (widget.gAvg1Controller, "Test 10-1 (Average)", Icons.circle_rounded, "e.g., 100"),
-                    (widget.gCfu1Controller, "Test 10-1 (CFU/ml)", Icons.science_rounded, "e.g., 10000"),
-                    (widget.gAvg2Controller, "Test 10-2 (Average)", Icons.circle_rounded, "e.g., 100"),
-                    (widget.gCfu2Controller, "Test 10-2 (CFU/ml)", Icons.science_rounded, "e.g., 10000"),
-                  ],
-                ),
+              ? _buildBacterialTabContent(context, [
+                  (
+                    widget.yAvg1Controller,
+                    "Test 10-1 (Average)",
+                    Icons.circle_rounded,
+                    "e.g., 100",
+                  ),
+                  (
+                    widget.yCfu1Controller,
+                    "Test 10-1 (CFU/ml)",
+                    Icons.science_rounded,
+                    "e.g., 10000",
+                  ),
+                  (
+                    widget.yAvg2Controller,
+                    "Test 10-2 (Average)",
+                    Icons.circle_rounded,
+                    "e.g., 100",
+                  ),
+                  (
+                    widget.yCfu2Controller,
+                    "Test 10-2 (CFU/ml)",
+                    Icons.science_rounded,
+                    "e.g., 10000",
+                  ),
+                ])
+              : _buildBacterialTabContent(context, [
+                  (
+                    widget.gAvg1Controller,
+                    "Test 10-1 (Average)",
+                    Icons.circle_rounded,
+                    "e.g., 100",
+                  ),
+                  (
+                    widget.gCfu1Controller,
+                    "Test 10-1 (CFU/ml)",
+                    Icons.science_rounded,
+                    "e.g., 10000",
+                  ),
+                  (
+                    widget.gAvg2Controller,
+                    "Test 10-2 (Average)",
+                    Icons.circle_rounded,
+                    "e.g., 100",
+                  ),
+                  (
+                    widget.gCfu2Controller,
+                    "Test 10-2 (CFU/ml)",
+                    Icons.science_rounded,
+                    "e.g., 10000",
+                  ),
+                ]),
         ),
       ],
     );
@@ -405,7 +449,9 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                           : const Color(0xFFF8FAFC)),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isFocused || hasError ? activeColor : Colors.transparent,
+                  color: isFocused || hasError
+                      ? activeColor
+                      : Colors.transparent,
                   width: isFocused || hasError ? 2 : 0,
                 ),
                 boxShadow: isFocused
@@ -442,7 +488,9 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                       contentPadding: EdgeInsets.symmetric(
                         vertical: isCompact ? 8 : 16,
                       ),
-                      hintText: isCompact ? '0.0' : widget.selectedParameter.hint,
+                      hintText: isCompact
+                          ? '0.0'
+                          : widget.selectedParameter.hint,
                       hintStyle: TextStyle(
                         color: Colors.grey.withValues(alpha: 0.4),
                         fontSize: isCompact ? 12 : 14,

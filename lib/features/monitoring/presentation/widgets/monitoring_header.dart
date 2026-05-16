@@ -103,8 +103,8 @@ class MonitoringHeader extends StatelessWidget {
                     backgroundImage: user?.photoURL != null
                         ? NetworkImage(user!.photoURL!)
                         : null,
-                    onBackgroundImageError: user?.photoURL != null 
-                        ? (exception, stackTrace) {} 
+                    onBackgroundImageError: user?.photoURL != null
+                        ? (exception, stackTrace) {}
                         : null,
                     child: user?.photoURL == null
                         ? Text(

@@ -17,7 +17,7 @@ class CultureProgressCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final primaryBlue = theme.colorScheme.primary;
     final errorColor = theme.colorScheme.error;
-    
+
     final now = DateTime.now();
     final startDay = DateTime(createdAt.year, createdAt.month, createdAt.day);
     final today = DateTime(now.year, now.month, now.day);
@@ -27,8 +27,9 @@ class CultureProgressCard extends StatelessWidget {
         today.difference(startDay).inDays + 1; // Day 1 starts on creation date
     if (doc < 0) doc = 0;
 
-    final isOverdue = doc > targetCulturePeriodDays && targetCulturePeriodDays > 0;
-    
+    final isOverdue =
+        doc > targetCulturePeriodDays && targetCulturePeriodDays > 0;
+
     final progress = targetCulturePeriodDays > 0
         ? (doc / targetCulturePeriodDays).clamp(0.0, 1.0)
         : 0.0;
@@ -43,13 +44,15 @@ class CultureProgressCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: isDark ? [] : [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,11 +118,13 @@ class CultureProgressCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  isOverdue 
+                  isOverdue
                       ? "Overdue by ${doc - targetCulturePeriodDays} Days"
                       : "Target: $targetCulturePeriodDays Days",
                   style: TextStyle(
-                    color: isOverdue ? errorColor : theme.colorScheme.onSurfaceVariant,
+                    color: isOverdue
+                        ? errorColor
+                        : theme.colorScheme.onSurfaceVariant,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),

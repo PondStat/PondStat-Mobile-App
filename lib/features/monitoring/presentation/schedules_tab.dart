@@ -125,7 +125,8 @@ class _SchedulesTabState extends State<SchedulesTab>
               child: EmptyStateCard(
                 icon: Icons.event_busy_rounded,
                 title: 'No Schedules Assigned',
-                description: 'There are currently no shifts scheduled for this pond.',
+                description:
+                    'There are currently no shifts scheduled for this pond.',
               ),
             );
           }
@@ -803,9 +804,13 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade200),
+                    border: Border.all(
+                      color: isDark ? Colors.white12 : Colors.grey.shade200,
+                    ),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
@@ -843,13 +848,21 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                   ),
                   decoration: BoxDecoration(
                     color: _selectedShift == 'morning'
-                        ? (isDark ? Colors.amber.withValues(alpha: 0.1) : Colors.amber.shade50)
-                        : (isDark ? Colors.indigo.withValues(alpha: 0.1) : Colors.indigo.shade50),
+                        ? (isDark
+                              ? Colors.amber.withValues(alpha: 0.1)
+                              : Colors.amber.shade50)
+                        : (isDark
+                              ? Colors.indigo.withValues(alpha: 0.1)
+                              : Colors.indigo.shade50),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: _selectedShift == 'morning'
-                          ? (isDark ? Colors.amber.withValues(alpha: 0.3) : Colors.amber.shade200)
-                          : (isDark ? Colors.indigo.withValues(alpha: 0.3) : Colors.indigo.shade200),
+                          ? (isDark
+                                ? Colors.amber.withValues(alpha: 0.3)
+                                : Colors.amber.shade200)
+                          : (isDark
+                                ? Colors.indigo.withValues(alpha: 0.3)
+                                : Colors.indigo.shade200),
                     ),
                   ),
                   child: DropdownButtonHideUnderline(
@@ -859,15 +872,23 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                       icon: Icon(
                         Icons.expand_more_rounded,
                         color: _selectedShift == 'morning'
-                            ? (isDark ? Colors.amber.shade300 : Colors.amber.shade700)
-                            : (isDark ? Colors.indigo.shade300 : Colors.indigo.shade700),
+                            ? (isDark
+                                  ? Colors.amber.shade300
+                                  : Colors.amber.shade700)
+                            : (isDark
+                                  ? Colors.indigo.shade300
+                                  : Colors.indigo.shade700),
                       ),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: _selectedShift == 'morning'
-                            ? (isDark ? Colors.amber.shade300 : Colors.amber.shade800)
-                            : (isDark ? Colors.indigo.shade300 : Colors.indigo.shade800),
+                            ? (isDark
+                                  ? Colors.amber.shade300
+                                  : Colors.amber.shade800)
+                            : (isDark
+                                  ? Colors.indigo.shade300
+                                  : Colors.indigo.shade800),
                       ),
                       onChanged: (val) {
                         if (val != null) setState(() => _selectedShift = val);
@@ -986,12 +1007,16 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                         decoration: BoxDecoration(
                           color: isAssigned
                               ? primaryBlue.withValues(alpha: 0.15)
-                              : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
+                              : (isDark
+                                    ? Colors.white.withValues(alpha: 0.05)
+                                    : Colors.white),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isAssigned
                                 ? primaryBlue.withValues(alpha: 0.3)
-                                : (isDark ? Colors.white12 : Colors.grey.shade200),
+                                : (isDark
+                                      ? Colors.white12
+                                      : Colors.grey.shade200),
                           ),
                         ),
                         child: CheckboxListTile(
@@ -1011,13 +1036,17 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                             children: [
                               CircleAvatar(
                                 radius: 14,
-                                backgroundColor: isDark ? Colors.white12 : Colors.grey.shade200,
+                                backgroundColor: isDark
+                                    ? Colors.white12
+                                    : Colors.grey.shade200,
                                 child: Text(
                                   StringUtils.getInitials(user['name']),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.grey.shade700,
                                   ),
                                 ),
                               ),

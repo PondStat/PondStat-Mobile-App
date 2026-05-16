@@ -239,7 +239,9 @@ class _SettingsPageState extends State<SettingsPage> {
         trailing: showChevron
             ? Icon(
                 Icons.chevron_right_rounded,
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.5,
+                ),
               )
             : null,
         onTap: onTap,

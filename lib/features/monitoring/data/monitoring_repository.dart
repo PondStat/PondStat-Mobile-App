@@ -160,8 +160,7 @@ class MonitoringRepository {
       if (newPointValues == null || newReplicateValues == null) continue;
 
       final double avg = double.parse(
-        (newPointValues.values.reduce((a, b) => a + b) /
-                newPointValues.length)
+        (newPointValues.values.reduce((a, b) => a + b) / newPointValues.length)
             .toStringAsFixed(2),
       );
 

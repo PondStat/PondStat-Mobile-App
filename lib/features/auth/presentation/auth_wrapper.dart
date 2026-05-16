@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/dashboard/presentation/default_dashboard.dart';
 import 'package:pondstat/features/auth/presentation/welcome_page.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/core/widgets/loading_overlay.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -15,8 +16,8 @@ class AuthWrapper extends StatelessWidget {
         Widget currentWidget;
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          currentWidget = const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          currentWidget = const LoadingOverlay(
+            messages: ['Checking access...'],
           );
         } else if (snapshot.hasError) {
           currentWidget = Scaffold(

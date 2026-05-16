@@ -362,20 +362,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                       width: 120,
                                       height: 120,
                                       fit: BoxFit.cover,
-                                      loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null) return child;
-                                        return CircularProgressIndicator(color: primaryBlue);
-                                      },
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Text(
-                                          StringUtils.getInitials(displayName),
-                                          style: TextStyle(
-                                            fontSize: 40,
-                                            fontWeight: FontWeight.w900,
-                                            color: primaryBlue,
-                                          ),
-                                        );
-                                      },
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                            if (loadingProgress == null) {
+                                              return child;
+                                            }
+                                            return CircularProgressIndicator(
+                                              color: primaryBlue,
+                                            );
+                                          },
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Text(
+                                              StringUtils.getInitials(
+                                                displayName,
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: 40,
+                                                fontWeight: FontWeight.w900,
+                                                color: primaryBlue,
+                                              ),
+                                            );
+                                          },
                                     ),
                                   )
                                 : Text(
@@ -405,7 +413,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 end: Alignment.bottomRight,
                               ),
                               shape: BoxShape.circle,
-                              border: Border.all(color: Theme.of(context).colorScheme.surface, width: 3),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.surface,
+                                width: 3,
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: primaryBlue.withValues(alpha: 0.4),
@@ -556,7 +567,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isFocused ? primaryBlue : Theme.of(context).colorScheme.surface,
+          color: isFocused
+              ? primaryBlue
+              : Theme.of(context).colorScheme.surface,
           width: 2,
         ),
         boxShadow: [

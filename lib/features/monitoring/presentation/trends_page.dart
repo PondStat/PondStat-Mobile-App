@@ -79,11 +79,11 @@ class _TrendsPageState extends State<TrendsPage> {
 
   Future<void> _exportReport(BuildContext context) async {
     if (_isExporting) return;
-    
+
     setState(() {
       _isExporting = true;
     });
-    
+
     try {
       SnackbarHelper.show(context, "Generating report...");
 
@@ -303,8 +303,9 @@ class _TrendsPageState extends State<TrendsPage> {
         floatingActionButton: FloatingActionButton.extended(
           heroTag: 'export_btn',
           onPressed: _isExporting ? null : () => _exportReport(context),
-          backgroundColor:
-              _isExporting ? Colors.grey.shade400 : const Color(0xFF0A74DA),
+          backgroundColor: _isExporting
+              ? Colors.grey.shade400
+              : const Color(0xFF0A74DA),
           icon: _isExporting
               ? const SizedBox(
                   width: 20,
@@ -318,7 +319,9 @@ class _TrendsPageState extends State<TrendsPage> {
           label: Text(
             _isExporting ? "Exporting..." : "Export CSV",
             style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold),
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),

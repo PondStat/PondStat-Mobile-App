@@ -51,7 +51,9 @@ class _FishGainsChartState extends State<FishGainsChart> {
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(24),
-          border: isDark ? Border.all(color: Colors.white12) : Border.all(color: theme.colorScheme.outlineVariant),
+          border: isDark
+              ? Border.all(color: Colors.white12)
+              : Border.all(color: theme.colorScheme.outlineVariant),
           boxShadow: isDark
               ? []
               : [
@@ -121,7 +123,9 @@ class _FishGainsChartState extends State<FishGainsChart> {
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(24),
-        border: isDark ? Border.all(color: Colors.white12) : Border.all(color: theme.colorScheme.outlineVariant),
+        border: isDark
+            ? Border.all(color: Colors.white12)
+            : Border.all(color: theme.colorScheme.outlineVariant),
         boxShadow: isDark
             ? []
             : [
@@ -302,7 +306,8 @@ class _FishGainsChartState extends State<FishGainsChart> {
         touchTooltipData: LineTouchTooltipData(
           fitInsideHorizontally: true,
           fitInsideVertically: true,
-          getTooltipColor: (touchedSpot) => Theme.of(context).colorScheme.inverseSurface,
+          getTooltipColor: (touchedSpot) =>
+              Theme.of(context).colorScheme.inverseSurface,
           tooltipBorderRadius: BorderRadius.circular(8),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((barSpot) {

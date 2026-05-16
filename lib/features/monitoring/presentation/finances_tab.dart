@@ -106,10 +106,7 @@ class _FinancesTabState extends State<FinancesTab>
               heroTag: 'finances_fab',
               onPressed: _handleFabPressed,
               backgroundColor: Colors.teal,
-              icon: const Icon(
-                Icons.receipt_long_rounded,
-                color: Colors.white,
-              ),
+              icon: const Icon(Icons.receipt_long_rounded, color: Colors.white),
               label: const Text(
                 "Add Expenses",
                 style: TextStyle(

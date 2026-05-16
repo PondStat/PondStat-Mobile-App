@@ -131,7 +131,9 @@ class _EditGrowthSheetState extends State<EditGrowthSheet> {
 
       // Fetch all docs in parallel
       final snapshots = await Future.wait(
-        docIds.map((id) => FirestoreHelper.measurementsCollection.doc(id).get()),
+        docIds.map(
+          (id) => FirestoreHelper.measurementsCollection.doc(id).get(),
+        ),
       );
 
       final batch = FirebaseFirestore.instance.batch();
@@ -142,7 +144,7 @@ class _EditGrowthSheetState extends State<EditGrowthSheet> {
         if (!docSnap.exists) continue;
 
         final data = docSnap.data() as Map<String, dynamic>;
-        
+
         double? newValue;
         if (id == widget.metrics.abwDocId) {
           newValue = newAbw;

@@ -158,7 +158,9 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.teal.withValues(alpha: 0.2) : Colors.teal.shade50,
+                          color: isDark
+                              ? Colors.teal.withValues(alpha: 0.2)
+                              : Colors.teal.shade50,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -224,7 +226,9 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                           hint: "1",
                           prefixIcon: Icons.production_quantity_limits_rounded,
                           keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
                           onChanged: (_) => setState(() {}),
                           validator: (v) =>
                               int.tryParse(v ?? '') == null ? "Invalid" : null,
@@ -247,8 +251,9 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
                             ),
                           ],
                           onChanged: (_) => setState(() {}),
-                          validator: (v) =>
-                              double.tryParse(v ?? '') == null ? "Invalid" : null,
+                          validator: (v) => double.tryParse(v ?? '') == null
+                              ? "Invalid"
+                              : null,
                         ),
                       ),
                     ],
@@ -286,9 +291,15 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? Colors.teal.withValues(alpha: 0.1) : Colors.teal.shade50.withValues(alpha: 0.5),
+        color: isDark
+            ? Colors.teal.withValues(alpha: 0.1)
+            : Colors.teal.shade50.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.teal.withValues(alpha: 0.3) : Colors.teal.shade100),
+        border: Border.all(
+          color: isDark
+              ? Colors.teal.withValues(alpha: 0.3)
+              : Colors.teal.shade100,
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -302,7 +313,10 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
             ),
           ),
           Text(
-            NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(_totalAmount),
+            NumberFormat.currency(
+              symbol: '₱',
+              decimalDigits: 2,
+            ).format(_totalAmount),
             style: const TextStyle(
               fontWeight: FontWeight.w900,
               color: Colors.teal,

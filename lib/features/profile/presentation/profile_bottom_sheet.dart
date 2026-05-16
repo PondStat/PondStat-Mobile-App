@@ -161,7 +161,9 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                         const SizedBox(height: 28),
                         Divider(
                           height: 1,
-                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                          color: theme.colorScheme.outlineVariant.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                         const SizedBox(height: 20),
                       ],
@@ -370,10 +372,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     );
   }
 
-  Widget _buildPondRoleCard(
-    BuildContext context,
-    ThemeData theme,
-  ) {
+  Widget _buildPondRoleCard(BuildContext context, ThemeData theme) {
     IconData roleIcon = Icons.visibility_outlined;
     String roleTitle = 'Viewer';
     Color roleColor = theme.colorScheme.onSurfaceVariant;
@@ -381,7 +380,9 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     if (widget.currentUserRole == 'owner') {
       roleIcon = Icons.admin_panel_settings_rounded;
       roleTitle = 'Owner';
-      roleColor = theme.brightness == Brightness.dark ? Colors.orange.shade400 : Colors.orange.shade600;
+      roleColor = theme.brightness == Brightness.dark
+          ? Colors.orange.shade400
+          : Colors.orange.shade600;
     } else if (widget.currentUserRole == 'editor') {
       roleIcon = Icons.edit_note_rounded;
       roleTitle = 'Editor';
@@ -393,7 +394,9 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
         color: theme.scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: theme.brightness == Brightness.dark ? Colors.white12 : roleColor.withValues(alpha: 0.15),
+          color: theme.brightness == Brightness.dark
+              ? Colors.white12
+              : roleColor.withValues(alpha: 0.15),
           width: 1.5,
         ),
         boxShadow: [
@@ -461,10 +464,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     );
   }
 
-  Future<void> _confirmSignOut(
-    BuildContext context,
-    ThemeData theme,
-  ) async {
+  Future<void> _confirmSignOut(BuildContext context, ThemeData theme) async {
     HapticFeedback.selectionClick();
     final shouldSignOut = await showDialog<bool>(
       context: context,
@@ -597,6 +597,7 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
     HapticFeedback.lightImpact();
     _controller.forward();
   }
+
   void _onTapUp(TapUpDetails details) {
     _controller.reverse();
     widget.onTap();
@@ -657,7 +658,9 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
               if (!widget.isDestructive)
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.5,
+                  ),
                   size: 24,
                 ),
             ],

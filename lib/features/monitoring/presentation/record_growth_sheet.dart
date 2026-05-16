@@ -534,7 +534,11 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(p.icon, color: p.getColor(context), size: 32),
+                              Icon(
+                                p.icon,
+                                color: p.getColor(context),
+                                size: 32,
+                              ),
                               const SizedBox(height: 8),
                               Text(
                                 p.label,

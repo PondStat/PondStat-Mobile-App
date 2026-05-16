@@ -42,7 +42,8 @@ class SafetyService {
 
     if (parameter.absoluteMin != null && value < parameter.absoluteMin!) {
       status = 'below';
-    } else if (parameter.absoluteMax != null && value > parameter.absoluteMax!) {
+    } else if (parameter.absoluteMax != null &&
+        value > parameter.absoluteMax!) {
       status = 'above';
     }
 

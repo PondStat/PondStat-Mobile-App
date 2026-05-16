@@ -113,7 +113,8 @@ class _TrendsTabState extends State<TrendsTab> {
                     child: EmptyStateCard(
                       icon: Icons.analytics_outlined,
                       title: 'No Data Found',
-                      description: 'No measurements recorded for the selected date range.',
+                      description:
+                          'No measurements recorded for the selected date range.',
                     ),
                   );
                 }
@@ -153,39 +154,33 @@ class _TrendsTabState extends State<TrendsTab> {
       ['Temperature', 'Salinity', 'Transparency', ...customPhysical],
     );
 
-    final chemicalData = TrendsRepository.getNormalizedParameters(
-      docs,
-      widget.species,
-      [
-        'pH Level',
-        'Dissolved Oxygen',
-        'Nitrate',
-        'Nitrite',
-        'Ammonia',
-        'Carbon dioxide',
-        'Magnesium',
-        'Calcium',
-        'Total Alkalinity',
-        ...customChemical,
-      ],
-    );
+    final chemicalData =
+        TrendsRepository.getNormalizedParameters(docs, widget.species, [
+          'pH Level',
+          'Dissolved Oxygen',
+          'Nitrate',
+          'Nitrite',
+          'Ammonia',
+          'Carbon dioxide',
+          'Magnesium',
+          'Calcium',
+          'Total Alkalinity',
+          ...customChemical,
+        ]);
 
-    final biologicalData = TrendsRepository.getNormalizedParameters(
-      docs,
-      widget.species,
-      [
-        'Phytoplankton',
-        'Test 10-1 (Average yellow colonies)',
-        'Test yellow 10-1 (CFU/ml)',
-        'Test 10-2 (Average yellow colonies)',
-        'Test yellow 10-2 (CFU/ml)',
-        'Test 10-1 (Average green colonies)',
-        'Test green 10-1 (CFU/ml)',
-        'Test 10-2 (Average green colonies)',
-        'Test green 10-2 (CFU/ml)',
-        ...customBiological,
-      ],
-    );
+    final biologicalData =
+        TrendsRepository.getNormalizedParameters(docs, widget.species, [
+          'Phytoplankton',
+          'Test 10-1 (Average yellow colonies)',
+          'Test yellow 10-1 (CFU/ml)',
+          'Test 10-2 (Average yellow colonies)',
+          'Test yellow 10-2 (CFU/ml)',
+          'Test 10-1 (Average green colonies)',
+          'Test green 10-1 (CFU/ml)',
+          'Test 10-2 (Average green colonies)',
+          'Test green 10-2 (CFU/ml)',
+          ...customBiological,
+        ]);
 
     return ListView(
       padding: const EdgeInsets.only(

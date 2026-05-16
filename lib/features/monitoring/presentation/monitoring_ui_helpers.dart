@@ -25,16 +25,15 @@ class SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
         child: Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surface.withValues(alpha: 0.8),
-            boxShadow:
-                overlapsContent
-                    ? [
-                        BoxShadow(
-                          color: theme.shadowColor.withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
+            boxShadow: overlapsContent
+                ? [
+                    BoxShadow(
+                      color: theme.shadowColor.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: _tabBar,
         ),
