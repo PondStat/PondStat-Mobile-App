@@ -724,9 +724,9 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(
         top: 12,
@@ -803,9 +803,9 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade200),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
@@ -985,13 +985,13 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
                           color: isAssigned
-                              ? primaryBlue.withValues(alpha: 0.05)
-                              : Colors.white,
+                              ? primaryBlue.withValues(alpha: 0.15)
+                              : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isAssigned
                                 ? primaryBlue.withValues(alpha: 0.3)
-                                : Colors.grey.shade200,
+                                : (isDark ? Colors.white12 : Colors.grey.shade200),
                           ),
                         ),
                         child: CheckboxListTile(
@@ -1011,13 +1011,13 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                             children: [
                               CircleAvatar(
                                 radius: 14,
-                                backgroundColor: Colors.grey.shade200,
+                                backgroundColor: isDark ? Colors.white12 : Colors.grey.shade200,
                                 child: Text(
                                   StringUtils.getInitials(user['name']),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade700,
+                                    color: isDark ? Colors.white70 : Colors.grey.shade700,
                                   ),
                                 ),
                               ),

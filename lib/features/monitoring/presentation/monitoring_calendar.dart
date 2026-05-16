@@ -271,7 +271,7 @@ class MonitoringCalendar extends StatelessWidget {
                       _buildStatusDot(Colors.amber.shade400, isSelected),
                     );
                   }
-                  if (types.contains('biweekly') || types.contains('growth')) {
+                  if (types.contains('biweekly')) {
                     activeDots.add(_buildStatusDot(primaryColor, isSelected));
                   }
 
