@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
-class RecordFormFields extends StatelessWidget {
+class RecordFormFields extends StatefulWidget {
   final ParameterItem selectedParameter;
   final Color themeColor;
   final List<String> points;
@@ -41,20 +41,27 @@ class RecordFormFields extends StatelessWidget {
   });
 
   @override
+  State<RecordFormFields> createState() => _RecordFormFieldsState();
+}
+
+class _RecordFormFieldsState extends State<RecordFormFields> {
+  int _bacterialTabIndex = 0;
+
+  @override
   Widget build(BuildContext context) {
     final bool hasRange =
-        selectedParameter.absoluteMin != null &&
-        selectedParameter.absoluteMax != null;
+        widget.selectedParameter.absoluteMin != null &&
+        widget.selectedParameter.absoluteMax != null;
 
-    if (selectedParameter.label == 'Bacterial Analysis') {
-      return _buildBacterialAnalysisUI(context, themeColor);
+    if (widget.selectedParameter.label == 'Bacterial Analysis') {
+      return _buildBacterialAnalysisUI(context, widget.themeColor);
     }
 
     return Column(
       children: [
-        _buildDataPointsHeader(context, hasRange, themeColor),
+        _buildDataPointsHeader(context, hasRange, widget.themeColor),
         const SizedBox(height: 16),
-        _buildDataPointInputs(context, themeColor),
+        _buildDataPointInputs(context, widget.themeColor),
       ],
     );
   }
@@ -65,7 +72,6 @@ class RecordFormFields extends StatelessWidget {
     Color themeColor,
   ) {
     Color textDark = Theme.of(context).colorScheme.onSurface;
-    Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -105,9 +111,9 @@ class RecordFormFields extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      "Safe Range: ${selectedParameter.absoluteMin} - ${selectedParameter.absoluteMax}",
-                      style: TextStyle(
-                        color: textMuted,
+                      "Safe Range: ${widget.selectedParameter.absoluteMin} - ${widget.selectedParameter.absoluteMax}",
+                      style: const TextStyle(
+                        color: Colors.grey,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -115,22 +121,22 @@ class RecordFormFields extends StatelessWidget {
                   ],
                 ),
               ),
-            ] else if (selectedParameter.absoluteMin != null) ...[
+            ] else if (widget.selectedParameter.absoluteMin != null) ...[
               const SizedBox(height: 4),
               Text(
-                "Minimum: ${selectedParameter.absoluteMin}",
-                style: TextStyle(
-                  color: textMuted,
+                "Minimum: ${widget.selectedParameter.absoluteMin}",
+                style: const TextStyle(
+                  color: Colors.grey,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-            ] else if (selectedParameter.absoluteMax != null) ...[
+            ] else if (widget.selectedParameter.absoluteMax != null) ...[
               const SizedBox(height: 4),
               Text(
-                "Maximum: ${selectedParameter.absoluteMax}",
-                style: TextStyle(
-                  color: textMuted,
+                "Maximum: ${widget.selectedParameter.absoluteMax}",
+                style: const TextStyle(
+                  color: Colors.grey,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -138,7 +144,7 @@ class RecordFormFields extends StatelessWidget {
             ],
           ],
         ),
-        if (selectedParameter.unit.isNotEmpty)
+        if (widget.selectedParameter.unit.isNotEmpty)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -146,7 +152,7 @@ class RecordFormFields extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              selectedParameter.unit,
+              widget.selectedParameter.unit,
               style: TextStyle(
                 color: themeColor,
                 fontWeight: FontWeight.w900,
@@ -161,7 +167,7 @@ class RecordFormFields extends StatelessWidget {
   Widget _buildDataPointInputs(BuildContext context, Color themeColor) {
     Color textDark = Theme.of(context).colorScheme.onSurface;
 
-    if (selectedParameter.isSinglePoint) {
+    if (widget.selectedParameter.isSinglePoint) {
       // For single point parameters, show 1 input value (treated as Point A, Replicate 1 behind the scenes)
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
@@ -179,9 +185,9 @@ class RecordFormFields extends StatelessWidget {
     // For multi-point parameters, show each point with its 3 replicates and average
     return Column(
       children: [
-        for (int pIdx = 0; pIdx < points.length; pIdx++)
+        for (int pIdx = 0; pIdx < widget.points.length; pIdx++)
           Container(
-            margin: EdgeInsets.only(bottom: pIdx < points.length - 1 ? 16 : 0),
+            margin: EdgeInsets.only(bottom: pIdx < widget.points.length - 1 ? 16 : 0),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Theme.of(context).brightness == Brightness.dark
@@ -201,7 +207,7 @@ class RecordFormFields extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
-                    "Point ${points[pIdx]}",
+                    "Point ${widget.points[pIdx]}",
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 16,
@@ -212,21 +218,21 @@ class RecordFormFields extends StatelessWidget {
                 // Replicate inputs
                 Row(
                   children: [
-                    for (int rIdx = 0; rIdx < replicates.length; rIdx++)
+                    for (int rIdx = 0; rIdx < widget.replicates.length; rIdx++)
                       Expanded(
                         child: Padding(
                           padding: EdgeInsets.only(
-                            right: rIdx < replicates.length - 1 ? 8 : 0,
+                            right: rIdx < widget.replicates.length - 1 ? 8 : 0,
                           ),
                           child: _buildReplicateInput(
                             context,
-                            points[pIdx],
-                            replicates[rIdx],
+                            widget.points[pIdx],
+                            widget.replicates[rIdx],
                             themeColor,
                             isCompact: true,
                             isLast:
-                                (pIdx == points.length - 1) &&
-                                (rIdx == replicates.length - 1),
+                                (pIdx == widget.points.length - 1) &&
+                                (rIdx == widget.replicates.length - 1),
                           ),
                         ),
                       ),
@@ -234,7 +240,7 @@ class RecordFormFields extends StatelessWidget {
                 ),
                 // Average display for this point
                 const SizedBox(height: 10),
-                _buildAverageDisplay(context, points[pIdx], themeColor),
+                _buildAverageDisplay(context, widget.points[pIdx], themeColor),
               ],
             ),
           ),
@@ -245,131 +251,107 @@ class RecordFormFields extends StatelessWidget {
   Widget _buildBacterialAnalysisUI(BuildContext context, Color themeColor) {
     Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
 
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TabBar(
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                color: themeColor,
-                borderRadius: BorderRadius.circular(12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _bacterialTabIndex = 0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: _bacterialTabIndex == 0 ? themeColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(
+                        "Yellow Colonies",
+                        style: TextStyle(
+                          color: _bacterialTabIndex == 0 ? Colors.white : textMuted,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              labelColor: Colors.white,
-              unselectedLabelColor: textMuted,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-              tabs: const [
-                Tab(text: "Yellow Colonies"),
-                Tab(text: "Green Colonies"),
-              ],
-            ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _bacterialTabIndex = 1),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: _bacterialTabIndex == 1 ? themeColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(
+                        "Green Colonies",
+                        style: TextStyle(
+                          color: _bacterialTabIndex == 1 ? Colors.white : textMuted,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 380, // Fixed height for inputs
-            child: TabBarView(
-              children: [
-                // Yellow Tab
-                ListView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    PondStatTextField(
-                      controller: yAvg1Controller,
-                      label: "Test 10-1 (Average)",
-                      hint: "e.g., 100",
-                      prefixIcon: Icons.circle_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: yCfu1Controller,
-                      label: "Test 10-1 (CFU/ml)",
-                      hint: "e.g., 10000",
-                      prefixIcon: Icons.science_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: yAvg2Controller,
-                      label: "Test 10-2 (Average)",
-                      hint: "e.g., 100",
-                      prefixIcon: Icons.circle_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: yCfu2Controller,
-                      label: "Test 10-2 (CFU/ml)",
-                      hint: "e.g., 10000",
-                      prefixIcon: Icons.science_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
+        ),
+        const SizedBox(height: 16),
+        // Switch between Yellow and Green Tabs without TabBarView fixed height
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: _bacterialTabIndex == 0
+              ? _buildBacterialTabContent(
+                  context,
+                  [
+                    (widget.yAvg1Controller, "Test 10-1 (Average)", Icons.circle_rounded, "e.g., 100"),
+                    (widget.yCfu1Controller, "Test 10-1 (CFU/ml)", Icons.science_rounded, "e.g., 10000"),
+                    (widget.yAvg2Controller, "Test 10-2 (Average)", Icons.circle_rounded, "e.g., 100"),
+                    (widget.yCfu2Controller, "Test 10-2 (CFU/ml)", Icons.science_rounded, "e.g., 10000"),
+                  ],
+                )
+              : _buildBacterialTabContent(
+                  context,
+                  [
+                    (widget.gAvg1Controller, "Test 10-1 (Average)", Icons.circle_rounded, "e.g., 100"),
+                    (widget.gCfu1Controller, "Test 10-1 (CFU/ml)", Icons.science_rounded, "e.g., 10000"),
+                    (widget.gAvg2Controller, "Test 10-2 (Average)", Icons.circle_rounded, "e.g., 100"),
+                    (widget.gCfu2Controller, "Test 10-2 (CFU/ml)", Icons.science_rounded, "e.g., 10000"),
                   ],
                 ),
-                // Green Tab
-                ListView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    PondStatTextField(
-                      controller: gAvg1Controller,
-                      label: "Test 10-1 (Average)",
-                      hint: "e.g., 100",
-                      prefixIcon: Icons.circle_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: gCfu1Controller,
-                      label: "Test 10-1 (CFU/ml)",
-                      hint: "e.g., 10000",
-                      prefixIcon: Icons.science_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: gAvg2Controller,
-                      label: "Test 10-2 (Average)",
-                      hint: "e.g., 100",
-                      prefixIcon: Icons.circle_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PondStatTextField(
-                      controller: gCfu2Controller,
-                      label: "Test 10-2 (CFU/ml)",
-                      hint: "e.g., 10000",
-                      prefixIcon: Icons.science_rounded,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBacterialTabContent(
+    BuildContext context,
+    List<(TextEditingController, String, IconData, String)> fields,
+  ) {
+    return Column(
+      key: ValueKey(_bacterialTabIndex),
+      children: [
+        for (var field in fields) ...[
+          PondStatTextField(
+            controller: field.$1,
+            label: field.$2,
+            hint: field.$4,
+            prefixIcon: field.$3,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),
+          const SizedBox(height: 12),
         ],
-      ),
+      ],
     );
   }
 
@@ -387,92 +369,112 @@ class RecordFormFields extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     final key = '$point-$replicate';
-    final bool isFocused = focusNodes[key]?.hasFocus ?? false;
-    final controller = valueControllers[key]!;
+    final bool isFocused = widget.focusNodes[key]?.hasFocus ?? false;
+    final controller = widget.valueControllers[key]!;
 
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller,
       builder: (context, value, child) {
-        bool hasError = false;
+        String? errorMessage;
         if (value.text.isNotEmpty) {
           final parsedValue = double.tryParse(value.text);
           if (parsedValue != null) {
-            if (selectedParameter.absoluteMin != null &&
-                parsedValue < selectedParameter.absoluteMin!) {
-              hasError = true;
+            if (widget.selectedParameter.absoluteMin != null &&
+                parsedValue < widget.selectedParameter.absoluteMin!) {
+              errorMessage = "Min: ${widget.selectedParameter.absoluteMin}";
             }
-            if (selectedParameter.absoluteMax != null &&
-                parsedValue > selectedParameter.absoluteMax!) {
-              hasError = true;
+            if (widget.selectedParameter.absoluteMax != null &&
+                parsedValue > widget.selectedParameter.absoluteMax!) {
+              errorMessage = "Max: ${widget.selectedParameter.absoluteMax}";
             }
           }
         }
 
+        final bool hasError = errorMessage != null;
         final activeColor = hasError ? theme.colorScheme.error : themeColor;
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: isFocused
-                ? theme.colorScheme.surface
-                : (isDark
-                      ? theme.colorScheme.surfaceContainerHighest
-                      : const Color(0xFFF8FAFC)),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isFocused || hasError ? activeColor : Colors.transparent,
-              width: isFocused || hasError ? 2 : 0,
-            ),
-            boxShadow: isFocused
-                ? [
-                    BoxShadow(
-                      color: activeColor.withValues(alpha: 0.2),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+        return Column(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                color: isFocused
+                    ? theme.colorScheme.surface
+                    : (isDark
+                          ? theme.colorScheme.surfaceContainerHighest
+                          : const Color(0xFFF8FAFC)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isFocused || hasError ? activeColor : Colors.transparent,
+                  width: isFocused || hasError ? 2 : 0,
+                ),
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: activeColor.withValues(alpha: 0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  TextField(
+                    controller: controller,
+                    focusNode: widget.focusNodes[key],
+                    keyboardType: widget.selectedParameter.keyboardType,
+                    textInputAction: isLast
+                        ? TextInputAction.done
+                        : TextInputAction.next,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: isCompact ? 14 : 18,
+                      color: hasError ? theme.colorScheme.error : textDark,
                     ),
-                  ]
-                : [],
-          ),
-          child: TextField(
-            controller: controller,
-            focusNode: focusNodes[key],
-            keyboardType: selectedParameter.keyboardType,
-            textInputAction: isLast
-                ? TextInputAction.done
-                : TextInputAction.next,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: isCompact ? 14 : 18,
-              color: hasError ? theme.colorScheme.error : textDark,
-            ),
-            onSubmitted: (_) {
-              onFieldSubmitted(key);
-            },
-            decoration: InputDecoration(
-              labelText:
-                  customLabel ??
-                  (isCompact ? "R$replicate" : "Replicate $replicate"),
-              floatingLabelBehavior: FloatingLabelBehavior.always,
-              labelStyle: TextStyle(
-                color: hasError
-                    ? theme.colorScheme.error
-                    : (isFocused ? activeColor : Colors.grey.shade500),
-                fontWeight: FontWeight.w800,
-                fontSize: isCompact ? 11 : 12,
+                    onSubmitted: (_) {
+                      widget.onFieldSubmitted(key);
+                    },
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: isCompact ? 8 : 16,
+                      ),
+                      hintText: isCompact ? '0.0' : widget.selectedParameter.hint,
+                      hintStyle: TextStyle(
+                        color: Colors.grey.withValues(alpha: 0.4),
+                        fontSize: isCompact ? 12 : 14,
+                      ),
+                    ),
+                  ),
+                  if (hasError)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Icon(
+                        Icons.error_outline_rounded,
+                        size: 14,
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                ],
               ),
-              hintText: selectedParameter.hint.isEmpty
-                  ? ''
-                  : selectedParameter.hint.split(' ').last,
-              hintStyle: TextStyle(
-                color: Colors.grey.shade400,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.only(top: 8, bottom: 12),
             ),
-          ),
+            if (hasError && !isCompact)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  errorMessage,
+                  style: TextStyle(
+                    color: theme.colorScheme.error,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -484,7 +486,7 @@ class RecordFormFields extends StatelessWidget {
     Color themeColor,
   ) {
     Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
-    final average = calculatePointAverage(point);
+    final average = widget.calculatePointAverage(point);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
