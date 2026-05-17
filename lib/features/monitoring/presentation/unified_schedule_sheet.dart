@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -9,7 +10,7 @@ import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 
-class UnifiedScheduleSheet extends StatefulWidget {
+class UnifiedScheduleSheet extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final bool canEdit;
@@ -22,10 +23,10 @@ class UnifiedScheduleSheet extends StatefulWidget {
   });
 
   @override
-  State<UnifiedScheduleSheet> createState() => _UnifiedScheduleSheetState();
+  ConsumerState<UnifiedScheduleSheet> createState() => _UnifiedScheduleSheetState();
 }
 
-class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
+class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
     with TickerProviderStateMixin {
   late TabController _tabController;
 
@@ -33,7 +34,6 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
   bool _isLoadingUsers = true;
   bool _isSaving = false;
   bool _hasChanges = false;
-  final MonitoringRepository _repository = MonitoringRepository();
   final List<String> _daysOfWeek = [
     'Monday',
     'Tuesday',
@@ -125,7 +125,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
     });
 
     try {
-      final scheduleData = await _repository.getJobSchedule(
+      final scheduleData = await ref.read(monitoringRepositoryProvider).getJobSchedule(
         widget.pondId,
         _selectedUserId!,
       );
@@ -180,7 +180,7 @@ class _UnifiedScheduleSheetState extends State<UnifiedScheduleSheet>
 
     try {
       final user = _eligibleUsers.firstWhere((u) => u['id'] == _selectedUserId);
-      await _repository.saveJobSchedule(
+      await ref.read(monitoringRepositoryProvider).saveJobSchedule(
         pondId: widget.pondId,
         userId: _selectedUserId!,
         userName: user['name'],

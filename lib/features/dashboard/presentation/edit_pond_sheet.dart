@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/dashboard/data/pond_repository.dart';
+import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/pondstat_dropdown_field.dart';
-import 'package:pondstat/features/dashboard/data/dashboard_repository.dart';
+// Removed dashboard_repository.dart
 
-class EditPondSheet extends StatefulWidget {
+class EditPondSheet extends ConsumerStatefulWidget {
   final String pondId;
   final Map<String, dynamic> initialData;
 
@@ -18,10 +21,10 @@ class EditPondSheet extends StatefulWidget {
   });
 
   @override
-  State<EditPondSheet> createState() => _EditPondSheetState();
+  ConsumerState<EditPondSheet> createState() => _EditPondSheetState();
 }
 
-class _EditPondSheetState extends State<EditPondSheet> {
+class _EditPondSheetState extends ConsumerState<EditPondSheet> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
@@ -103,13 +106,15 @@ class _EditPondSheetState extends State<EditPondSheet> {
         int.tryParse(_culturePeriodController.text.trim()) ?? 0;
 
     try {
-      await DashboardRepository().updatePond(
-        pondId: widget.pondId,
-        name: pondName,
-        species: species,
-        stockingQuantity: quantity,
-        targetCulturePeriodDays: culturePeriod,
-      );
+      final updatedPond = Pond.fromJson({
+        ...widget.initialData,
+        'name': pondName,
+        'species': species,
+        'stockingQuantity': quantity,
+        'targetCulturePeriodDays': culturePeriod,
+      }, widget.pondId);
+
+      await ref.read(pondRepositoryProvider).updatePond(updatedPond);
 
       if (!mounted) return;
       Navigator.of(context).pop();

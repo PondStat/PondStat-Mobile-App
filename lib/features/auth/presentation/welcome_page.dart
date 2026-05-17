@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -19,14 +20,14 @@ class OnboardingStep {
   });
 }
 
-class WelcomePage extends StatefulWidget {
+class WelcomePage extends ConsumerStatefulWidget {
   const WelcomePage({super.key});
 
   @override
-  State<WelcomePage> createState() => _WelcomePageState();
+  ConsumerState<WelcomePage> createState() => _WelcomePageState();
 }
 
-class _WelcomePageState extends State<WelcomePage>
+class _WelcomePageState extends ConsumerState<WelcomePage>
     with TickerProviderStateMixin {
   late AnimationController _bubbleController;
   late AnimationController _textController;
@@ -71,8 +72,6 @@ class _WelcomePageState extends State<WelcomePage>
       icon: Icons.group_add_outlined,
     ),
   ];
-
-  final AuthRepository _authRepository = AuthRepository();
 
   @override
   void initState() {
@@ -144,7 +143,8 @@ class _WelcomePageState extends State<WelcomePage>
     setState(() => _isLoading = true);
 
     try {
-      final userCredential = await _authRepository.signInWithGoogle();
+      final authRepository = ref.read(authRepositoryProvider);
+      final userCredential = await authRepository.signInWithGoogle();
 
       if (userCredential == null) {
         if (mounted) setState(() => _isLoading = false);

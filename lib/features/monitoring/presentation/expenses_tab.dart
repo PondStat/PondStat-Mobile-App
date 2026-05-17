@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -7,18 +8,17 @@ import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 
-class ExpensesTab extends StatefulWidget {
+class ExpensesTab extends ConsumerStatefulWidget {
   final String pondId;
   final bool canAdd;
 
   const ExpensesTab({super.key, required this.pondId, required this.canAdd});
 
   @override
-  State<ExpensesTab> createState() => _ExpensesTabState();
+  ConsumerState<ExpensesTab> createState() => _ExpensesTabState();
 }
 
-class _ExpensesTabState extends State<ExpensesTab> {
-  final MonitoringRepository repository = MonitoringRepository();
+class _ExpensesTabState extends ConsumerState<ExpensesTab> {
   late Stream<DocumentSnapshot> _pondStream;
   late Stream<QuerySnapshot<Map<String, dynamic>>> _expensesStream;
 
@@ -28,7 +28,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
     _pondStream = FirestoreHelper.pondsCollection
         .doc(widget.pondId)
         .snapshots();
-    _expensesStream = repository.getExpensesStream(widget.pondId);
+    _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
   }
 
   @override
@@ -38,7 +38,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
       _pondStream = FirestoreHelper.pondsCollection
           .doc(widget.pondId)
           .snapshots();
-      _expensesStream = repository.getExpensesStream(widget.pondId);
+      _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
     }
   }
 
@@ -128,7 +128,6 @@ class _ExpensesTabState extends State<ExpensesTab> {
                           context,
                           docs[index],
                           memberCount,
-                          repository,
                         ),
                         childCount: docs.length,
                       ),
@@ -274,7 +273,6 @@ class _ExpensesTabState extends State<ExpensesTab> {
     BuildContext context,
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
     int memberCount,
-    MonitoringRepository repository,
   ) {
     final data = doc.data();
     final item = data['item'] ?? 'Unknown Item';
@@ -367,7 +365,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () =>
-                      _confirmDelete(context, doc.id, item, repository),
+                      _confirmDelete(context, doc.id, item),
                 ),
             ],
           ),
@@ -451,7 +449,6 @@ class _ExpensesTabState extends State<ExpensesTab> {
     BuildContext context,
     String id,
     String item,
-    MonitoringRepository repository,
   ) {
     showDialog(
       context: context,
@@ -469,7 +466,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
           ),
           TextButton(
             onPressed: () async {
-              await repository.deleteExpense(id);
+              await ref.read(monitoringRepositoryProvider).deleteExpense(id);
               if (context.mounted) {
                 HapticFeedback.mediumImpact();
                 SnackbarHelper.show(

@@ -1,15 +1,20 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
-class MonitoringRepository {
-  static final MonitoringRepository _instance =
-      MonitoringRepository._internal();
-  factory MonitoringRepository() => _instance;
-  MonitoringRepository._internal();
+final monitoringRepositoryProvider = Provider<MonitoringRepository>((ref) {
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final auth = ref.watch(firebaseAuthProvider);
+  return MonitoringRepository(firestore, auth);
+});
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+class MonitoringRepository {
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+
+  MonitoringRepository(this._firestore, this._auth);
 
   User? get currentUser => _auth.currentUser;
 

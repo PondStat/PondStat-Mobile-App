@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final settingsServiceProvider = Provider<SettingsService>((ref) {
+  return SettingsService();
+});
 
 class SettingsService extends ChangeNotifier {
-  static final SettingsService _instance = SettingsService._internal();
-
-  factory SettingsService() {
-    return _instance;
-  }
-
-  SettingsService._internal();
+  SettingsService();
 
   bool _isDarkMode = false;
   bool _pushNotifications = true;

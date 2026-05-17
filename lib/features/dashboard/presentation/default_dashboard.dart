@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
 import 'package:pondstat/core/utils/helpers.dart';
@@ -14,19 +13,21 @@ import 'package:pondstat/features/dashboard/presentation/widgets/pond_background
 import 'package:pondstat/features/dashboard/presentation/create_pond_sheet.dart';
 import 'package:pondstat/features/dashboard/presentation/edit_pond_sheet.dart';
 import 'package:pondstat/features/dashboard/presentation/pond_list_card.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
-import 'package:pondstat/features/dashboard/data/dashboard_repository.dart';
+import 'package:pondstat/features/dashboard/data/pond_repository.dart';
+import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 import 'package:pondstat/features/notifications/presentation/notifications_inbox_page.dart';
 
-class DefaultDashboardScreen extends StatefulWidget {
+class DefaultDashboardScreen extends ConsumerStatefulWidget {
   const DefaultDashboardScreen({super.key});
 
   @override
-  State<DefaultDashboardScreen> createState() => _DefaultDashboardScreenState();
+  ConsumerState<DefaultDashboardScreen> createState() => _DefaultDashboardScreenState();
 }
 
-class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
+class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     with SingleTickerProviderStateMixin {
   bool _isFabVisible = true;
   late AnimationController _shimmerController;
@@ -38,18 +39,19 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   final Color primaryBlue = const Color(0xFF0A74DA);
   final Color secondaryBlue = const Color(0xFF4FA0F0);
 
-  late Stream<QuerySnapshot> _userPondsStream;
+  late Stream<List<Pond>> _userPondsStream;
 
   @override
   void initState() {
     super.initState();
 
-    _userPondsStream = DashboardRepository().getUserPondsStream(
-      AuthRepository().currentUser!.uid,
+    final user = ref.read(authRepositoryProvider).currentUser;
+    _userPondsStream = ref.read(pondRepositoryProvider).getUserPondsStream(
+      user?.uid ?? '',
     );
 
     // Sync FCM token on initialization
-    AuthRepository().updateFcmToken();
+    ref.read(authRepositoryProvider).updateFcmToken();
 
     _shimmerController = AnimationController(
       vsync: this,
@@ -288,7 +290,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
 
   Future<void> _deletePond(String pondId, String pondName) async {
     try {
-      await DashboardRepository().deletePond(pondId);
+      await ref.read(pondRepositoryProvider).deletePond(pondId);
       if (mounted) {
         SnackbarHelper.show(
           context,
@@ -309,7 +311,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user = AuthRepository().currentUser;
+    final user = ref.read(authRepositoryProvider).currentUser;
     if (user == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
@@ -442,7 +444,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                 child: Stack(
                   children: [
                     const PondBackground(),
-                    StreamBuilder<QuerySnapshot>(
+                    StreamBuilder<List<Pond>>(
                       stream: _userPondsStream,
                       builder: (context, snapshot) {
                         if (!snapshot.hasData &&
@@ -455,19 +457,17 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                           return _buildErrorState(snapshot.error.toString());
                         }
 
-                        final ponds = snapshot.data?.docs ?? [];
+                        final ponds = snapshot.data ?? [];
 
                         if (ponds.isEmpty) {
                           return _buildEmptyState(context);
                         }
 
                         // Sort client-side by createdAt descending without mutating original list
-                        final sortedPonds = List<DocumentSnapshot>.from(ponds)
+                        final sortedPonds = List<Pond>.from(ponds)
                           ..sort((a, b) {
-                            final dataA = a.data() as Map<String, dynamic>;
-                            final dataB = b.data() as Map<String, dynamic>;
-                            final tA = dataA['createdAt'] as Timestamp?;
-                            final tB = dataB['createdAt'] as Timestamp?;
+                            final tA = a.createdAt;
+                            final tB = b.createdAt;
                             if (tA == null && tB == null) return 0;
                             if (tA == null) return 1;
                             if (tB == null) return -1;
@@ -520,31 +520,23 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                                   );
                                 }
 
-                                final pondDoc = sortedPonds[index - 1];
-                                final pondData =
-                                    pondDoc.data() as Map<String, dynamic>;
-                                final String pondName =
-                                    pondData['name'] ?? 'Unnamed Pond';
-                                final String userRole =
-                                    pondData['roles']?[user.uid] ?? 'viewer';
+                                final pond = sortedPonds[index - 1];
+                                final String pondName = pond.name.isNotEmpty ? pond.name : 'Unnamed Pond';
+                                final String userRole = pond.roles[user.uid] ?? 'viewer';
                                 final bool isOwner = userRole == 'owner';
 
                                 final card = PondListCard(
-                                  pondId: pondDoc.id,
+                                  pondId: pond.id,
                                   pondName: pondName,
-                                  species: pondData['species'] ?? 'Unspecified',
+                                  species: pond.species.isNotEmpty ? pond.species : 'Unspecified',
                                   userRole: userRole,
-                                  createdAt:
-                                      (pondData['createdAt'] as Timestamp?)
-                                          ?.toDate() ??
-                                      DateTime.now(),
-                                  targetCulturePeriodDays:
-                                      pondData['targetCulturePeriodDays'] ?? 90,
+                                  createdAt: pond.createdAt ?? DateTime.now(),
+                                  targetCulturePeriodDays: pond.targetCulturePeriodDays > 0 ? pond.targetCulturePeriodDays : 90,
                                 );
 
                                 if (isOwner) {
                                   return Slidable(
-                                    key: Key(pondDoc.id),
+                                    key: Key(pond.id),
                                     endActionPane: ActionPane(
                                       motion: const ScrollMotion(),
                                       extentRatio: 0.50,
@@ -554,8 +546,8 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                                             HapticFeedback.mediumImpact();
                                             _showEditPondSheet(
                                               context,
-                                              pondDoc.id,
-                                              pondData,
+                                              pond.id,
+                                              pond.toJson(),
                                             );
                                           },
                                           backgroundColor: Colors.transparent,
@@ -601,7 +593,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
                                                 ) ??
                                                 false;
                                             if (confirm) {
-                                              _deletePond(pondDoc.id, pondName);
+                                              _deletePond(pond.id, pondName);
                                             }
                                           },
                                           backgroundColor: Colors.transparent,
@@ -874,7 +866,7 @@ class _DefaultDashboardScreenState extends State<DefaultDashboardScreen>
   }
 }
 
-class _NotificationBadge extends StatelessWidget {
+class _NotificationBadge extends ConsumerWidget {
   final VoidCallback onTap;
   final bool isDark;
   final Color primaryBlue;
@@ -886,8 +878,8 @@ class _NotificationBadge extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final repository = NotificationsRepository();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repository = ref.read(notificationsRepositoryProvider);
 
     return StreamBuilder<int>(
       stream: repository.getUnreadCountStream(),

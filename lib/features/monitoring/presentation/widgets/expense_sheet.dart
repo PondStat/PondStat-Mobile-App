@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -6,16 +7,16 @@ import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 
-class ExpenseSheet extends StatefulWidget {
+class ExpenseSheet extends ConsumerStatefulWidget {
   final String pondId;
 
   const ExpenseSheet({super.key, required this.pondId});
 
   @override
-  State<ExpenseSheet> createState() => _ExpenseSheetState();
+  ConsumerState<ExpenseSheet> createState() => _ExpenseSheetState();
 }
 
-class _ExpenseSheetState extends State<ExpenseSheet> {
+class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _itemController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController(
@@ -24,7 +25,6 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
   final TextEditingController _amountController = TextEditingController();
 
   bool _isSaving = false;
-  final MonitoringRepository _repository = MonitoringRepository();
 
   @override
   void dispose() {
@@ -55,7 +55,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
     HapticFeedback.mediumImpact();
 
     try {
-      await _repository.addExpense(
+      await ref.read(monitoringRepositoryProvider).addExpense(
         pondId: widget.pondId,
         item: _itemController.text.trim(),
         quantity: int.parse(_quantityController.text),

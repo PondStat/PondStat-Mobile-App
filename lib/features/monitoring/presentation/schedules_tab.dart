@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -7,7 +8,7 @@ import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 
-class SchedulesTab extends StatefulWidget {
+class SchedulesTab extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final bool canEdit;
@@ -20,10 +21,10 @@ class SchedulesTab extends StatefulWidget {
   });
 
   @override
-  State<SchedulesTab> createState() => _SchedulesTabState();
+  ConsumerState<SchedulesTab> createState() => _SchedulesTabState();
 }
 
-class _SchedulesTabState extends State<SchedulesTab>
+class _SchedulesTabState extends ConsumerState<SchedulesTab>
     with AutomaticKeepAliveClientMixin {
   final Color primaryBlue = const Color(0xFF0A74DA);
   final List<String> _daysOfWeek = [
@@ -494,7 +495,7 @@ class _OverlapAvatarGroup extends StatelessWidget {
 // Phase 3: Shift-First Assignment Sheet (Multi-select)
 // -----------------------------------------------------------------------------
 
-class AssignShiftSheet extends StatefulWidget {
+class AssignShiftSheet extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final ScrollController scrollController;
@@ -507,12 +508,11 @@ class AssignShiftSheet extends StatefulWidget {
   });
 
   @override
-  State<AssignShiftSheet> createState() => _AssignShiftSheetState();
+  ConsumerState<AssignShiftSheet> createState() => _AssignShiftSheetState();
 }
 
-class _AssignShiftSheetState extends State<AssignShiftSheet> {
+class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
   final Color primaryBlue = const Color(0xFF0A74DA);
-  final MonitoringRepository _repository = MonitoringRepository();
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -575,7 +575,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
       // 2. Fetch existing schedules for all those users
       for (var user in users) {
         final userId = user['id'];
-        final scheduleData = await _repository.getJobSchedule(
+        final scheduleData = await ref.read(monitoringRepositoryProvider).getJobSchedule(
           widget.pondId,
           userId,
         );
@@ -666,7 +666,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
         }
 
         if (userChanged) {
-          await _repository.saveJobSchedule(
+          await ref.read(monitoringRepositoryProvider).saveJobSchedule(
             pondId: widget.pondId,
             userId: userId,
             userName: user['name'],

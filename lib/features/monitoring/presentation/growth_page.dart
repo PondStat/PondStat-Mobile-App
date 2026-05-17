@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,7 +11,7 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
-class GrowthPage extends StatefulWidget {
+class GrowthPage extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final String species;
@@ -25,10 +26,10 @@ class GrowthPage extends StatefulWidget {
   });
 
   @override
-  State<GrowthPage> createState() => _GrowthPageState();
+  ConsumerState<GrowthPage> createState() => _GrowthPageState();
 }
 
-class _GrowthPageState extends State<GrowthPage> {
+class _GrowthPageState extends ConsumerState<GrowthPage> {
   int _refreshKey = 0;
 
   void _showRecordGrowth() {
@@ -68,8 +69,7 @@ class _GrowthPageState extends State<GrowthPage> {
                   );
                 }
 
-                final repository = MonitoringRepository();
-                await repository.saveMeasurement(
+                await ref.read(monitoringRepositoryProvider).saveMeasurement(
                   pondId: widget.pondId,
                   label: label,
                   unit: unit,

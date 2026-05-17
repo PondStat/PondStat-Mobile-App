@@ -10,9 +10,10 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/record_form_fields.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/record_submit_button.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 
-class RecordDataSheet extends StatefulWidget {
+class RecordDataSheet extends ConsumerStatefulWidget {
   final int tabIndex;
   final String species;
   final Future<void> Function({
@@ -39,10 +40,10 @@ class RecordDataSheet extends StatefulWidget {
   });
 
   @override
-  State<RecordDataSheet> createState() => _RecordDataSheetState();
+  ConsumerState<RecordDataSheet> createState() => _RecordDataSheetState();
 }
 
-class _RecordDataSheetState extends State<RecordDataSheet> {
+class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   ParameterItem? selectedParameter;
   String? selectedDocId;
   TimeOfDay selectedTime = TimeOfDay.now();
@@ -70,7 +71,6 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   final TextEditingController _gCfu2Controller = TextEditingController();
 
   bool _isSaving = false;
-  final MonitoringRepository _repository = MonitoringRepository();
 
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
@@ -529,7 +529,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                     String type =
                         widget.customType ??
                         ['daily', 'weekly', 'biweekly'][widget.tabIndex];
-                    await _repository.addCustomParameter(
+                    await ref.read(monitoringRepositoryProvider).addCustomParameter(
                       label: nameController.text.trim(),
                       unit: unitController.text.trim(),
                       type: type,
@@ -606,7 +606,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
             onPressed: () async {
               final idToDelete = selectedDocId!;
-              await _repository.deleteCustomParameter(idToDelete);
+              await ref.read(monitoringRepositoryProvider).deleteCustomParameter(idToDelete);
               if (context.mounted) {
                 Navigator.pop(context);
                 setState(() {

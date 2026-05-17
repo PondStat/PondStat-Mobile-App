@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 import 'package:intl/intl.dart';
@@ -14,15 +15,14 @@ import 'package:pondstat/core/widgets/empty_state_card.dart';
 /// NOTE: If notifications don't appear, check Firestore security rules for:
 /// users/{uid}/notifications subcollection.
 
-class NotificationsInboxPage extends StatefulWidget {
+class NotificationsInboxPage extends ConsumerStatefulWidget {
   const NotificationsInboxPage({super.key});
 
   @override
-  State<NotificationsInboxPage> createState() => _NotificationsInboxPageState();
+  ConsumerState<NotificationsInboxPage> createState() => _NotificationsInboxPageState();
 }
 
-class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
-  final repository = NotificationsRepository();
+class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage> {
   Key _streamKey = UniqueKey();
   bool _showUnreadOnly = false;
 
@@ -100,7 +100,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
           IconButton(
             icon: const Icon(Icons.done_all_rounded),
             tooltip: 'Mark all as read',
-            onPressed: () => repository.markAllAsRead(),
+            onPressed: () => ref.read(notificationsRepositoryProvider).markAllAsRead(),
           ),
         ],
       ),
@@ -111,7 +111,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
         },
         child: StreamBuilder<List<NotificationModel>>(
           key: _streamKey,
-          stream: repository.getNotificationsStream(),
+          stream: ref.read(notificationsRepositoryProvider).getNotificationsStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -218,12 +218,12 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                     onTap: () async {
                       HapticFeedback.lightImpact();
                       if (!n.isRead) {
-                        await repository.markAsRead(n.id);
+                        await ref.read(notificationsRepositoryProvider).markAsRead(n.id);
                       }
                     },
                     onToggleRead: () =>
-                        repository.updateReadStatus(n.id, !n.isRead),
-                    onDelete: () => repository.deleteNotification(n.id),
+                        ref.read(notificationsRepositoryProvider).updateReadStatus(n.id, !n.isRead),
+                    onDelete: () => ref.read(notificationsRepositoryProvider).deleteNotification(n.id),
                   ),
                 );
               },

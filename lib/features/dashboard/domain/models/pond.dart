@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Pond extends Equatable {
   final String id;
@@ -9,6 +10,7 @@ class Pond extends Equatable {
   final String ownerId;
   final List<String> memberIds;
   final Map<String, String> roles;
+  final DateTime? createdAt;
 
   const Pond({
     required this.id,
@@ -19,6 +21,7 @@ class Pond extends Equatable {
     required this.ownerId,
     required this.memberIds,
     required this.roles,
+    this.createdAt,
   });
 
   factory Pond.fromJson(Map<String, dynamic> json, String id) {
@@ -31,6 +34,7 @@ class Pond extends Equatable {
       ownerId: json['ownerId'] as String? ?? '',
       memberIds: List<String>.from(json['memberIds'] ?? []),
       roles: Map<String, String>.from(json['roles'] ?? {}),
+      createdAt: (json['createdAt'] as Timestamp?)?.toDate(),
     );
   }
 

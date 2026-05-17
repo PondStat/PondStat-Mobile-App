@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/dashboard/presentation/default_dashboard.dart';
 import 'package:pondstat/features/auth/presentation/welcome_page.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/core/widgets/loading_overlay.dart';
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends ConsumerWidget {
   const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return StreamBuilder<User?>(
-      stream: AuthRepository().authStateChanges,
+      stream: ref.watch(authRepositoryProvider).authStateChanges,
       builder: (context, snapshot) {
         Widget currentWidget;
 

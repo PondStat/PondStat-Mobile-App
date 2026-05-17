@@ -4,15 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 
-final pondRepositoryProvider = Provider<PondRepositoryV2>((ref) {
+final pondRepositoryProvider = Provider<PondRepository>((ref) {
   final baseRef = ref.watch(appBaseRefProvider);
-  return PondRepositoryV2(baseRef);
+  return PondRepository(baseRef);
 });
 
-class PondRepositoryV2 {
+class PondRepository {
   final DocumentReference<Map<String, dynamic>> _baseRef;
 
-  PondRepositoryV2(this._baseRef);
+  PondRepository(this._baseRef);
 
   CollectionReference<Pond> get pondsCollection {
     return _baseRef

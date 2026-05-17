@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/services/settings_service.dart';
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends ConsumerState<SettingsPage> {
   final Color primaryBlue = const Color(0xFF0A74DA);
 
   @override
@@ -34,11 +35,13 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ),
-      body: ListenableBuilder(
-        listenable: SettingsService(),
-        builder: (context, _) {
-          final settings = SettingsService();
-          return ListView(
+      body: Builder(
+        builder: (context) {
+          final settings = ref.watch(settingsServiceProvider);
+          return ListenableBuilder(
+            listenable: settings,
+            builder: (context, _) {
+              return ListView(
             padding: const EdgeInsets.symmetric(vertical: 16),
             children: [
               _buildSectionHeader('APPEARANCE'),
@@ -104,13 +107,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 showChevron: false,
               ),
             ],
+              );
+            },
           );
         },
       ),
     );
-  }
-
-  Widget _buildSectionHeader(String title) {
+  }  Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 24, right: 24, bottom: 8),
       child: Text(

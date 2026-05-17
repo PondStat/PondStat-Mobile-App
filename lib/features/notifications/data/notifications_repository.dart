@@ -2,6 +2,8 @@ import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
 
 class NotificationModel {
   final String id;
@@ -36,14 +38,17 @@ class NotificationModel {
   }
 }
 
-class NotificationsRepository {
-  static final NotificationsRepository _instance =
-      NotificationsRepository._internal();
-  factory NotificationsRepository() => _instance;
-  NotificationsRepository._internal();
+final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) {
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final auth = ref.watch(firebaseAuthProvider);
+  return NotificationsRepository(firestore, auth);
+});
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+class NotificationsRepository {
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+
+  NotificationsRepository(this._firestore, this._auth);
 
   User? get currentUser => _auth.currentUser;
 

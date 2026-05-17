@@ -20,37 +20,33 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: SettingsService(),
-      builder: (context, _) {
-        final themeMode = SettingsService().themeMode;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsService = ref.watch(settingsServiceProvider);
+    final themeMode = settingsService.themeMode;
 
-        return MaterialApp(
-          title: 'PondStat',
-          debugShowCheckedModeBanner: false,
-          themeMode: themeMode,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          home: const StartupScreen(),
-        );
-      },
+    return MaterialApp(
+      title: 'PondStat',
+      debugShowCheckedModeBanner: false,
+      themeMode: themeMode,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      home: const StartupScreen(),
     );
   }
 }
 
-class StartupScreen extends StatefulWidget {
+class StartupScreen extends ConsumerStatefulWidget {
   const StartupScreen({super.key});
 
   @override
-  State<StartupScreen> createState() => _StartupScreenState();
+  ConsumerState<StartupScreen> createState() => _StartupScreenState();
 }
 
-class _StartupScreenState extends State<StartupScreen> {
+class _StartupScreenState extends ConsumerState<StartupScreen> {
   String? _initializationError;
   bool _isInitialized = false;
 
@@ -65,7 +61,7 @@ class _StartupScreenState extends State<StartupScreen> {
 
   Future<void> _initializeApp() async {
     try {
-      await SettingsService().loadSettings();
+      await ref.read(settingsServiceProvider).loadSettings();
 
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
@@ -86,7 +82,7 @@ class _StartupScreenState extends State<StartupScreen> {
       developer.log("✅ Firebase connected successfully!");
 
       if (!kIsWeb) {
-        await NotificationService().initialize();
+        await ref.read(notificationServiceProvider).initialize();
       }
 
       await Future.delayed(const Duration(milliseconds: 1500));

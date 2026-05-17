@@ -1,9 +1,17 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'dart:developer' as developer;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/services/notification_service.dart';
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final auth = ref.watch(firebaseAuthProvider);
+  final notificationService = ref.watch(notificationServiceProvider);
+  return AuthRepository(auth, notificationService);
+});
 
 class AuthException implements Exception {
   final String message;
@@ -13,11 +21,11 @@ class AuthException implements Exception {
 }
 
 class AuthRepository {
-  static final AuthRepository _instance = AuthRepository._internal();
-  factory AuthRepository() => _instance;
-  AuthRepository._internal();
+  final FirebaseAuth _auth;
+  final NotificationService _notificationService;
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  AuthRepository(this._auth, this._notificationService);
+
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId:
         '624574025589-5390binsi9sh8plk6ii0h929dtq63dvu.apps.googleusercontent.com',
@@ -76,7 +84,7 @@ class AuthRepository {
     final user = currentUser;
     if (user == null) return;
 
-    final token = await NotificationService().getDeviceToken();
+    final token = await _notificationService.getDeviceToken();
     if (token != null) {
       try {
         await FirestoreHelper.usersCollection.doc(user.uid).set({

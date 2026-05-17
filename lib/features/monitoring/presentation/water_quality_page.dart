@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/measurement_list_view.dart';
 import 'package:pondstat/features/monitoring/presentation/record_data_sheet.dart';
@@ -9,7 +10,7 @@ import 'package:pondstat/core/services/safety_service.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class WaterQualityPage extends StatefulWidget {
+class WaterQualityPage extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final String species;
@@ -26,14 +27,12 @@ class WaterQualityPage extends StatefulWidget {
   });
 
   @override
-  State<WaterQualityPage> createState() => _WaterQualityPageState();
+  ConsumerState<WaterQualityPage> createState() => _WaterQualityPageState();
 }
 
-class _WaterQualityPageState extends State<WaterQualityPage>
+class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final MonitoringRepository _repository = MonitoringRepository();
-  final SafetyService _safetyService = SafetyService();
 
   final Color primaryBlue = const Color(0xFF0A74DA);
 
@@ -67,14 +66,14 @@ class _WaterQualityPageState extends State<WaterQualityPage>
 
       Map<String, dynamic>? alertPayload;
       if (parameterItem != null) {
-        alertPayload = _safetyService.getAlertPayload(
+        alertPayload = ref.read(safetyServiceProvider).getAlertPayload(
           parameter: parameterItem,
           value: averageValue,
           pondName: widget.pondName,
         );
       }
 
-      await _repository.saveMeasurement(
+      await ref.read(monitoringRepositoryProvider).saveMeasurement(
         pondId: widget.pondId,
         label: label,
         unit: unit,
@@ -89,7 +88,7 @@ class _WaterQualityPageState extends State<WaterQualityPage>
       );
 
       if (parameterItem != null) {
-        await _safetyService.checkAndNotify(
+        await ref.read(safetyServiceProvider).checkAndNotify(
           parameter: parameterItem,
           value: averageValue,
           pondName: widget.pondName,
@@ -143,7 +142,7 @@ class _WaterQualityPageState extends State<WaterQualityPage>
         docs: docs,
         pondId: widget.pondId,
         species: widget.species,
-        repository: _repository,
+        repository: ref.read(monitoringRepositoryProvider),
         onSave: () {
           // Trigger a rebuild if necessary, or the stream will naturally update.
         },

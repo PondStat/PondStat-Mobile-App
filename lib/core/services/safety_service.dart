@@ -1,10 +1,16 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/services/notification_service.dart';
 
+final safetyServiceProvider = Provider<SafetyService>((ref) {
+  final notificationService = ref.watch(notificationServiceProvider);
+  return SafetyService(notificationService);
+});
+
 class SafetyService {
-  static final SafetyService _instance = SafetyService._internal();
-  factory SafetyService() => _instance;
-  SafetyService._internal();
+  final NotificationService _notificationService;
+
+  SafetyService(this._notificationService);
 
   /// Checks if a [value] for a given [parameter] is within its defined safe range.
   /// If not, it triggers a notification alert.
@@ -20,7 +26,7 @@ class SafetyService {
     );
 
     if (alert != null) {
-      await NotificationService().showParameterAlert(
+      await _notificationService.showParameterAlert(
         pondName: pondName,
         parameter: parameter.label,
         value: value,
