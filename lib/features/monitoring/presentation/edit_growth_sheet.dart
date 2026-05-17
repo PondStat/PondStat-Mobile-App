@@ -6,9 +6,10 @@ import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
-class EditGrowthSheet extends StatefulWidget {
+class EditGrowthSheet extends ConsumerStatefulWidget {
   final GrowthMetrics metrics;
   final String pondId;
   final VoidCallback onSave;
@@ -21,10 +22,10 @@ class EditGrowthSheet extends StatefulWidget {
   });
 
   @override
-  State<EditGrowthSheet> createState() => _EditGrowthSheetState();
+  ConsumerState<EditGrowthSheet> createState() => _EditGrowthSheetState();
 }
 
-class _EditGrowthSheetState extends State<EditGrowthSheet> {
+class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
   late final TextEditingController abwController;
   late final TextEditingController adgController;
   late final TextEditingController dfrController;
@@ -132,7 +133,7 @@ class _EditGrowthSheetState extends State<EditGrowthSheet> {
       // Fetch all docs in parallel
       final snapshots = await Future.wait(
         docIds.map(
-          (id) => FirestoreHelper.measurementsCollection.doc(id).get(),
+          (id) => ref.read(monitoringRepositoryProvider).measurementsCollection.doc(id).get(),
         ),
       );
 
@@ -165,7 +166,7 @@ class _EditGrowthSheetState extends State<EditGrowthSheet> {
           'editorName': user?.displayName,
         });
 
-        final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
+        final historyRef = ref.read(monitoringRepositoryProvider).measurementHistoryCollection.doc();
         batch.set(historyRef, {
           'pondId': widget.pondId,
           'measurementId': id,

@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/services/logger_service.dart';
+import 'package:pondstat/features/auth/data/auth_repository.dart';
 
-class EditProfilePage extends StatefulWidget {
+class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
 
   @override
-  State<EditProfilePage> createState() => _EditProfilePageState();
+  ConsumerState<EditProfilePage> createState() => _EditProfilePageState();
 }
 
-class _EditProfilePageState extends State<EditProfilePage> {
+class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _nameController = TextEditingController();
@@ -74,7 +75,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _initialName = user.displayName ?? '';
 
       try {
-        final doc = await FirestoreHelper.usersCollection.doc(user.uid).get();
+        final doc = await ref.read(authRepositoryProvider).usersCollection.doc(user.uid).get();
         if (doc.exists && doc.data() != null) {
           final data = doc.data()!;
           final sNum = data['studentNumber']?.toString() ?? '';
@@ -201,7 +202,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
 
       if (firestoreUpdates.isNotEmpty) {
-        await FirestoreHelper.usersCollection
+        await ref.read(authRepositoryProvider).usersCollection
             .doc(user.uid)
             .update(firestoreUpdates);
       }

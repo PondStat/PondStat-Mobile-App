@@ -5,12 +5,13 @@ import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
-import 'package:pondstat/features/monitoring/presentation/trends_tab.dart';
 import 'package:pondstat/features/monitoring/presentation/periodic_parameters_chart.dart';
+import 'package:pondstat/features/monitoring/presentation/trends_tab.dart';
 import 'package:pondstat/core/utils/helpers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
-class TrendsPage extends StatefulWidget {
+class TrendsPage extends ConsumerStatefulWidget {
   final String pondId;
   final String species;
   final String userRole;
@@ -23,10 +24,10 @@ class TrendsPage extends StatefulWidget {
   });
 
   @override
-  State<TrendsPage> createState() => _TrendsPageState();
+  ConsumerState<TrendsPage> createState() => _TrendsPageState();
 }
 
-class _TrendsPageState extends State<TrendsPage> {
+class _TrendsPageState extends ConsumerState<TrendsPage> {
   late DateTime _startDate;
   late DateTime _endDate;
   bool _isExporting = false;
@@ -87,7 +88,7 @@ class _TrendsPageState extends State<TrendsPage> {
     try {
       SnackbarHelper.show(context, "Generating report...");
 
-      final querySnapshot = await FirestoreHelper.getMeasurementsByDateRange(
+      final querySnapshot = await ref.read(monitoringRepositoryProvider).getMeasurementsByDateRange(
         widget.pondId,
         _startDate,
         _endDate,

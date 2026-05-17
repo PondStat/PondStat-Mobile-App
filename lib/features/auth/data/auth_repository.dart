@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:pondstat/core/services/logging/app_logger.dart';
@@ -30,8 +31,20 @@ class AuthRepository {
   final FirebaseAuth _auth;
   final NotificationService _notificationService;
   final AppLogger _log;
+  StreamSubscription<String>? _tokenRefreshSub;
 
-  AuthRepository(this._baseRef, this._auth, this._notificationService, this._log);
+  AuthRepository(this._baseRef, this._auth, this._notificationService, this._log) {
+    // SRP: Listen for FCM token refreshes and persist to Firestore.
+    // The NotificationService exposes the stream but does NOT write to the DB.
+    _tokenRefreshSub = _notificationService.onTokenRefresh.listen(
+      (newToken) => _persistFcmToken(newToken),
+    );
+  }
+
+  /// Clean up the token refresh listener.
+  void dispose() {
+    _tokenRefreshSub?.cancel();
+  }
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId:
@@ -97,21 +110,30 @@ class AuthRepository {
 
     final token = await _notificationService.getDeviceToken();
     if (token != null) {
-      try {
-        await usersCollection.doc(user.uid).set({
-          'fcmToken': token,
-          'lastTokenUpdate': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      } catch (e) {
-        _log.error(
-          'Error updating FCM token',
-          error: e,
-          tag: 'AUTH',
-        );
-      }
+      await _persistFcmToken(token);
     }
     // If token is null (e.g. permission denied), we DO NOT delete the existing token
     // to avoid wiping notifications for other devices.
+  }
+
+  /// Persists an FCM token to Firestore for the current user.
+  /// Called both on login ([updateFcmToken]) and on token refresh.
+  Future<void> _persistFcmToken(String token) async {
+    final user = currentUser;
+    if (user == null) return;
+
+    try {
+      await usersCollection.doc(user.uid).set({
+        'fcmToken': token,
+        'lastTokenUpdate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      _log.error(
+        'Error persisting FCM token',
+        error: e,
+        tag: 'AUTH',
+      );
+    }
   }
 
   Future<void> signOut() async {

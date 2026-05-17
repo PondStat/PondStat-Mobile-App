@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
 class _DailyRecord {
   final DateTime timestamp;
@@ -15,7 +16,7 @@ class _DailyRecord {
   });
 }
 
-class PeriodicParametersChart extends StatefulWidget {
+class PeriodicParametersChart extends ConsumerStatefulWidget {
   final String pondId;
   final String species;
   final String type;
@@ -32,11 +33,11 @@ class PeriodicParametersChart extends StatefulWidget {
   });
 
   @override
-  State<PeriodicParametersChart> createState() =>
+  ConsumerState<PeriodicParametersChart> createState() =>
       _PeriodicParametersChartState();
 }
 
-class _PeriodicParametersChartState extends State<PeriodicParametersChart>
+class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChart>
     with SingleTickerProviderStateMixin {
   late final List<ParameterItem> _baseParams;
   int _selectedIndex = 0;
@@ -99,7 +100,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
       59,
     );
 
-    _cachedStream = FirestoreHelper.measurementsCollection
+    _cachedStream = ref.read(monitoringRepositoryProvider).measurementsCollection
         .where('pondId', isEqualTo: widget.pondId)
         .where('type', isEqualTo: widget.type)
         .where('parameter', isEqualTo: param.label)
@@ -147,7 +148,7 @@ class _PeriodicParametersChartState extends State<PeriodicParametersChart>
     final isDark = theme.brightness == Brightness.dark;
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirestoreHelper.customParametersCollection
+      stream: ref.read(monitoringRepositoryProvider).customParametersCollection
           .where('type', isEqualTo: widget.type)
           .snapshots(),
       builder: (context, snapshot) {

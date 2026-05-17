@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 
-class EditHistorySheet extends StatefulWidget {
+class EditHistorySheet extends ConsumerStatefulWidget {
   final String pondId;
   final ScrollController scrollController;
 
@@ -15,10 +16,10 @@ class EditHistorySheet extends StatefulWidget {
   });
 
   @override
-  State<EditHistorySheet> createState() => _EditHistorySheetState();
+  ConsumerState<EditHistorySheet> createState() => _EditHistorySheetState();
 }
 
-class _EditHistorySheetState extends State<EditHistorySheet> {
+class _EditHistorySheetState extends ConsumerState<EditHistorySheet> {
   String selectedFilter = 'all';
 
   String _formatRelativeTime(DateTime date) {
@@ -60,7 +61,7 @@ class _EditHistorySheetState extends State<EditHistorySheet> {
     final colorScheme = Theme.of(context).colorScheme;
     final onSurface = colorScheme.onSurface;
 
-    Query<Map<String, dynamic>> query = FirestoreHelper
+    Query<Map<String, dynamic>> query = ref.read(monitoringRepositoryProvider)
         .measurementHistoryCollection
         .where('pondId', isEqualTo: widget.pondId);
 

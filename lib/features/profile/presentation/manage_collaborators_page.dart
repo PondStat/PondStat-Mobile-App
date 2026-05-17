@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/services/logger_service.dart';
+import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/features/dashboard/data/pond_repository.dart';
+import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 
-class ManageCollaboratorsPage extends StatefulWidget {
+class ManageCollaboratorsPage extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
 
@@ -17,11 +20,11 @@ class ManageCollaboratorsPage extends StatefulWidget {
   });
 
   @override
-  State<ManageCollaboratorsPage> createState() =>
+  ConsumerState<ManageCollaboratorsPage> createState() =>
       _ManageCollaboratorsPageState();
 }
 
-class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
+class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPage> {
   final TextEditingController _emailController = TextEditingController();
   final FocusNode _emailFocus = FocusNode();
   bool _isAdding = false;
@@ -54,7 +57,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
     }
 
     try {
-      final doc = await FirestoreHelper.usersCollection.doc(userId).get();
+      final doc = await ref.read(authRepositoryProvider).usersCollection.doc(userId).get();
       if (doc.exists && doc.data() != null) {
         _userCache[userId] = doc.data() as Map<String, dynamic>;
         return _userCache[userId]!;
@@ -84,7 +87,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
     FocusScope.of(context).unfocus();
 
     try {
-      final query = await FirestoreHelper.usersCollection
+      final query = await ref.read(authRepositoryProvider).usersCollection
           .where('email', isEqualTo: email)
           .limit(1)
           .get();
@@ -102,7 +105,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
       }
 
       final targetUserId = query.docs.first.id;
-      final pondRef = FirestoreHelper.pondsCollection.doc(widget.pondId);
+      final pondRef = ref.read(pondRepositoryProvider).pondsCollection.doc(widget.pondId);
 
       await pondRef.update({
         'memberIds': FieldValue.arrayUnion([targetUserId]),
@@ -230,7 +233,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
   }
 
   Future<void> _updateRole(String userId, String newRole) async {
-    final pondRef = FirestoreHelper.pondsCollection.doc(widget.pondId);
+    final pondRef = ref.read(pondRepositoryProvider).pondsCollection.doc(widget.pondId);
 
     try {
       if (newRole == 'remove') {
@@ -493,8 +496,8 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
               ),
 
               Expanded(
-                child: StreamBuilder<DocumentSnapshot>(
-                  stream: FirestoreHelper.pondsCollection
+                child: StreamBuilder<DocumentSnapshot<Pond>>(
+                  stream: ref.read(pondRepositoryProvider).pondsCollection
                       .doc(widget.pondId)
                       .snapshots(),
                   builder: (context, snapshot) {
@@ -511,9 +514,8 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    final data =
-                        snapshot.data!.data() as Map<String, dynamic>? ?? {};
-                    final roles = data['roles'] as Map<String, dynamic>? ?? {};
+                    final pond = snapshot.data!.data();
+                    final roles = pond?.roles ?? {};
 
                     return ListView.builder(
                       padding: const EdgeInsets.only(

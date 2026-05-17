@@ -91,6 +91,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
         await ref.read(safetyServiceProvider).checkAndNotify(
           parameter: parameterItem,
           value: averageValue,
+          pondId: widget.pondId,
           pondName: widget.pondName,
         );
       }

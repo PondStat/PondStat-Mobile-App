@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/features/dashboard/data/pond_repository.dart';
+import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 
@@ -19,13 +20,13 @@ class ExpensesTab extends ConsumerStatefulWidget {
 }
 
 class _ExpensesTabState extends ConsumerState<ExpensesTab> {
-  late Stream<DocumentSnapshot> _pondStream;
+  late Stream<DocumentSnapshot<Pond>> _pondStream;
   late Stream<QuerySnapshot<Map<String, dynamic>>> _expensesStream;
 
   @override
   void initState() {
     super.initState();
-    _pondStream = FirestoreHelper.pondsCollection
+    _pondStream = ref.read(pondRepositoryProvider).pondsCollection
         .doc(widget.pondId)
         .snapshots();
     _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
@@ -35,7 +36,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
   void didUpdateWidget(covariant ExpensesTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pondId != widget.pondId) {
-      _pondStream = FirestoreHelper.pondsCollection
+      _pondStream = ref.read(pondRepositoryProvider).pondsCollection
           .doc(widget.pondId)
           .snapshots();
       _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
@@ -44,7 +45,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
+    return StreamBuilder<DocumentSnapshot<Pond>>(
       stream: _pondStream,
       builder: (context, pondSnapshot) {
         // Only show loader if we have NO data yet
@@ -53,9 +54,8 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final pondData =
-            pondSnapshot.data?.data() as Map<String, dynamic>? ?? {};
-        final roles = pondData['roles'] as Map<String, dynamic>? ?? {};
+        final pond = pondSnapshot.data?.data();
+        final roles = pond?.roles ?? {};
 
         // Count Owners and Editors only
         final groupMembers = roles.entries

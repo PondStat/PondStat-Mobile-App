@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
 
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/utils/helpers.dart';
@@ -807,7 +806,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirestoreHelper.customParametersCollection
+      stream: ref.read(monitoringRepositoryProvider).customParametersCollection
           .where('type', isEqualTo: type)
           .snapshots(),
       builder: (context, snapshot) {

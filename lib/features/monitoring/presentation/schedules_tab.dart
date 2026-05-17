@@ -5,7 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/core/utils/helpers.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 
@@ -66,7 +67,7 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirestoreHelper.schedulesCollection
+        stream: ref.read(monitoringRepositoryProvider).schedulesCollection
             .where('pondId', isEqualTo: widget.pondId)
             .snapshots(),
         builder: (context, snapshot) {
@@ -549,18 +550,19 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
   Future<void> _loadData() async {
     try {
       // 1. Fetch eligible users
-      final pondDoc = await FirestoreHelper.pondsCollection
+      final pondDoc = await ref.read(pondRepositoryProvider).pondsCollection
           .doc(widget.pondId)
           .get();
       if (!pondDoc.exists) return;
 
-      final data = pondDoc.data() ?? {};
-      final roles = data['roles'] as Map<String, dynamic>? ?? {};
+      final pond = pondDoc.data();
+      if (pond == null) return;
+      final roles = pond.roles;
 
       List<Map<String, dynamic>> users = [];
       for (var entry in roles.entries) {
         if (entry.value == 'owner' || entry.value == 'editor') {
-          final userDoc = await FirestoreHelper.usersCollection
+          final userDoc = await ref.read(authRepositoryProvider).usersCollection
               .doc(entry.key)
               .get();
           if (userDoc.exists) {
