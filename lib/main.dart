@@ -15,12 +15,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pondstat/core/services/settings/settings_provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:pondstat/core/widgets/loading_overlay.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   final prefs = await SharedPreferences.getInstance();
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   runApp(
     ProviderScope(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+
+import '../theme/app_metrics.dart';
 
 class PondStatDropdownField<T> extends StatelessWidget {
   final T? value;
@@ -64,7 +65,7 @@ class PondStatDropdownField<T> extends StatelessWidget {
             value: value,
             isExpanded: true,
             dropdownColor: theme.cardTheme.color,
-            borderRadius: BorderRadius.circular(AppMetrics.radiusMedium),
+            borderRadius: BorderRadius.circular(context.metrics.radiusMedium),
             menuMaxHeight: 300,
             icon: Icon(
               Icons.keyboard_arrow_down_rounded,
