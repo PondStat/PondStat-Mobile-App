@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/services/logger_service.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/schedule_header.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/schedule_list_item.dart';
@@ -111,7 +111,7 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
         });
       }
     } catch (e, stackTrace) {
-      LoggerService.error("Error loading eligible users", e, stackTrace);
+      ref.read(appLoggerProvider).error('Error loading eligible users', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
       if (mounted) setState(() => _isLoadingUsers = false);
     }
   }
@@ -147,7 +147,7 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
         }
       }
     } catch (e, stackTrace) {
-      LoggerService.error("Error loading schedule", e, stackTrace);
+      ref.read(appLoggerProvider).error('Error loading schedule', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
     } finally {
       if (mounted) setState(() => _isLoadingUsers = false);
     }

@@ -1,4 +1,5 @@
-import 'dart:developer' as developer;
+import 'package:pondstat/core/services/logging/app_logger.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -44,15 +45,17 @@ NotificationsRepository notificationsRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
-  return NotificationsRepository(baseRef, firestore, auth);
+  final logger = ref.watch(appLoggerProvider);
+  return NotificationsRepository(baseRef, firestore, auth, logger);
 }
 
 class NotificationsRepository {
   final DocumentReference<Map<String, dynamic>> _baseRef;
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  final AppLogger _log;
 
-  NotificationsRepository(this._baseRef, this._firestore, this._auth);
+  NotificationsRepository(this._baseRef, this._firestore, this._auth, this._log);
 
   User? get currentUser => _auth.currentUser;
 
@@ -82,11 +85,11 @@ class NotificationsRepository {
               .toList(),
         )
         .handleError((error, stackTrace) {
-          developer.log(
+          _log.error(
             'Error in getNotificationsStream',
-            name: 'notifications.repository',
             error: error,
             stackTrace: stackTrace,
+            tag: 'NOTIFICATIONS',
           );
           throw error;
         });
@@ -101,11 +104,11 @@ class NotificationsRepository {
         .snapshots()
         .map((snapshot) => snapshot.docs.length)
         .handleError((error, stackTrace) {
-          developer.log(
+          _log.error(
             'Error in getUnreadCountStream',
-            name: 'notifications.repository',
             error: error,
             stackTrace: stackTrace,
+            tag: 'NOTIFICATIONS',
           );
           throw error;
         });
@@ -121,10 +124,10 @@ class NotificationsRepository {
       if (collection == null) return;
       await collection.doc(notificationId).update({'isRead': isRead});
     } catch (e) {
-      developer.log(
+      _log.error(
         'Error updating notification read status',
         error: e,
-        name: 'notifications.repository',
+        tag: 'NOTIFICATIONS',
       );
     }
   }
@@ -152,10 +155,10 @@ class NotificationsRepository {
         await batch.commit();
       }
     } catch (e) {
-      developer.log(
+      _log.error(
         'Error marking all as read',
         error: e,
-        name: 'notifications.repository',
+        tag: 'NOTIFICATIONS',
       );
     }
   }
@@ -166,10 +169,10 @@ class NotificationsRepository {
       if (collection == null) return;
       await collection.doc(notificationId).delete();
     } catch (e) {
-      developer.log(
+      _log.error(
         'Error deleting notification',
         error: e,
-        name: 'notifications.repository',
+        tag: 'NOTIFICATIONS',
       );
     }
   }

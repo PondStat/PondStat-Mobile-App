@@ -62,6 +62,8 @@ dependencies:
   clock: ^1.1.1
   json_annotation: ^4.9.0
   freezed_annotation: ^3.0.0
+  logger: ^2.7.0
+  firebase_crashlytics: ^5.2.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

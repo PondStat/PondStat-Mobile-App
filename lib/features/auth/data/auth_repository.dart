@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
-import 'dart:developer' as developer;
+import 'package:pondstat/core/services/logging/app_logger.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,7 +14,8 @@ AuthRepository authRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
   final auth = ref.watch(firebaseAuthProvider);
   final notificationService = ref.watch(notificationServiceProvider);
-  return AuthRepository(baseRef, auth, notificationService);
+  final logger = ref.watch(appLoggerProvider);
+  return AuthRepository(baseRef, auth, notificationService, logger);
 }
 
 class AuthException implements Exception {
@@ -27,8 +29,9 @@ class AuthRepository {
   final DocumentReference<Map<String, dynamic>> _baseRef;
   final FirebaseAuth _auth;
   final NotificationService _notificationService;
+  final AppLogger _log;
 
-  AuthRepository(this._baseRef, this._auth, this._notificationService);
+  AuthRepository(this._baseRef, this._auth, this._notificationService, this._log);
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId:
@@ -100,10 +103,10 @@ class AuthRepository {
           'lastTokenUpdate': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } catch (e) {
-        developer.log(
+        _log.error(
           'Error updating FCM token',
           error: e,
-          name: 'auth.repository',
+          tag: 'AUTH',
         );
       }
     }

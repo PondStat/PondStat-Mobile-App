@@ -1,10 +1,12 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/services.dart';
-import 'dart:developer' as developer;
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/core/theme/app_theme.dart';
 import 'package:pondstat/features/auth/presentation/auth_wrapper.dart';
 import 'package:pondstat/core/firebase/firebase_options.dart';
@@ -73,13 +75,28 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
             persistenceEnabled: true,
             cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
           );
-          developer.log("✅ Offline persistence enabled");
+          ref.read(appLoggerProvider).info('Offline persistence enabled', tag: 'FIREBASE');
         } catch (e) {
-          developer.log("⚠️ Could not enable offline persistence: $e");
+          ref.read(appLoggerProvider).warning('Could not enable offline persistence: $e', tag: 'FIREBASE');
         }
       }
 
-      developer.log("✅ Firebase connected successfully!");
+      ref.read(appLoggerProvider).info('Firebase connected successfully!', tag: 'FIREBASE');
+
+      // Initialize Crashlytics for production error tracking
+      if (!kIsWeb) {
+        if (!kDebugMode) {
+          // Pass all uncaught Flutter errors to Crashlytics
+          FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+          // Pass all uncaught async errors to Crashlytics
+          PlatformDispatcher.instance.onError = (error, stack) {
+            FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+            return true;
+          };
+        }
+        // Disable Crashlytics data collection in debug to avoid noise
+        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+      }
 
       if (!kIsWeb) {
         await ref.read(notificationServiceProvider).initialize();
@@ -93,10 +110,12 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
         });
       }
     } catch (e, stackTrace) {
-      developer.log(
-        "❌ Initialization failed: $e",
+      final log = ref.read(appLoggerProvider);
+      log.error(
+        'App initialization failed',
         error: e,
         stackTrace: stackTrace,
+        tag: 'STARTUP',
       );
       if (mounted) {
         setState(() {
