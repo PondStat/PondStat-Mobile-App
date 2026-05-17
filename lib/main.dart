@@ -11,7 +11,8 @@ import 'package:pondstat/core/theme/app_theme.dart';
 import 'package:pondstat/features/auth/presentation/auth_wrapper.dart';
 import 'package:pondstat/core/firebase/firebase_options.dart';
 import 'package:pondstat/core/services/notification_service.dart';
-import 'package:pondstat/core/services/settings_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pondstat/core/services/settings/settings_provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:pondstat/core/widgets/loading_overlay.dart';
 
@@ -19,7 +20,16 @@ void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  runApp(const ProviderScope(child: MyApp()));
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends ConsumerWidget {
@@ -27,8 +37,7 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settingsService = ref.watch(settingsServiceProvider);
-    final themeMode = settingsService.themeMode;
+    final themeMode = ref.watch(settingsProvider.select((s) => s.themeMode));
 
     return MaterialApp(
       title: 'PondStat',
@@ -63,7 +72,6 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
 
   Future<void> _initializeApp() async {
     try {
-      await ref.read(settingsServiceProvider).loadSettings();
 
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/core/services/settings_service.dart';
+import 'package:pondstat/core/services/settings/settings_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -37,24 +37,61 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
       body: Builder(
         builder: (context) {
-          final settings = ref.watch(settingsServiceProvider);
-          return ListenableBuilder(
-            listenable: settings,
-            builder: (context, _) {
-              return ListView(
+          final settings = ref.watch(settingsProvider);
+          return ListView(
             padding: const EdgeInsets.symmetric(vertical: 16),
             children: [
               _buildSectionHeader('APPEARANCE'),
-              _buildSwitchTile(
-                context: context,
-                icon: Icons.dark_mode_rounded,
-                title: 'Dark Mode',
-                subtitle: 'Use a dark theme across the app',
-                value: settings.isDarkMode,
-                onChanged: (val) {
-                  HapticFeedback.lightImpact();
-                  settings.setDarkMode(val);
-                },
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Theme',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SegmentedButton<ThemeMode>(
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          icon: Icon(Icons.brightness_auto_rounded),
+                          label: Text('System'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          icon: Icon(Icons.light_mode_rounded),
+                          label: Text('Light'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          icon: Icon(Icons.dark_mode_rounded),
+                          label: Text('Dark'),
+                        ),
+                      ],
+                      selected: {settings.themeMode},
+                      onSelectionChanged: (Set<ThemeMode> newSelection) {
+                        HapticFeedback.selectionClick();
+                        ref.read(settingsProvider.notifier).setThemeMode(newSelection.first);
+                      },
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+                          (Set<WidgetState> states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return primaryBlue.withValues(alpha: 0.2);
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
               _buildSectionHeader('NOTIFICATIONS'),
@@ -66,7 +103,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 value: settings.pushNotifications,
                 onChanged: (val) {
                   HapticFeedback.lightImpact();
-                  settings.setPushNotifications(val);
+                  ref.read(settingsProvider.notifier).setPushNotifications(val);
                 },
               ),
               _buildSwitchTile(
@@ -77,7 +114,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 value: settings.abnormalAlerts,
                 onChanged: (val) {
                   HapticFeedback.lightImpact();
-                  settings.setAbnormalAlerts(val);
+                  ref.read(settingsProvider.notifier).setAbnormalAlerts(val);
                 },
               ),
               const SizedBox(height: 24),
@@ -107,8 +144,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 showChevron: false,
               ),
             ],
-              );
-            },
           );
         },
       ),
