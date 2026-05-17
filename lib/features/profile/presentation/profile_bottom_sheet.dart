@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/features/profile/presentation/edit_profile_page.dart';
 import 'package:pondstat/features/profile/presentation/manage_collaborators_page.dart';
 import 'package:pondstat/features/profile/presentation/settings_page.dart';
@@ -308,7 +308,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                         },
                         errorBuilder: (context, error, stackTrace) {
                           return Text(
-                            StringUtils.getInitials(name),
+                            name.initials,
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
@@ -319,7 +319,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                       ),
                     )
                   : Text(
-                      StringUtils.getInitials(name),
+                      name.initials,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,

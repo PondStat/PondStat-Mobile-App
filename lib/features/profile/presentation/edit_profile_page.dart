@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/core/services/logger_service.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 
@@ -216,20 +217,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         _checkForChanges();
         HapticFeedback.heavyImpact();
 
-        SnackbarHelper.show(
-          context,
-          'Profile updated successfully!',
-          backgroundColor: Colors.grey.shade800,
-        );
+        SnackbarHelper.showInfo(context, 'Profile updated successfully!');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Failed to update profile: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Failed to update profile: $e");
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -376,9 +369,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                       errorBuilder:
                                           (context, error, stackTrace) {
                                             return Text(
-                                              StringUtils.getInitials(
-                                                displayName,
-                                              ),
+                                              displayName.initials,
                                               style: TextStyle(
                                                 fontSize: 40,
                                                 fontWeight: FontWeight.w900,
@@ -389,7 +380,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                     ),
                                   )
                                 : Text(
-                                    StringUtils.getInitials(displayName),
+                                    displayName.initials,
                                     style: TextStyle(
                                       fontSize: 40,
                                       fontWeight: FontWeight.w900,
@@ -401,10 +392,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         GestureDetector(
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            SnackbarHelper.show(
-                              context,
-                              'Profile picture uploads coming soon!',
-                            );
+                            SnackbarHelper.showInfo(context, 'Profile picture uploads coming soon!',);
                           },
                           child: Container(
                             padding: const EdgeInsets.all(10),

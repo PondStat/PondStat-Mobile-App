@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
@@ -144,20 +144,12 @@ class MeasurementCard extends ConsumerWidget {
 
                             if (context.mounted) {
                               Navigator.pop(context);
-                              SnackbarHelper.show(
-                                context,
-                                "$title entry deleted",
-                                backgroundColor: Colors.grey.shade800,
-                              );
+                              SnackbarHelper.showInfo(context, "$title entry deleted");
                             }
                           } catch (e) {
                             if (context.mounted) {
                               setState(() => isDeleting = false);
-                              SnackbarHelper.show(
-                                context,
-                                "Failed to delete: $e",
-                                backgroundColor: Colors.red,
-                              );
+                              SnackbarHelper.showError(context, "Failed to delete: $e");
                             }
                           }
                         },

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/core/services/logger_service.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
@@ -75,11 +76,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
     );
     if (email.isEmpty || !emailRegex.hasMatch(email)) {
-      SnackbarHelper.show(
-        context,
-        'Please enter a valid email address.',
-        backgroundColor: Colors.orange.shade700,
-      );
+      SnackbarHelper.showInfo(context, 'Please enter a valid email address.');
       return;
     }
 
@@ -94,11 +91,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
 
       if (query.docs.isEmpty) {
         if (mounted) {
-          SnackbarHelper.show(
-            context,
-            'User not found. They must sign up for PondStat first.',
-            backgroundColor: Colors.orange.shade800,
-          );
+          SnackbarHelper.showInfo(context, 'User not found. They must sign up for PondStat first.');
         }
         setState(() => _isAdding = false);
         return;
@@ -116,19 +109,11 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
       _emailController.clear();
 
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          'Collaborator added successfully!',
-          backgroundColor: Colors.green.shade700,
-        );
+        SnackbarHelper.showSuccess(context, 'Collaborator added successfully!');
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          'Error adding collaborator: $e',
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, 'Error adding collaborator: $e');
       }
     } finally {
       if (mounted) setState(() => _isAdding = false);
@@ -247,11 +232,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
       HapticFeedback.lightImpact();
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          'Failed to update role: $e',
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, 'Failed to update role: $e');
       }
     }
   }
@@ -702,12 +683,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                     ).withValues(alpha: 0.2),
                     radius: 20,
                     child: Text(
-                      StringUtils.getInitials(
-                        (userData?['fullName']?.toString().trim().isEmpty ??
-                                true)
-                            ? 'U'
-                            : userData!['fullName'],
-                      ),
+                      (userData?['fullName'] as String?).initials,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: _getAvatarColor(
@@ -914,7 +890,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
     final rawName = userData?['fullName']?.toString().trim() ?? '';
     final name = rawName.isEmpty ? 'Unknown User' : rawName;
     final email = userData?['email'] ?? '';
-    final initials = StringUtils.getInitials(name);
+    final initials = name.initials;
     final avatarColor = widget.isMe
         ? const Color(0xFF0A74DA)
         : _getAvatarColor(name);

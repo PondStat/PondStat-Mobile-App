@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
@@ -186,11 +186,11 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
       if (mounted) {
         widget.onSave();
         Navigator.pop(context); // close the edit sheet
-        SnackbarHelper.show(context, "Measurements deleted");
+        SnackbarHelper.showInfo(context, "Measurements deleted");
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+        SnackbarHelper.showError(context, "Error: $e");
       }
     } finally {
       if (mounted) setState(() => _isDeleting = false);
@@ -253,15 +253,11 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
       if (mounted) {
         widget.onSave();
         Navigator.pop(context);
-        SnackbarHelper.show(
-          context,
-          "Measurements updated",
-          backgroundColor: Colors.green,
-        );
+        SnackbarHelper.showSuccess(context, "Measurements updated");
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+        SnackbarHelper.showError(context, "Error: $e");
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

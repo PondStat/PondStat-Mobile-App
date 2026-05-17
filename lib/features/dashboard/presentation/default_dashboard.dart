@@ -5,7 +5,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/secondary_button.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/no_pond_assigned.dart';
@@ -293,19 +293,11 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     try {
       await ref.read(pondRepositoryProvider).deletePond(pondId);
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "$pondName deleted successfully",
-          backgroundColor: Colors.grey.shade800,
-        );
+        SnackbarHelper.showInfo(context, "$pondName deleted successfully");
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Failed to delete pond: $e",
-          backgroundColor: Colors.red,
-        );
+        SnackbarHelper.showError(context, "Failed to delete pond: $e");
       }
     }
   }

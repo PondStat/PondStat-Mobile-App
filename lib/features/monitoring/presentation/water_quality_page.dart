@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/measurement_list_view.dart';
 import 'package:pondstat/features/monitoring/presentation/record_data_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_parameter_sheet.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/services/safety_service.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
@@ -105,22 +105,18 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
       }
 
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Data recorded",
-          backgroundColor: Colors.green,
-        );
+        SnackbarHelper.showSuccess(context, "Data recorded");
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+        SnackbarHelper.showError(context, "Error: $e");
       }
     }
   }
 
   void _showAddDataOverlay() {
     if (!widget.canEdit) {
-      SnackbarHelper.show(context, 'Permissions required to add data.');
+      SnackbarHelper.showInfo(context, 'Permissions required to add data.');
       return;
     }
 

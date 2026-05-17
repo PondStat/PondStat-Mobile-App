@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 
 class OnboardingStep {
@@ -182,11 +182,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
           errorMessage = "A platform error occurred during Sign-In.";
         }
 
-        SnackbarHelper.show(
-          context,
-          errorMessage,
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, errorMessage);
       }
     }
   }

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 
@@ -65,19 +65,11 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
 
       if (mounted) {
         Navigator.pop(context, true);
-        SnackbarHelper.show(
-          context,
-          "Expense recorded successfully",
-          backgroundColor: Colors.green.shade600,
-        );
+        SnackbarHelper.showSuccess(context, "Expense recorded successfully");
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Error recording expense: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Error recording expense: $e");
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

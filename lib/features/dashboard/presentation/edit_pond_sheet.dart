@@ -4,7 +4,7 @@ import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/pondstat_dropdown_field.dart';
@@ -120,20 +120,12 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
 
       if (!mounted) return;
       Navigator.of(context).pop();
-      SnackbarHelper.show(
-        context,
-        'Pond updated successfully!',
-        backgroundColor: Colors.green,
-      );
+      SnackbarHelper.showSuccess(context, 'Pond updated successfully!');
     } catch (e, stackTrace) {
       ref.read(appLoggerProvider).error('Background sync error', error: e, stackTrace: stackTrace, tag: 'POND');
       if (!mounted) return;
       setState(() => _isLoading = false);
-      SnackbarHelper.show(
-        context,
-        'Failed to update pond: $e',
-        backgroundColor: Colors.redAccent,
-      );
+      SnackbarHelper.showError(context, 'Failed to update pond: $e');
     }
   }
 

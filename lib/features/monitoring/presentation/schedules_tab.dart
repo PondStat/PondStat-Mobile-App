@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/string_extensions.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
@@ -373,7 +374,7 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                                   user['name'],
                                 ).withValues(alpha: 0.2),
                                 child: Text(
-                                  StringUtils.getInitials(user['name']),
+                                  (user['name'] as String?).initials,
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -478,7 +479,7 @@ class _OverlapAvatarGroup extends StatelessWidget {
               radius: 14,
               backgroundColor: color.withValues(alpha: 0.2),
               child: Text(
-                StringUtils.getInitials(name),
+                name.initials,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -681,20 +682,12 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
 
       if (mounted) {
         Navigator.pop(context); // close bottom sheet
-        SnackbarHelper.show(
-          context,
-          "Schedules updated successfully for $updatedCount members",
-          backgroundColor: Colors.green.shade600,
-        );
+        SnackbarHelper.showSuccess(context, "Schedules updated successfully for $updatedCount members");
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        SnackbarHelper.show(
-          context,
-          "Error saving schedules: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Error saving schedules: $e");
       }
     }
   }
@@ -1043,7 +1036,7 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
                                     ? Colors.white12
                                     : Colors.grey.shade200,
                                 child: Text(
-                                  StringUtils.getInitials(user['name']),
+                                  (user['name'] as String?).initials,
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,

@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/record_form_fields.dart';
@@ -255,11 +255,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     }
 
     if (pointsWithData == 0) {
-      SnackbarHelper.show(
-        context,
-        "Please enter at least one valid replicate value",
-        backgroundColor: Colors.orange.shade700,
-      );
+      SnackbarHelper.showInfo(context, "Please enter at least one valid replicate value");
       return;
     }
 
@@ -302,11 +298,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Failed to save: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Failed to save: $e");
       }
     } finally {
       if (mounted) {
@@ -382,11 +374,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
 
       if (saves == 0) {
         if (mounted) {
-          SnackbarHelper.show(
-            context,
-            "Please enter at least one value",
-            backgroundColor: Colors.orange.shade700,
-          );
+          SnackbarHelper.showInfo(context, "Please enter at least one value");
         }
         return;
       }
@@ -413,11 +401,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Failed to save: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Failed to save: $e");
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -536,11 +520,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
                     );
                     if (context.mounted) Navigator.pop(context);
                   } else {
-                    SnackbarHelper.show(
-                      context,
-                      "Please fill out all fields",
-                      backgroundColor: Colors.orange.shade700,
-                    );
+                    SnackbarHelper.showInfo(context, "Please fill out all fields");
                   }
                 },
                 child: const Text(
@@ -612,11 +592,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
                   selectedParameter = null;
                   selectedDocId = null;
                 });
-                SnackbarHelper.show(
-                  context,
-                  "Parameter deleted",
-                  backgroundColor: Colors.grey.shade800,
-                );
+                SnackbarHelper.showInfo(context, "Parameter deleted");
               }
             },
             child: const Text(

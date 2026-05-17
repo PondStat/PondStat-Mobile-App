@@ -7,7 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/presentation/periodic_parameters_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/trends_tab.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
@@ -42,11 +42,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
 
   Future<void> _selectDateRange(BuildContext context) async {
     if (widget.userRole != 'owner') {
-      SnackbarHelper.show(
-        context,
-        "Only the owner can set the date range.",
-        backgroundColor: Colors.orange.shade600,
-      );
+      SnackbarHelper.showInfo(context, "Only the owner can set the date range.");
       return;
     }
 
@@ -86,7 +82,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
     });
 
     try {
-      SnackbarHelper.show(context, "Generating report...");
+      SnackbarHelper.showInfo(context, "Generating report...");
 
       final querySnapshot = await ref.read(monitoringRepositoryProvider).getMeasurementsByDateRange(
         widget.pondId,
@@ -96,11 +92,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
 
       if (querySnapshot.docs.isEmpty) {
         if (!context.mounted) return;
-        SnackbarHelper.show(
-          context,
-          "No data to export for this date range.",
-          backgroundColor: Colors.orange.shade600,
-        );
+        SnackbarHelper.showInfo(context, "No data to export for this date range.");
         return;
       }
 
@@ -137,19 +129,11 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
 
       if (result.status == ShareResultStatus.success) {
         if (!context.mounted) return;
-        SnackbarHelper.show(
-          context,
-          "Report exported successfully!",
-          backgroundColor: Colors.green,
-        );
+        SnackbarHelper.showSuccess(context, "Report exported successfully!");
       }
     } catch (e) {
       if (!context.mounted) return;
-      SnackbarHelper.show(
-        context,
-        "Failed to export report: $e",
-        backgroundColor: Colors.red.shade600,
-      );
+      SnackbarHelper.showError(context, "Failed to export report: $e");
     } finally {
       if (mounted) {
         setState(() {

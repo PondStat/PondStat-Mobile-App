@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -109,7 +109,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
     final newFcr = double.tryParse(fcrController.text);
 
     if (newAbw == null || newAdg == null || newDfr == null || newFcr == null) {
-      SnackbarHelper.show(context, "Please enter valid numbers");
+      SnackbarHelper.showInfo(context, "Please enter valid numbers");
       return;
     }
 
@@ -187,11 +187,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      SnackbarHelper.show(
-        context,
-        "Error updating: $e",
-        backgroundColor: Colors.red,
-      );
+      SnackbarHelper.showError(context, "Error updating: $e");
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

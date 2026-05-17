@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 
 class ExpensesTab extends ConsumerStatefulWidget {
@@ -469,11 +469,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
               await ref.read(monitoringRepositoryProvider).deleteExpense(id);
               if (context.mounted) {
                 HapticFeedback.mediumImpact();
-                SnackbarHelper.show(
-                  context,
-                  "Expense deleted",
-                  backgroundColor: Colors.green,
-                );
+                SnackbarHelper.showSuccess(context, "Expense deleted");
                 Navigator.pop(context);
               }
             },

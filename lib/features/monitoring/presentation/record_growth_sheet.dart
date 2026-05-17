@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 
@@ -211,11 +211,7 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
     }
 
     if (finalValue == null) {
-      SnackbarHelper.show(
-        context,
-        "Please enter valid numbers in all fields.",
-        backgroundColor: Colors.orange.shade700,
-      );
+      SnackbarHelper.showInfo(context, "Please enter valid numbers in all fields.");
       return;
     }
 
@@ -238,11 +234,7 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Failed to save: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Failed to save: $e");
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -85,17 +85,15 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                 setState(() {
                   _refreshKey++;
                 });
-                SnackbarHelper.show(
+                SnackbarHelper.showSuccess(
                   sheetContext,
                   "Growth sampling recorded",
-                  backgroundColor: Colors.green,
                 );
               } catch (e) {
                 if (!sheetContext.mounted) return;
-                SnackbarHelper.show(
+                SnackbarHelper.showError(
                   sheetContext,
                   e.toString().replaceAll("Exception: ", ""),
-                  backgroundColor: Colors.redAccent,
                 );
               }
             },
@@ -179,15 +177,11 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                               if (!context.mounted) return;
                               Navigator.pop(context);
                               setState(() => _refreshKey++);
-                              SnackbarHelper.show(context, "Sampling deleted");
+                              SnackbarHelper.showInfo(context, "Sampling deleted");
                             } catch (e) {
                               if (!context.mounted) return;
                               setStateDialog(() => isDeleting = false);
-                              SnackbarHelper.show(
-                                context,
-                                "Error deleting: $e",
-                                backgroundColor: Colors.red,
-                              );
+                              SnackbarHelper.showError(context, "Error deleting: $e");
                             }
                           },
                     child: isDeleting
@@ -231,11 +225,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
         pondId: widget.pondId,
         onSave: () {
           setState(() => _refreshKey++);
-          SnackbarHelper.show(
-            context,
-            "Sampling updated",
-            backgroundColor: Colors.green,
-          );
+          SnackbarHelper.showSuccess(context, "Sampling updated");
         },
       ),
     );

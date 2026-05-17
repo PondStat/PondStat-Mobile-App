@@ -6,7 +6,7 @@ import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/schedule_header.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/schedule_list_item.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
@@ -195,20 +195,12 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
           _isSaving = false;
           _hasChanges = false;
         });
-        SnackbarHelper.show(
-          context,
-          "Schedule updated for ${user['name']}",
-          backgroundColor: Colors.green.shade600,
-        );
+        SnackbarHelper.showSuccess(context, "Schedule updated for ${user['name']}");
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        SnackbarHelper.show(
-          context,
-          "Error saving schedule: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Error saving schedule: $e");
       }
     }
   }
