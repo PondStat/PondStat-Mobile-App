@@ -8,6 +8,7 @@ import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/pondstat_dropdown_field.dart';
+import 'package:pondstat/core/services/logger_service.dart';
 
 class CreatePondSheet extends ConsumerStatefulWidget {
   const CreatePondSheet({super.key});
@@ -76,8 +77,8 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
           backgroundColor: Colors.green,
         );
       }
-    } catch (e) {
-      debugPrint("Background sync error: $e");
+    } catch (e, stackTrace) {
+      LoggerService.error("Background sync error", e, stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
         SnackbarHelper.show(

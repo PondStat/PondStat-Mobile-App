@@ -6,6 +6,7 @@ import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/features/profile/presentation/edit_profile_page.dart';
 import 'package:pondstat/features/profile/presentation/manage_collaborators_page.dart';
 import 'package:pondstat/features/profile/presentation/settings_page.dart';
+import 'package:pondstat/core/services/logger_service.dart';
 
 class ProfileBottomSheet extends StatefulWidget {
   final String? currentPondId;
@@ -544,8 +545,8 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
       try {
         await FirebaseAuth.instance.signOut();
         await GoogleSignIn().signOut();
-      } catch (e) {
-        debugPrint('Sign out error: $e');
+      } catch (e, stackTrace) {
+        LoggerService.error("Sign out error", e, stackTrace);
       }
     }
   }

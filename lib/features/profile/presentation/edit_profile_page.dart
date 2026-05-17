@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/services/logger_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -87,8 +88,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
             _initialName = fName;
           }
         }
-      } catch (e) {
-        debugPrint("Error fetching user data: $e");
+      } catch (e, stackTrace) {
+        LoggerService.error("Error fetching user data", e, stackTrace);
       }
     }
 

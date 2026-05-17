@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/services/logger_service.dart';
 
 class ManageCollaboratorsPage extends StatefulWidget {
   final String pondId;
@@ -58,8 +59,8 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
         _userCache[userId] = doc.data() as Map<String, dynamic>;
         return _userCache[userId]!;
       }
-    } catch (e) {
-      debugPrint("Error fetching user: $e");
+    } catch (e, stackTrace) {
+      LoggerService.error("Error fetching user", e, stackTrace);
     }
     return {'fullName': 'Unknown User', 'email': 'No email found'};
   }

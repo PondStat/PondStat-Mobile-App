@@ -58,3 +58,20 @@ app.*.map.json
 .gemini
 
 functions/node_modules
+
+# Security & Secrets
+*.jks
+*.keystore
+**/*.jks
+**/*.keystore
+key.properties
+**/android/key.properties
+.env
+.env.*
+
+# Firebase Configuration
+**/android/app/google-services.json
+**/ios/Runner/GoogleService-Info.plist
+**/macos/Runner/GoogleService-Info.plist
+**/lib/core/firebase/firebase_options.dart
+**/lib/firebase_options.dart

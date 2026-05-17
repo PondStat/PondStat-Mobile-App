@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/core/services/logger_service.dart';
 import 'package:pondstat/core/utils/helpers.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
@@ -610,8 +611,8 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      debugPrint("Error loading data for assignment: $e");
+    } catch (e, stackTrace) {
+      LoggerService.error("Error loading data for assignment", e, stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
       }

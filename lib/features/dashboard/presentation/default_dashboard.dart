@@ -11,6 +11,7 @@ import 'package:pondstat/core/widgets/secondary_button.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/no_pond_assigned.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
 import 'package:pondstat/features/dashboard/presentation/create_pond_sheet.dart';
+import 'package:pondstat/core/services/logger_service.dart';
 import 'package:pondstat/features/dashboard/presentation/edit_pond_sheet.dart';
 import 'package:pondstat/features/dashboard/presentation/pond_list_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,8 +69,8 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     late List<ConnectivityResult> result;
     try {
       result = await Connectivity().checkConnectivity();
-    } catch (e) {
-      debugPrint('Couldn\'t check connectivity status: $e');
+    } catch (e, stackTrace) {
+      LoggerService.error("Couldn't check connectivity status", e, stackTrace);
       return;
     }
     if (!mounted) {

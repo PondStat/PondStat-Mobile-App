@@ -8,9 +8,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 
+import 'package:pondstat/core/services/logger_service.dart';
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('Handling a background message: ${message.messageId}');
+  LoggerService.info('Handling a background message: ${message.messageId}');
 }
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
@@ -42,8 +44,8 @@ class NotificationService {
             'fcmToken': newToken,
             'lastTokenUpdate': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
-        } catch (e) {
-          debugPrint('Error refreshing FCM token: $e');
+        } catch (e, stackTrace) {
+          LoggerService.error('Error refreshing FCM token', e, stackTrace);
         }
       }
     });
@@ -94,8 +96,8 @@ class NotificationService {
       final hasPermission = await requestPermission();
       if (!hasPermission) return null;
       return await _fcm.getToken();
-    } catch (e) {
-      debugPrint('Error getting device token: $e');
+    } catch (e, stackTrace) {
+      LoggerService.error('Error getting device token', e, stackTrace);
       return null;
     }
   }

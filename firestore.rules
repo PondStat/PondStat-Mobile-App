@@ -4,7 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.token.email.matches('.*@up\\.edu\\.ph$');
     }
 
     function uid() {
