@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
-class MonitoringCalendar extends StatelessWidget {
+class MonitoringCalendar extends ConsumerWidget {
   final String pondId;
   final DateTime focusedDay;
   final DateTime? selectedDay;
@@ -25,9 +26,6 @@ class MonitoringCalendar extends StatelessWidget {
     this.onReturnToToday,
   });
 
-  final Color primaryBlue = const Color(0xFF0A74DA);
-  final Color secondaryBlue = const Color(0xFF4FA0F0);
-
   Widget _buildStatusDot(Color color, bool isSelected) {
     return Container(
       width: isSelected ? 8 : 6,
@@ -41,14 +39,57 @@ class MonitoringCalendar extends StatelessWidget {
     );
   }
 
+  Widget _buildLegendItem(Color color, String label, Color textMuted) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: textMuted,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
-    final Color textDark = Theme.of(context).colorScheme.onSurface;
-    final Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final primaryColor = colorScheme.primary;
+    final Color textDark = colorScheme.onSurface;
+    final Color textMuted = colorScheme.onSurfaceVariant;
+
+    // Constrain the query to the visible month to prevent a Firestore read bomb
+    final startOfMonth = DateTime(focusedDay.year, focusedDay.month, 1);
+    final endOfMonth = DateTime(
+      focusedDay.year,
+      focusedDay.month + 1,
+      0,
+      23,
+      59,
+      59,
+    );
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirestoreHelper.measurementsCollection
+      stream: ref.watch(monitoringRepositoryProvider).measurementsCollection
           .where('pondId', isEqualTo: pondId)
+          .where(
+            'timestamp',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+          )
+          .where(
+            'timestamp',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth),
+          )
           .snapshots(includeMetadataChanges: true),
       builder: (context, snapshot) {
         Map<DateTime, Set<String>> eventsMap = {};
@@ -102,8 +143,8 @@ class MonitoringCalendar extends StatelessWidget {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       style: TextButton.styleFrom(
-                        foregroundColor: primaryBlue,
-                        backgroundColor: primaryBlue.withValues(alpha: 0.05),
+                        foregroundColor: primaryColor,
+                        backgroundColor: primaryColor.withValues(alpha: 0.05),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 8,
@@ -167,15 +208,11 @@ class MonitoringCalendar extends StatelessWidget {
                     margin: const EdgeInsets.all(6),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [secondaryBlue, primaryBlue],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: primaryColor,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryBlue.withValues(alpha: 0.3),
+                          color: primaryColor.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -196,16 +233,16 @@ class MonitoringCalendar extends StatelessWidget {
                     margin: const EdgeInsets.all(6),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: primaryBlue.withValues(alpha: 0.08),
+                      color: primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: primaryBlue.withValues(alpha: 0.2),
+                        color: primaryColor.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Text(
                       '${date.day}',
                       style: TextStyle(
-                        color: primaryBlue,
+                        color: primaryColor,
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -236,7 +273,7 @@ class MonitoringCalendar extends StatelessWidget {
                     );
                   }
                   if (types.contains('biweekly')) {
-                    activeDots.add(_buildStatusDot(primaryBlue, isSelected));
+                    activeDots.add(_buildStatusDot(primaryColor, isSelected));
                   }
 
                   return Positioned(
@@ -247,6 +284,21 @@ class MonitoringCalendar extends StatelessWidget {
                     ),
                   );
                 },
+              ),
+            ),
+
+            // Legend
+            Padding(
+              padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildLegendItem(Colors.green.shade400, "Daily", textMuted),
+                  const SizedBox(width: 16),
+                  _buildLegendItem(Colors.amber.shade400, "Weekly", textMuted),
+                  const SizedBox(width: 16),
+                  _buildLegendItem(primaryColor, "Biweekly/Growth", textMuted),
+                ],
               ),
             ),
           ],

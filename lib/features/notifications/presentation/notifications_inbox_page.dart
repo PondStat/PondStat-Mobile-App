@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 import 'package:intl/intl.dart';
@@ -10,19 +11,18 @@ import 'package:pondstat/core/widgets/empty_state_card.dart';
 /// 3. Open the inbox and see the new alert entry.
 /// 4. Tap the notification to mark it read – the dot should disappear and the badge count drop.
 /// 5. Swipe the notification to delete it – it should disappear from the list.
-/// 
+///
 /// NOTE: If notifications don't appear, check Firestore security rules for:
 /// users/{uid}/notifications subcollection.
 
-class NotificationsInboxPage extends StatefulWidget {
+class NotificationsInboxPage extends ConsumerStatefulWidget {
   const NotificationsInboxPage({super.key});
 
   @override
-  State<NotificationsInboxPage> createState() => _NotificationsInboxPageState();
+  ConsumerState<NotificationsInboxPage> createState() => _NotificationsInboxPageState();
 }
 
-class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
-  final repository = NotificationsRepository();
+class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage> {
   Key _streamKey = UniqueKey();
   bool _showUnreadOnly = false;
 
@@ -33,7 +33,9 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
   }
 
   List<dynamic> _groupNotifications(List<NotificationModel> raw) {
-    final filtered = _showUnreadOnly ? raw.where((n) => !n.isRead).toList() : raw;
+    final filtered = _showUnreadOnly
+        ? raw.where((n) => !n.isRead).toList()
+        : raw;
     if (filtered.isEmpty) return [];
 
     final now = DateTime.now();
@@ -49,7 +51,11 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
     };
 
     for (final n in filtered) {
-      final date = DateTime(n.timestamp.year, n.timestamp.month, n.timestamp.day);
+      final date = DateTime(
+        n.timestamp.year,
+        n.timestamp.month,
+        n.timestamp.day,
+      );
       if (date == today) {
         groups['Today']!.add(n);
       } else if (date == yesterday) {
@@ -83,24 +89,18 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
         title: const Text('Notifications'),
         actions: [
           IconButton(
-            icon: Icon(_showUnreadOnly
-                ? Icons.filter_list_off_rounded
-                : Icons.filter_list_rounded),
+            icon: Icon(
+              _showUnreadOnly
+                  ? Icons.filter_list_off_rounded
+                  : Icons.filter_list_rounded,
+            ),
             tooltip: _showUnreadOnly ? 'Show all' : 'Show unread',
             onPressed: () => setState(() => _showUnreadOnly = !_showUnreadOnly),
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'markAllRead') {
-                repository.markAllAsRead();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'markAllRead',
-                child: Text('Mark all as read'),
-              ),
-            ],
+          IconButton(
+            icon: const Icon(Icons.done_all_rounded),
+            tooltip: 'Mark all as read',
+            onPressed: () => ref.read(notificationsRepositoryProvider).markAllAsRead(),
           ),
         ],
       ),
@@ -111,7 +111,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
         },
         child: StreamBuilder<List<NotificationModel>>(
           key: _streamKey,
-          stream: repository.getNotificationsStream(),
+          stream: ref.read(notificationsRepositoryProvider).getNotificationsStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -124,8 +124,11 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline_rounded,
-                          size: 64, color: colorScheme.error),
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 64,
+                        color: colorScheme.error,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'Failed to load notifications',
@@ -161,9 +164,9 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                     height: MediaQuery.of(context).size.height * 0.7,
                     child: Center(
                       child: EmptyStateCard(
-                        icon: _showUnreadOnly
+                        image: Icon(_showUnreadOnly
                             ? Icons.mark_email_read_rounded
-                            : Icons.notifications_none_rounded,
+                            : Icons.notifications_none_rounded),
                         title: _showUnreadOnly
                             ? 'No unread notifications'
                             : 'No notifications yet',
@@ -186,13 +189,23 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                 if (item is String) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 24, bottom: 8, left: 4),
-                    child: Text(
-                      item,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          item,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }
@@ -205,12 +218,12 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                     onTap: () async {
                       HapticFeedback.lightImpact();
                       if (!n.isRead) {
-                        await repository.markAsRead(n.id);
+                        await ref.read(notificationsRepositoryProvider).markAsRead(n.id);
                       }
                     },
                     onToggleRead: () =>
-                        repository.updateReadStatus(n.id, !n.isRead),
-                    onDelete: () => repository.deleteNotification(n.id),
+                        ref.read(notificationsRepositoryProvider).updateReadStatus(n.id, !n.isRead),
+                    onDelete: () => ref.read(notificationsRepositoryProvider).deleteNotification(n.id),
                   ),
                 );
               },
@@ -235,38 +248,107 @@ class _NotificationTile extends StatelessWidget {
     required this.onDelete,
   });
 
+  IconData _getIconData(NotificationModel n) {
+    final lowerTitle = n.title.toLowerCase();
+    final lowerBody = n.body.toLowerCase();
+    if (lowerTitle.contains('alert') ||
+        lowerTitle.contains('warning') ||
+        lowerBody.contains('alert') ||
+        lowerBody.contains('warning')) {
+      return Icons.warning_amber_rounded;
+    } else if (lowerTitle.contains('error') ||
+        lowerTitle.contains('fail') ||
+        lowerBody.contains('error') ||
+        lowerBody.contains('fail')) {
+      return Icons.error_outline_rounded;
+    } else if (lowerTitle.contains('success') ||
+        lowerBody.contains('success')) {
+      return Icons.check_circle_outline_rounded;
+    }
+    return Icons.info_outline_rounded;
+  }
+
+  Color _getIconColor(NotificationModel n, ColorScheme colorScheme) {
+    final lowerTitle = n.title.toLowerCase();
+    final lowerBody = n.body.toLowerCase();
+    if (lowerTitle.contains('alert') ||
+        lowerTitle.contains('warning') ||
+        lowerBody.contains('alert') ||
+        lowerBody.contains('warning')) {
+      return Colors.orange;
+    } else if (lowerTitle.contains('error') ||
+        lowerTitle.contains('fail') ||
+        lowerBody.contains('error') ||
+        lowerBody.contains('fail')) {
+      return colorScheme.error;
+    } else if (lowerTitle.contains('success') ||
+        lowerBody.contains('success')) {
+      return Colors.green;
+    }
+    return colorScheme.primary;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final dynamicIcon = _getIconData(notification);
+    final dynamicColor = _getIconColor(notification, colorScheme);
 
     return Dismissible(
       key: Key(notification.id),
       direction: DismissDirection.horizontal,
       background: Container(
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: colorScheme.secondaryContainer,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(
-          notification.isRead
-              ? Icons.mark_as_unread_rounded
-              : Icons.mark_email_read_rounded,
-          color: colorScheme.onSecondaryContainer,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              notification.isRead
+                  ? Icons.mark_as_unread_rounded
+                  : Icons.mark_email_read_rounded,
+              color: colorScheme.onSecondaryContainer,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              notification.isRead ? 'Mark Unread' : 'Mark Read',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
       secondaryBackground: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: colorScheme.errorContainer,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(
-          Icons.delete_outline_rounded,
-          color: colorScheme.onErrorContainer,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Delete',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: colorScheme.onErrorContainer,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.delete_outline_rounded,
+              color: colorScheme.onErrorContainer,
+            ),
+          ],
         ),
       ),
       confirmDismiss: (direction) async {
@@ -310,14 +392,14 @@ class _NotificationTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: notification.isRead
                         ? colorScheme.surfaceContainerHighest
-                        : colorScheme.primary.withValues(alpha: 0.1),
+                        : dynamicColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.warning_amber_rounded,
+                    dynamicIcon,
                     color: notification.isRead
                         ? colorScheme.onSurfaceVariant
-                        : colorScheme.primary,
+                        : dynamicColor,
                     size: 20,
                   ),
                 ),

@@ -1,47 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/features/dashboard/data/pond_repository.dart';
+import 'package:pondstat/features/dashboard/domain/models/pond.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:pondstat/core/widgets/empty_state_card.dart';
 
-class ExpensesTab extends StatefulWidget {
+class ExpensesTab extends ConsumerStatefulWidget {
   final String pondId;
   final bool canAdd;
 
   const ExpensesTab({super.key, required this.pondId, required this.canAdd});
 
   @override
-  State<ExpensesTab> createState() => _ExpensesTabState();
+  ConsumerState<ExpensesTab> createState() => _ExpensesTabState();
 }
 
-class _ExpensesTabState extends State<ExpensesTab> {
-  final MonitoringRepository repository = MonitoringRepository();
-  late Stream<DocumentSnapshot> _pondStream;
+class _ExpensesTabState extends ConsumerState<ExpensesTab> {
+  late Stream<DocumentSnapshot<Pond>> _pondStream;
   late Stream<QuerySnapshot<Map<String, dynamic>>> _expensesStream;
 
   @override
   void initState() {
     super.initState();
-    _pondStream = FirestoreHelper.pondsCollection
+    _pondStream = ref.read(pondRepositoryProvider).pondsCollection
         .doc(widget.pondId)
         .snapshots();
-    _expensesStream = repository.getExpensesStream(widget.pondId);
+    _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
   }
 
   @override
   void didUpdateWidget(covariant ExpensesTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pondId != widget.pondId) {
-      _pondStream = FirestoreHelper.pondsCollection
+      _pondStream = ref.read(pondRepositoryProvider).pondsCollection
           .doc(widget.pondId)
           .snapshots();
-      _expensesStream = repository.getExpensesStream(widget.pondId);
+      _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
+    return StreamBuilder<DocumentSnapshot<Pond>>(
       stream: _pondStream,
       builder: (context, pondSnapshot) {
         // Only show loader if we have NO data yet
@@ -50,9 +54,8 @@ class _ExpensesTabState extends State<ExpensesTab> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final pondData =
-            pondSnapshot.data?.data() as Map<String, dynamic>? ?? {};
-        final roles = pondData['roles'] as Map<String, dynamic>? ?? {};
+        final pond = pondSnapshot.data?.data();
+        final roles = pond?.roles ?? {};
 
         // Count Owners and Editors only
         final groupMembers = roles.entries
@@ -125,7 +128,6 @@ class _ExpensesTabState extends State<ExpensesTab> {
                           context,
                           docs[index],
                           memberCount,
-                          repository,
                         ),
                         childCount: docs.length,
                       ),
@@ -141,6 +143,8 @@ class _ExpensesTabState extends State<ExpensesTab> {
   }
 
   Widget _buildSummaryCard(double total, int members, double share) {
+    final currencyFormat = NumberFormat.currency(symbol: '₱', decimalDigits: 2);
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -183,7 +187,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "₱${total.toStringAsFixed(2)}",
+                        currencyFormat.format(total),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 28,
@@ -248,7 +252,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      "₱${share.toStringAsFixed(2)}",
+                      currencyFormat.format(share),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -269,7 +273,6 @@ class _ExpensesTabState extends State<ExpensesTab> {
     BuildContext context,
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
     int memberCount,
-    MonitoringRepository repository,
   ) {
     final data = doc.data();
     final item = data['item'] ?? 'Unknown Item';
@@ -284,6 +287,11 @@ class _ExpensesTabState extends State<ExpensesTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
     final onSurface = colorScheme.onSurface;
+
+    final compactCurrencyFormat = NumberFormat.currency(
+      symbol: '₱',
+      decimalDigits: 0,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -305,18 +313,18 @@ class _ExpensesTabState extends State<ExpensesTab> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.teal.withValues(alpha: 0.1)
-                      : Colors.teal.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.shopping_cart_rounded,
-                  color: Colors.teal,
-                  size: 18,
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: isDark
+                    ? Colors.teal.withValues(alpha: 0.2)
+                    : Colors.teal.shade100,
+                foregroundColor: Colors.teal.shade700,
+                child: Text(
+                  buyer.isNotEmpty ? buyer[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -357,7 +365,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () =>
-                      _confirmDelete(context, doc.id, item, repository),
+                      _confirmDelete(context, doc.id, item),
                 ),
             ],
           ),
@@ -370,16 +378,16 @@ class _ExpensesTabState extends State<ExpensesTab> {
                   _buildMetric("Qty", qty.toString()),
                   _buildMetric(
                     "Unit Price",
-                    "₱${unitPrice.toStringAsFixed(0)}",
+                    compactCurrencyFormat.format(unitPrice),
                   ),
                   _buildMetric(
                     "Total",
-                    "₱${total.toStringAsFixed(0)}",
+                    compactCurrencyFormat.format(total),
                     isBold: true,
                   ),
                   _buildMetric(
                     "Share",
-                    "₱${share.toStringAsFixed(0)}",
+                    compactCurrencyFormat.format(share),
                     isPrimary: true,
                   ),
                 ],
@@ -424,28 +432,14 @@ class _ExpensesTabState extends State<ExpensesTab> {
   }
 
   Widget _buildEmptyState() {
-    final colorScheme = Theme.of(context).colorScheme;
     return SliverFillRemaining(
       hasScrollBody: false,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.receipt_long_rounded,
-              size: 64,
-              color: colorScheme.outlineVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "No expenses recorded yet",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+      child: Padding(
+        padding: EdgeInsets.all(24.0),
+        child: EmptyStateCard(
+          image: const Icon(Icons.receipt_long_rounded),
+          title: "No group expenses records",
+          description: "Tap 'Add Expenses' to log an expense.",
         ),
       ),
     );
@@ -455,7 +449,6 @@ class _ExpensesTabState extends State<ExpensesTab> {
     BuildContext context,
     String id,
     String item,
-    MonitoringRepository repository,
   ) {
     showDialog(
       context: context,
@@ -473,8 +466,12 @@ class _ExpensesTabState extends State<ExpensesTab> {
           ),
           TextButton(
             onPressed: () async {
-              await repository.deleteExpense(id);
-              if (context.mounted) Navigator.pop(context);
+              await ref.read(monitoringRepositoryProvider).deleteExpense(id);
+              if (context.mounted) {
+                HapticFeedback.mediumImpact();
+                SnackbarHelper.showSuccess(context, "Expense deleted");
+                Navigator.pop(context);
+              }
             },
             child: const Text(
               "Delete",

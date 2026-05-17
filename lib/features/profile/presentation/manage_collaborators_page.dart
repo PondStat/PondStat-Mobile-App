@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/core/utils/string_extensions.dart';
+import 'package:pondstat/core/services/logger_service.dart';
+import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/features/dashboard/data/pond_repository.dart';
+import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 
-class ManageCollaboratorsPage extends StatefulWidget {
+class ManageCollaboratorsPage extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
 
@@ -16,11 +21,11 @@ class ManageCollaboratorsPage extends StatefulWidget {
   });
 
   @override
-  State<ManageCollaboratorsPage> createState() =>
+  ConsumerState<ManageCollaboratorsPage> createState() =>
       _ManageCollaboratorsPageState();
 }
 
-class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
+class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPage> {
   final TextEditingController _emailController = TextEditingController();
   final FocusNode _emailFocus = FocusNode();
   bool _isAdding = false;
@@ -31,7 +36,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
   final Color secondaryBlue = const Color(0xFF4FA0F0);
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
-  final Color backgroundLight = const Color(0xFFF8FAFC);
+  Color get backgroundLight => Theme.of(context).scaffoldBackgroundColor;
 
   @override
   void initState() {
@@ -53,13 +58,13 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
     }
 
     try {
-      final doc = await FirestoreHelper.usersCollection.doc(userId).get();
+      final doc = await ref.read(authRepositoryProvider).usersCollection.doc(userId).get();
       if (doc.exists && doc.data() != null) {
         _userCache[userId] = doc.data() as Map<String, dynamic>;
         return _userCache[userId]!;
       }
-    } catch (e) {
-      debugPrint("Error fetching user: $e");
+    } catch (e, stackTrace) {
+      LoggerService.error("Error fetching user", e, stackTrace);
     }
     return {'fullName': 'Unknown User', 'email': 'No email found'};
   }
@@ -71,11 +76,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
     );
     if (email.isEmpty || !emailRegex.hasMatch(email)) {
-      SnackbarHelper.show(
-        context,
-        'Please enter a valid email address.',
-        backgroundColor: Colors.orange.shade700,
-      );
+      SnackbarHelper.showInfo(context, 'Please enter a valid email address.');
       return;
     }
 
@@ -83,25 +84,21 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
     FocusScope.of(context).unfocus();
 
     try {
-      final query = await FirestoreHelper.usersCollection
+      final query = await ref.read(authRepositoryProvider).usersCollection
           .where('email', isEqualTo: email)
           .limit(1)
           .get();
 
       if (query.docs.isEmpty) {
         if (mounted) {
-          SnackbarHelper.show(
-            context,
-            'User not found. They must sign up for PondStat first.',
-            backgroundColor: Colors.orange.shade800,
-          );
+          SnackbarHelper.showInfo(context, 'User not found. They must sign up for PondStat first.');
         }
         setState(() => _isAdding = false);
         return;
       }
 
       final targetUserId = query.docs.first.id;
-      final pondRef = FirestoreHelper.pondsCollection.doc(widget.pondId);
+      final pondRef = ref.read(pondRepositoryProvider).pondsCollection.doc(widget.pondId);
 
       await pondRef.update({
         'memberIds': FieldValue.arrayUnion([targetUserId]),
@@ -112,19 +109,11 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
       _emailController.clear();
 
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          'Collaborator added successfully!',
-          backgroundColor: Colors.green.shade700,
-        );
+        SnackbarHelper.showSuccess(context, 'Collaborator added successfully!');
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          'Error adding collaborator: $e',
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, 'Error adding collaborator: $e');
       }
     } finally {
       if (mounted) setState(() => _isAdding = false);
@@ -168,7 +157,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
@@ -229,7 +218,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
   }
 
   Future<void> _updateRole(String userId, String newRole) async {
-    final pondRef = FirestoreHelper.pondsCollection.doc(widget.pondId);
+    final pondRef = ref.read(pondRepositoryProvider).pondsCollection.doc(widget.pondId);
 
     try {
       if (newRole == 'remove') {
@@ -243,11 +232,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
       HapticFeedback.lightImpact();
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          'Failed to update role: $e',
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, 'Failed to update role: $e');
       }
     }
   }
@@ -275,7 +260,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                       icon: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
@@ -328,7 +313,7 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                 margin: const EdgeInsets.all(20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
@@ -356,7 +341,9 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             decoration: BoxDecoration(
-                              color: isFocused ? Colors.white : backgroundLight,
+                              color: isFocused
+                                  ? Theme.of(context).colorScheme.surface
+                                  : backgroundLight,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isFocused
@@ -490,8 +477,8 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
               ),
 
               Expanded(
-                child: StreamBuilder<DocumentSnapshot>(
-                  stream: FirestoreHelper.pondsCollection
+                child: StreamBuilder<DocumentSnapshot<Pond>>(
+                  stream: ref.read(pondRepositoryProvider).pondsCollection
                       .doc(widget.pondId)
                       .snapshots(),
                   builder: (context, snapshot) {
@@ -508,9 +495,8 @@ class _ManageCollaboratorsPageState extends State<ManageCollaboratorsPage> {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    final data =
-                        snapshot.data!.data() as Map<String, dynamic>? ?? {};
-                    final roles = data['roles'] as Map<String, dynamic>? ?? {};
+                    final pond = snapshot.data!.data();
+                    final roles = pond?.roles ?? {};
 
                     return ListView.builder(
                       padding: const EdgeInsets.only(
@@ -660,105 +646,114 @@ class _CollaboratorTileState extends State<CollaboratorTile>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        padding: const EdgeInsets.only(
-          bottom: 32,
-          top: 12,
-          left: 24,
-          right: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 48,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(10),
+      builder: (context) => SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: const EdgeInsets.only(
+            bottom: 32,
+            top: 12,
+            left: 24,
+            right: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: _getAvatarColor(
-                    userData?['fullName'] ?? 'U',
-                  ).withValues(alpha: 0.2),
-                  radius: 20,
-                  child: Text(
-                    StringUtils.getInitials(userData?['fullName'] ?? 'U'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: _getAvatarColor(userData?['fullName'] ?? 'U'),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _getAvatarColor(
+                      (userData?['fullName']?.toString().trim().isEmpty ?? true)
+                          ? 'U'
+                          : userData!['fullName'],
+                    ).withValues(alpha: 0.2),
+                    radius: 20,
+                    child: Text(
+                      (userData?['fullName'] as String?).initials,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: _getAvatarColor(
+                          (userData?['fullName']?.toString().trim().isEmpty ??
+                                  true)
+                              ? 'U'
+                              : userData!['fullName'],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Manage Access",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.blueGrey.shade900,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Manage Access",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.blueGrey.shade900,
+                          ),
                         ),
-                      ),
-                      Text(
-                        userData?['fullName'] ?? 'User',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                        Text(
+                          userData?['fullName'] ?? 'User',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            _buildRoleOption(
-              'viewer',
-              'Viewer',
-              'Can view pond data and measurements.',
-              Icons.visibility_rounded,
-              Colors.grey.shade700,
-            ),
-            _buildRoleOption(
-              'editor',
-              'Editor',
-              'Can add, edit, and manage measurements.',
-              Icons.edit_rounded,
-              Colors.blue.shade700,
-            ),
-            _buildRoleOption(
-              'owner',
-              'Owner',
-              'Full control. Can delete the pond and manage users.',
-              Icons.admin_panel_settings_rounded,
-              Colors.orange.shade700,
-            ),
-            const Divider(height: 32),
-            _buildRoleOption(
-              'remove',
-              'Remove Access',
-              'Revoke all access immediately.',
-              Icons.person_remove_rounded,
-              Colors.red.shade600,
-              isDestructive: true,
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildRoleOption(
+                'viewer',
+                'Viewer',
+                'Can view pond data and measurements.',
+                Icons.visibility_rounded,
+                Colors.grey.shade700,
+              ),
+              _buildRoleOption(
+                'editor',
+                'Editor',
+                'Can add, edit, and manage measurements.',
+                Icons.edit_rounded,
+                Colors.blue.shade700,
+              ),
+              _buildRoleOption(
+                'owner',
+                'Owner',
+                'Full control. Can delete the pond and manage users.',
+                Icons.admin_panel_settings_rounded,
+                Colors.orange.shade700,
+              ),
+              const Divider(height: 32),
+              _buildRoleOption(
+                'remove',
+                'Remove Access',
+                'Revoke all access immediately.',
+                Icons.person_remove_rounded,
+                Colors.red.shade600,
+                isDestructive: true,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -847,7 +842,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.grey.shade100),
           ),
@@ -892,9 +887,10 @@ class _CollaboratorTileState extends State<CollaboratorTile>
       );
     }
 
-    final name = userData?['fullName'] ?? 'Unknown User';
+    final rawName = userData?['fullName']?.toString().trim() ?? '';
+    final name = rawName.isEmpty ? 'Unknown User' : rawName;
     final email = userData?['email'] ?? '';
-    final initials = StringUtils.getInitials(name);
+    final initials = name.initials;
     final avatarColor = widget.isMe
         ? const Color(0xFF0A74DA)
         : _getAvatarColor(name);
@@ -902,7 +898,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
     Widget tileContent = Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -1048,12 +1044,17 @@ class _CollaboratorTileState extends State<CollaboratorTile>
             size: 28,
           ),
         ),
+        onUpdate: (details) {
+          if (details.reached && !details.previousReached) {
+            HapticFeedback.lightImpact();
+          }
+        },
         confirmDismiss: (direction) async {
           HapticFeedback.selectionClick();
           return await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
               ),

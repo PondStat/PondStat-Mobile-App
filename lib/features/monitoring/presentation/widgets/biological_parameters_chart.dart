@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/trends_repository.dart';
@@ -7,11 +8,15 @@ import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.
 class BiologicalParametersChart extends StatefulWidget {
   final Map<String, List<NormalizedTrendPoint>> normalizedData;
   final String species;
+  final DateTime startDate;
+  final DateTime endDate;
 
   const BiologicalParametersChart({
     super.key,
     required this.normalizedData,
     required this.species,
+    required this.startDate,
+    required this.endDate,
   });
 
   @override
@@ -20,17 +25,7 @@ class BiologicalParametersChart extends StatefulWidget {
 }
 
 class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
-  final Map<String, bool> _visibleParameters = {
-    'Phytoplankton': true,
-    'Test 10-1 (Average yellow colonies)': true,
-    'Test yellow 10-1 (CFU/ml)': true,
-    'Test 10-2 (Average yellow colonies)': true,
-    'Test yellow 10-2 (CFU/ml)': true,
-    'Test 10-1 (Average green colonies)': true,
-    'Test green 10-1 (CFU/ml)': true,
-    'Test 10-2 (Average green colonies)': true,
-    'Test green 10-2 (CFU/ml)': true,
-  };
+  final Map<String, bool> _visibleParameters = {};
 
   @override
   void initState() {
@@ -45,11 +40,23 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
   }
 
   void _syncVisibleParameters() {
+    bool isFirst = true;
     for (var key in widget.normalizedData.keys) {
       if (!_visibleParameters.containsKey(key)) {
-        _visibleParameters[key] = true;
+        _visibleParameters[key] = isFirst;
+        isFirst = false;
       }
     }
+  }
+
+  void _toggleAllParameters() {
+    HapticFeedback.selectionClick();
+    final allTrue = _visibleParameters.values.every((v) => v);
+    setState(() {
+      for (var key in _visibleParameters.keys) {
+        _visibleParameters[key] = !allTrue;
+      }
+    });
   }
 
   @override
@@ -81,14 +88,32 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "BIOLOGICAL PARAMETERS",
-            style: TextStyle(
-              color: Colors.blueGrey,
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
-              letterSpacing: 1.2,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "BIOLOGICAL PARAMETERS",
+                style: TextStyle(
+                  color: Colors.blueGrey,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              GestureDetector(
+                onTap: _toggleAllParameters,
+                child: Text(
+                  _visibleParameters.values.every((v) => v)
+                      ? "Deselect All"
+                      : "Select All",
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           SizedBox(height: 220, child: LineChart(_buildChartData(isDark))),
@@ -102,7 +127,7 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
   LineChartData _buildChartData(bool isDark) {
     List<LineChartBarData> lineBars = [];
 
-    final Set<DateTime> allTimestamps = {};
+    final Set<DateTime> allTimestamps = {widget.startDate, widget.endDate};
     for (var list in widget.normalizedData.values) {
       allTimestamps.addAll(list.map((p) => p.timestamp));
     }
@@ -175,7 +200,7 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
         parameterName,
         widget.species,
       );
-      final color = paramItem?.color ?? Colors.grey;
+      final paramColor = paramItem?.getColor(context) ?? Colors.grey;
 
       final spots = points.map((p) {
         final x = timestampIndices[p.timestamp]!.toDouble();
@@ -186,7 +211,7 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
         LineChartBarData(
           spots: spots,
           isCurved: true,
-          color: color,
+          color: paramColor,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
@@ -261,9 +286,10 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
       lineBarsData: lineBars,
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (touchedSpot) => isDark
-              ? Colors.black87
-              : Colors.blueGrey.shade900.withValues(alpha: 0.9),
+          fitInsideHorizontally: true,
+          fitInsideVertically: true,
+          getTooltipColor: (touchedSpot) =>
+              Theme.of(context).colorScheme.inverseSurface,
           tooltipBorderRadius: BorderRadius.circular(8),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((barSpot) {
@@ -287,7 +313,7 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
                   widget.species,
                 );
                 final unit = paramItem?.unit ?? '';
-                final color = paramItem?.color ?? Colors.white;
+                final paramColor = paramItem?.getColor(context) ?? Colors.white;
 
                 final point = widget.normalizedData[matchedParam]!.firstWhere(
                   (p) => p.timestamp == timestamp,
@@ -296,7 +322,7 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
                 return LineTooltipItem(
                   "$matchedParam\n${point.actualValue} $unit",
                   TextStyle(
-                    color: color,
+                    color: paramColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -325,11 +351,12 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
           param,
           widget.species,
         );
-        final color = paramItem?.color ?? Colors.grey;
+        final paramColor = paramItem?.getColor(context) ?? Colors.grey;
         final isVisible = _visibleParameters[param]!;
 
         return GestureDetector(
           onTap: () {
+            HapticFeedback.selectionClick();
             setState(() {
               _visibleParameters[param] = !isVisible;
             });
@@ -342,7 +369,7 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
                 height: 12,
                 decoration: BoxDecoration(
                   color: isVisible
-                      ? color
+                      ? paramColor
                       : (isDark ? Colors.white24 : Colors.grey.shade300),
                   shape: BoxShape.circle,
                 ),

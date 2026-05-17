@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
 
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/record_form_fields.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/record_submit_button.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/core/widgets/primary_button.dart';
 
-class RecordDataSheet extends StatefulWidget {
+class RecordDataSheet extends ConsumerStatefulWidget {
   final int tabIndex;
   final String species;
   final Future<void> Function({
@@ -38,15 +39,19 @@ class RecordDataSheet extends StatefulWidget {
   });
 
   @override
-  State<RecordDataSheet> createState() => _RecordDataSheetState();
+  ConsumerState<RecordDataSheet> createState() => _RecordDataSheetState();
 }
 
-class _RecordDataSheetState extends State<RecordDataSheet> {
+class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   ParameterItem? selectedParameter;
   String? selectedDocId;
-  List<ParameterItem> _currentParams = [];
-  int _currentIndex = 0;
   TimeOfDay selectedTime = TimeOfDay.now();
+
+  // Wizard state
+  final List<ParameterItem> _wizardSequence = [];
+  final List<String?> _wizardDocIds = [];
+  bool _isWizardStarted = false;
+  int _wizardStepIndex = 0;
 
   final List<String> points = const ['A', 'B', 'C', 'D'];
   final List<int> replicates = const [1, 2, 3];
@@ -65,11 +70,10 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
   final TextEditingController _gCfu2Controller = TextEditingController();
 
   bool _isSaving = false;
-  final MonitoringRepository _repository = MonitoringRepository();
 
-  final Color primaryBlue = const Color(0xFF0A74DA);
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
+  Color get primaryColor => Theme.of(context).colorScheme.primary;
 
   @override
   void initState() {
@@ -152,6 +156,10 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     setState(() {
       selectedParameter = null;
       selectedDocId = null;
+      _isWizardStarted = false;
+      _wizardSequence.clear();
+      _wizardDocIds.clear();
+      _wizardStepIndex = 0;
     });
   }
 
@@ -247,11 +255,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     }
 
     if (pointsWithData == 0) {
-      SnackbarHelper.show(
-        context,
-        "Please enter at least one valid replicate value",
-        backgroundColor: Colors.orange.shade700,
-      );
+      SnackbarHelper.showInfo(context, "Please enter at least one valid replicate value");
       return;
     }
 
@@ -276,10 +280,11 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       if (mounted) {
         if (keepOpen) {
           _clearInputs();
-          if (_currentIndex < _currentParams.length - 1) {
+          if (_wizardStepIndex < _wizardSequence.length - 1) {
             setState(() {
-              _currentIndex++;
-              selectedParameter = _currentParams[_currentIndex];
+              _wizardStepIndex++;
+              selectedParameter = _wizardSequence[_wizardStepIndex];
+              selectedDocId = _wizardDocIds[_wizardStepIndex];
             });
             Future.delayed(const Duration(milliseconds: 300), () {
               if (mounted) focusNodes['A-1']?.requestFocus();
@@ -293,11 +298,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Failed to save: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Failed to save: $e");
       }
     } finally {
       if (mounted) {
@@ -373,11 +374,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
 
       if (saves == 0) {
         if (mounted) {
-          SnackbarHelper.show(
-            context,
-            "Please enter at least one value",
-            backgroundColor: Colors.orange.shade700,
-          );
+          SnackbarHelper.showInfo(context, "Please enter at least one value");
         }
         return;
       }
@@ -386,10 +383,11 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       if (mounted) {
         if (keepOpen) {
           _clearInputs();
-          if (_currentIndex < _currentParams.length - 1) {
+          if (_wizardStepIndex < _wizardSequence.length - 1) {
             setState(() {
-              _currentIndex++;
-              selectedParameter = _currentParams[_currentIndex];
+              _wizardStepIndex++;
+              selectedParameter = _wizardSequence[_wizardStepIndex];
+              selectedDocId = _wizardDocIds[_wizardStepIndex];
             });
             Future.delayed(const Duration(milliseconds: 300), () {
               if (mounted) focusNodes['A-1']?.requestFocus();
@@ -403,11 +401,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Failed to save: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Failed to save: $e");
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -466,10 +460,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF0A74DA),
-                        width: 2,
-                      ),
+                      borderSide: BorderSide(color: primaryColor, width: 2),
                     ),
                   ),
                   items: const [
@@ -507,7 +498,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryBlue,
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -521,7 +512,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                     String type =
                         widget.customType ??
                         ['daily', 'weekly', 'biweekly'][widget.tabIndex];
-                    await _repository.addCustomParameter(
+                    await ref.read(monitoringRepositoryProvider).addCustomParameter(
                       label: nameController.text.trim(),
                       unit: unitController.text.trim(),
                       type: type,
@@ -529,11 +520,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                     );
                     if (context.mounted) Navigator.pop(context);
                   } else {
-                    SnackbarHelper.show(
-                      context,
-                      "Please fill out all fields",
-                      backgroundColor: Colors.orange.shade700,
-                    );
+                    SnackbarHelper.showInfo(context, "Please fill out all fields");
                   }
                 },
                 child: const Text(
@@ -560,10 +547,13 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: Theme.of(context).colorScheme.errorContainer,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.error,
+              ),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -586,8 +576,8 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade50,
-              foregroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.errorContainer,
+              foregroundColor: Theme.of(context).colorScheme.error,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -595,18 +585,14 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
             onPressed: () async {
               final idToDelete = selectedDocId!;
-              await _repository.deleteCustomParameter(idToDelete);
+              await ref.read(monitoringRepositoryProvider).deleteCustomParameter(idToDelete);
               if (context.mounted) {
                 Navigator.pop(context);
                 setState(() {
                   selectedParameter = null;
                   selectedDocId = null;
                 });
-                SnackbarHelper.show(
-                  context,
-                  "Parameter deleted",
-                  backgroundColor: Colors.grey.shade800,
-                );
+                SnackbarHelper.showInfo(context, "Parameter deleted");
               }
             },
             child: const Text(
@@ -627,61 +613,106 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     required List<ParameterItem> allParams,
     required int index,
   }) {
+    bool isSelected = _wizardSequence.contains(param);
+
     return InkWell(
       onTap: () {
         HapticFeedback.selectionClick();
         setState(() {
-          selectedParameter = param;
-          selectedDocId = docId;
-          _currentParams = allParams;
-          _currentIndex = index;
-        });
-        Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted) focusNodes['A-1']?.requestFocus();
+          if (isSelected) {
+            final idx = _wizardSequence.indexOf(param);
+            _wizardSequence.removeAt(idx);
+            _wizardDocIds.removeAt(idx);
+          } else {
+            _wizardSequence.add(param);
+            _wizardDocIds.add(docId);
+          }
         });
       },
       borderRadius: BorderRadius.circular(20),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [param.color.withValues(alpha: 0.85), param.color],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    param.getColor(context).withValues(alpha: 0.85),
+                    param.getColor(context),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected
+              ? null
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: param.color.withValues(alpha: 0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          border: Border.all(
+            color: isSelected ? param.getColor(context) : Colors.transparent,
+            width: 2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: param.getColor(context).withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [],
         ),
         padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Stack(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(param.icon, color: Colors.white, size: 20),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : param.getColor(context).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    param.icon,
+                    color: isSelected ? Colors.white : param.getColor(context),
+                    size: 20,
+                  ),
+                ),
+                Text(
+                  param.label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: isSelected ? Colors.white : textDark,
+                    letterSpacing: -0.2,
+                    height: 1.1,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ],
             ),
-            Text(
-              param.label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                letterSpacing: -0.2,
-                height: 1.1,
+            if (isSelected)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_rounded,
+                    size: 12,
+                    color: param.getColor(context),
+                  ),
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-            ),
           ],
         ),
       ),
@@ -697,18 +728,25 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300, width: 2),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+            width: 2,
+          ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_rounded, color: Colors.grey.shade400, size: 28),
+            Icon(
+              Icons.add_rounded,
+              color: Theme.of(context).colorScheme.outline,
+              size: 28,
+            ),
             const SizedBox(height: 6),
             Text(
               "Custom",
               style: TextStyle(
-                color: Colors.grey.shade500,
+                color: Theme.of(context).colorScheme.outline,
                 fontWeight: FontWeight.w800,
                 fontSize: 12,
               ),
@@ -729,35 +767,31 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     String type =
         widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
 
+    List<Widget> gridItems = [];
+
     if (type == 'growth') {
-      List<Widget> gridItems = hardcodedParams.asMap().entries.map((e) {
+      gridItems = hardcodedParams.asMap().entries.map((e) {
         return _buildParamTile(
           param: e.value,
+          docId: null,
           allParams: hardcodedParams,
           index: e.key,
         );
       }).toList();
-      return GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.95,
-        ),
-        itemCount: gridItems.length,
-        itemBuilder: (context, i) => gridItems[i],
-      );
+      return _buildGridWithStartButton(gridItems);
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirestoreHelper.customParametersCollection
+      stream: ref.read(monitoringRepositoryProvider).customParametersCollection
           .where('type', isEqualTo: type)
           .snapshots(),
       builder: (context, snapshot) {
         List<ParameterItem> allParams = List.from(hardcodedParams);
-        List<String?> docIds = List.filled(hardcodedParams.length, null, growable: true);
+        List<String?> docIds = List.filled(
+          hardcodedParams.length,
+          null,
+          growable: true,
+        );
 
         if (snapshot.hasData) {
           for (var doc in snapshot.data!.docs) {
@@ -767,7 +801,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 label: data['label'],
                 unit: data['unit'] ?? '',
                 icon: Icons.dashboard_customize_rounded,
-                color: Colors.blueGrey,
+                category: ParameterCategory.custom,
                 createdBy: data['createdBy'],
               ),
             );
@@ -775,9 +809,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           }
         }
 
-        List<Widget> gridItems = [];
+        List<Widget> items = [];
         for (int i = 0; i < allParams.length; i++) {
-          gridItems.add(
+          items.add(
             _buildParamTile(
               param: allParams[i],
               docId: docIds[i],
@@ -786,9 +820,16 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
           );
         }
-        gridItems.add(_buildAddNewButton());
+        items.add(_buildAddNewButton());
+        return _buildGridWithStartButton(items);
+      },
+    );
+  }
 
-        return GridView.builder(
+  Widget _buildGridWithStartButton(List<Widget> gridItems) {
+    return Column(
+      children: [
+        GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -799,17 +840,111 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           ),
           itemCount: gridItems.length,
           itemBuilder: (context, i) => gridItems[i],
-        );
-      },
+        ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(scale: animation, child: child),
+            );
+          },
+          child: _wizardSequence.isNotEmpty
+              ? Column(
+                  key: const ValueKey('start_button_area'),
+                  children: [
+                    const SizedBox(height: 32),
+                    PrimaryButton(
+                      text: "Start Recording (${_wizardSequence.length})",
+                      icon: Icons.play_arrow_rounded,
+                      onPressed: () {
+                        HapticFeedback.heavyImpact();
+                        setState(() {
+                          _isWizardStarted = true;
+                          _wizardStepIndex = 0;
+                          selectedParameter = _wizardSequence[_wizardStepIndex];
+                          selectedDocId = _wizardDocIds[_wizardStepIndex];
+                        });
+                        Future.delayed(const Duration(milliseconds: 300), () {
+                          if (mounted) focusNodes['A-1']?.requestFocus();
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _wizardSequence.clear();
+                          _wizardDocIds.clear();
+                        });
+                      },
+                      child: Text(
+                        "Clear Selection",
+                        style: TextStyle(
+                          color: textMuted,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : const SizedBox.shrink(key: ValueKey('empty_start_button')),
+        ),
+      ],
     );
   }
 
   Widget _buildInputForm() {
-    final Color themeColor = selectedParameter!.color;
+    final Color themeColor = selectedParameter!.getColor(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Progress Indicator
+        if (_isWizardStarted) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Step ${_wizardStepIndex + 1} of ${_wizardSequence.length}",
+                      style: TextStyle(
+                        color: themeColor,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      "${((_wizardStepIndex + 1) / _wizardSequence.length * 100).toInt()}%",
+                      style: TextStyle(
+                        color: themeColor.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: (_wizardStepIndex + 1) / _wizardSequence.length,
+                    backgroundColor: themeColor.withValues(alpha: 0.1),
+                    valueColor: AlwaysStoppedAnimation<Color>(themeColor),
+                    minHeight: 6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -865,12 +1000,12 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: Theme.of(context).colorScheme.errorContainer,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.delete_outline_rounded,
-                    color: Colors.red,
+                    color: Theme.of(context).colorScheme.error,
                     size: 20,
                   ),
                 ),
@@ -901,7 +1036,9 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             final keys = valueControllers.keys.toList();
             final currentIndex = keys.indexOf(key);
             if (currentIndex >= 0 && currentIndex < keys.length - 1) {
-              FocusScope.of(context).requestFocus(focusNodes[keys[currentIndex + 1]]);
+              FocusScope.of(
+                context,
+              ).requestFocus(focusNodes[keys[currentIndex + 1]]);
             } else {
               FocusScope.of(context).unfocus();
             }
@@ -919,7 +1056,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
         RecordSubmitButton(
           isSaving: _isSaving,
           themeColor: themeColor,
-          isLastParameter: _currentIndex >= _currentParams.length - 1,
+          isLastParameter: _wizardStepIndex >= _wizardSequence.length - 1,
           onSaveNext: () => _processAndSaveForm(keepOpen: true),
           onSaveFinish: () => _processAndSaveForm(keepOpen: false),
         ),
@@ -943,9 +1080,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Theme.of(context).colorScheme.surfaceContainerHighest
-              : Colors.white,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -955,9 +1090,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             ),
           ],
           border: Border.all(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white10
-                : Colors.grey.shade100,
+            color: Theme.of(context).colorScheme.outlineVariant,
           ),
         ),
         child: Row(
@@ -968,7 +1101,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).colorScheme.surface,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -1009,49 +1142,59 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           Navigator.pop(context);
         }
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        padding: EdgeInsets.only(
-          top: 12,
-          left: 20,
-          right: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 48,
-                  height: 5,
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(10),
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: EdgeInsets.only(
+            top: 12,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 48,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
-              ),
-              _buildSheetHeader(),
-              const SizedBox(height: 16),
-              _buildContentSwitcher(),
-            ],
+                _buildSheetHeader(),
+                const SizedBox(height: 16),
+                _buildContentSwitcher(),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  void _goToPreviousParameter() {
-    if (_currentIndex > 0) {
+  Future<void> _goToPreviousParameter() async {
+    if (_wizardStepIndex > 0) {
+      if (_hasUnsavedData()) {
+        final shouldDiscard = await _onWillPop();
+        if (!shouldDiscard) return;
+      }
+      HapticFeedback.selectionClick();
       _clearInputs();
       setState(() {
-        _currentIndex--;
-        selectedParameter = _currentParams[_currentIndex];
+        _wizardStepIndex--;
+        selectedParameter = _wizardSequence[_wizardStepIndex];
+        selectedDocId = _wizardDocIds[_wizardStepIndex];
       });
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) focusNodes['A-1']?.requestFocus();
@@ -1059,12 +1202,18 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
     }
   }
 
-  void _goToNextParameter() {
-    if (_currentIndex < _currentParams.length - 1) {
+  Future<void> _goToNextParameter() async {
+    if (_wizardStepIndex < _wizardSequence.length - 1) {
+      if (_hasUnsavedData()) {
+        final shouldDiscard = await _onWillPop();
+        if (!shouldDiscard) return;
+      }
+      HapticFeedback.selectionClick();
       _clearInputs();
       setState(() {
-        _currentIndex++;
-        selectedParameter = _currentParams[_currentIndex];
+        _wizardStepIndex++;
+        selectedParameter = _wizardSequence[_wizardStepIndex];
+        selectedDocId = _wizardDocIds[_wizardStepIndex];
       });
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) focusNodes['A-1']?.requestFocus();
@@ -1081,7 +1230,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.arrow_back_rounded, size: 20, color: textDark),
@@ -1116,21 +1265,21 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
                     const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.chevron_left_rounded),
-                      onPressed: _currentIndex > 0
+                      onPressed: _wizardStepIndex > 0
                           ? _goToPreviousParameter
                           : null,
-                      color: _currentIndex > 0
-                          ? primaryBlue
-                          : Colors.grey.shade300,
+                      color: _wizardStepIndex > 0
+                          ? primaryColor
+                          : Theme.of(context).colorScheme.outlineVariant,
                     ),
                     IconButton(
                       icon: const Icon(Icons.chevron_right_rounded),
-                      onPressed: _currentIndex < _currentParams.length - 1
+                      onPressed: _wizardStepIndex < _wizardSequence.length - 1
                           ? _goToNextParameter
                           : null,
-                      color: _currentIndex < _currentParams.length - 1
-                          ? primaryBlue
-                          : Colors.grey.shade300,
+                      color: _wizardStepIndex < _wizardSequence.length - 1
+                          ? primaryColor
+                          : Theme.of(context).colorScheme.outlineVariant,
                     ),
                   ],
                 ),
@@ -1139,7 +1288,7 @@ class _RecordDataSheetState extends State<RecordDataSheet> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.close_rounded, size: 20, color: textMuted),

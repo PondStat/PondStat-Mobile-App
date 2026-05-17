@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/features/monitoring/data/trends_repository.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/physical_parameters_chart.dart';
@@ -8,7 +10,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/chemical_param
 import 'package:pondstat/features/monitoring/presentation/widgets/biological_parameters_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/fish_gains_chart.dart';
 
-class TrendsTab extends StatefulWidget {
+class TrendsTab extends ConsumerStatefulWidget {
   final String pondId;
   final String species;
   final String userRole;
@@ -25,10 +27,10 @@ class TrendsTab extends StatefulWidget {
   });
 
   @override
-  State<TrendsTab> createState() => _TrendsTabState();
+  ConsumerState<TrendsTab> createState() => _TrendsTabState();
 }
 
-class _TrendsTabState extends State<TrendsTab> {
+class _TrendsTabState extends ConsumerState<TrendsTab> {
   late Stream<QuerySnapshot<Map<String, dynamic>>>
   _historicalMeasurementsStream;
   late Stream<QuerySnapshot<Map<String, dynamic>>> _customParamsStream;
@@ -51,17 +53,18 @@ class _TrendsTabState extends State<TrendsTab> {
   }
 
   void _initData() {
-    _historicalMeasurementsStream = FirestoreHelper.getMeasurementsByDateRange(
+    final monitoringRepo = ref.read(monitoringRepositoryProvider);
+    _historicalMeasurementsStream = monitoringRepo.getMeasurementsByDateRange(
       widget.pondId,
       widget.startDate,
       widget.endDate,
     ).snapshots();
 
-    _customParamsStream = FirestoreHelper.customParametersCollection
+    _customParamsStream = monitoringRepo.customParametersCollection
         .snapshots();
 
     _growthMetricsFuture =
-        GrowthRepository.calculateGrowthMetrics(widget.pondId).then((metrics) {
+        ref.read(growthRepositoryProvider).calculateGrowthMetrics(widget.pondId).then((metrics) {
           final endOfDay = DateTime(
             widget.endDate.year,
             widget.endDate.month,
@@ -107,96 +110,108 @@ class _TrendsTabState extends State<TrendsTab> {
                 final customParamsDocs = customParamsSnapshot.data?.docs ?? [];
 
                 if (docs.isEmpty && growthMetrics.isEmpty) {
-                  return _buildEmptyState();
+                  return Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: EmptyStateCard(
+                      image: const Icon(Icons.analytics_outlined),
+                      title: 'No Data Found',
+                      description:
+                          'No measurements recorded for the selected date range.',
+                    ),
+                  );
                 }
 
-                final List<String> customPhysical = [];
-                final List<String> customChemical = [];
-                final List<String> customBiological = [];
-
-                for (var doc in customParamsDocs) {
-                  final data = doc.data();
-                  final category = data['category'] as String?;
-                  final label = data['label'] as String?;
-                  if (label != null) {
-                    if (category == 'Physical') customPhysical.add(label);
-                    if (category == 'Chemical') customChemical.add(label);
-                    if (category == 'Biological') customBiological.add(label);
-                  }
-                }
-
-                final physicalData = TrendsRepository.getNormalizedParameters(
-                  docs,
-                  widget.species,
-                  [
-                    'Temperature',
-                    'Salinity',
-                    'Transparency',
-                    ...customPhysical,
-                  ],
-                );
-
-                final chemicalData = TrendsRepository.getNormalizedParameters(
-                  docs,
-                  widget.species,
-                  [
-                    'pH Level',
-                    'Dissolved Oxygen',
-                    'Nitrate',
-                    'Nitrite',
-                    'Ammonia',
-                    'Carbon dioxide',
-                    'Magnesium',
-                    'Calcium',
-                    'Total Alkalinity',
-                    ...customChemical,
-                  ],
-                );
-
-                final biologicalData =
-                    TrendsRepository.getNormalizedParameters(
-                      docs,
-                      widget.species,
-                      [
-                        'Phytoplankton',
-                        'Test 10-1 (Average yellow colonies)',
-                        'Test yellow 10-1 (CFU/ml)',
-                        'Test 10-2 (Average yellow colonies)',
-                        'Test yellow 10-2 (CFU/ml)',
-                        'Test 10-1 (Average green colonies)',
-                        'Test green 10-1 (CFU/ml)',
-                        'Test 10-2 (Average green colonies)',
-                        'Test green 10-2 (CFU/ml)',
-                        ...customBiological,
-                      ],
-                    );
-
-                return ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  children: [
-                    PhysicalParametersChart(
-                      normalizedData: physicalData,
-                      species: widget.species,
-                    ),
-                    ChemicalParametersChart(
-                      normalizedData: chemicalData,
-                      species: widget.species,
-                    ),
-                    BiologicalParametersChart(
-                      normalizedData: biologicalData,
-                      species: widget.species,
-                    ),
-                    FishGainsChart(metrics: growthMetrics),
-                  ],
-                );
+                return _buildContent(docs, growthMetrics, customParamsDocs);
               },
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildContent(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+    List<GrowthMetrics> growthMetrics,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> customParamsDocs,
+  ) {
+    final List<String> customPhysical = [];
+    final List<String> customChemical = [];
+    final List<String> customBiological = [];
+
+    for (var doc in customParamsDocs) {
+      final data = doc.data();
+      final category = data['category'] as String?;
+      final label = data['label'] as String?;
+      if (label != null) {
+        if (category == 'Physical') customPhysical.add(label);
+        if (category == 'Chemical') customChemical.add(label);
+        if (category == 'Biological') customBiological.add(label);
+      }
+    }
+
+    final physicalData = TrendsRepository.getNormalizedParameters(
+      docs,
+      widget.species,
+      ['Temperature', 'Salinity', 'Transparency', ...customPhysical],
+    );
+
+    final chemicalData =
+        TrendsRepository.getNormalizedParameters(docs, widget.species, [
+          'pH Level',
+          'Dissolved Oxygen',
+          'Nitrate',
+          'Nitrite',
+          'Ammonia',
+          'Carbon dioxide',
+          'Magnesium',
+          'Calcium',
+          'Total Alkalinity',
+          ...customChemical,
+        ]);
+
+    final biologicalData =
+        TrendsRepository.getNormalizedParameters(docs, widget.species, [
+          'Phytoplankton',
+          'Test 10-1 (Average yellow colonies)',
+          'Test yellow 10-1 (CFU/ml)',
+          'Test 10-2 (Average yellow colonies)',
+          'Test yellow 10-2 (CFU/ml)',
+          'Test 10-1 (Average green colonies)',
+          'Test green 10-1 (CFU/ml)',
+          'Test 10-2 (Average green colonies)',
+          'Test green 10-2 (CFU/ml)',
+          ...customBiological,
+        ]);
+
+    return ListView(
+      padding: const EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 10,
+        bottom: 100, // Padding to protect from FAB
+      ),
+      children: [
+        PhysicalParametersChart(
+          normalizedData: physicalData,
+          species: widget.species,
+          startDate: widget.startDate,
+          endDate: widget.endDate,
+        ),
+        ChemicalParametersChart(
+          normalizedData: chemicalData,
+          species: widget.species,
+          startDate: widget.startDate,
+          endDate: widget.endDate,
+        ),
+        BiologicalParametersChart(
+          normalizedData: biologicalData,
+          species: widget.species,
+          startDate: widget.startDate,
+          endDate: widget.endDate,
+        ),
+        FishGainsChart(metrics: growthMetrics),
+      ],
     );
   }
 
@@ -215,50 +230,6 @@ class _TrendsTabState extends State<TrendsTab> {
           child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         );
       },
-    );
-  }
-
-  Widget _buildEmptyState() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.blueGrey.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.analytics_outlined,
-              size: 64,
-              color: Colors.blueGrey.withValues(alpha: 0.4),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            "No Data Found",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: isDark ? Colors.white70 : Colors.blueGrey.shade800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "No measurements recorded for the selected date range.",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.white38 : Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

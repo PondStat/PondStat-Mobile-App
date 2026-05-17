@@ -20,7 +20,7 @@ class ParameterChartCard extends StatelessWidget {
       stats.parameter,
       species,
     );
-    final color = paramItem?.color ?? Colors.blue;
+    final color = paramItem?.getColor(context) ?? Colors.blue;
     final unit = paramItem?.unit ?? '';
 
     final colorScheme = Theme.of(context).colorScheme;
@@ -104,128 +104,162 @@ class ParameterChartCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            height: 180,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 1,
-                  getDrawingHorizontalLine: (value) =>
-                      FlLine(color: colorScheme.outlineVariant, strokeWidth: 1),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      interval: _calculateInterval(stats.dataPoints.length),
-                      getTitlesWidget: (value, meta) {
-                        if (value.toInt() < 0 ||
-                            value.toInt() >= stats.dataPoints.length) {
-                          return const SizedBox.shrink();
-                        }
-                        final date = stats.dataPoints[value.toInt()].timestamp;
-                        return SideTitleWidget(
-                          meta: meta,
-                          child: Text(
-                            DateFormat('MM/dd').format(date),
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 10,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (value, meta) {
-                        return SideTitleWidget(
-                          meta: meta,
-                          child: Text(
-                            value.toStringAsFixed(1),
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 10,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: stats.dataPoints.asMap().entries.map((e) {
-                      return FlSpot(e.key.toDouble(), e.value.value);
-                    }).toList(),
-                    isCurved: true,
-                    gradient: LinearGradient(
-                      colors: [color.withValues(alpha: 0.8), color],
-                    ),
-                    barWidth: 4,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, barData, index) =>
-                          FlDotCirclePainter(
-                            radius: 4,
-                            color: colorScheme.surfaceContainer,
-                            strokeWidth: 2,
-                            strokeColor: color,
-                          ),
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        colors: [
-                          color.withValues(alpha: 0.2),
-                          color.withValues(alpha: 0.0),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+          stats.dataPoints.length < 2
+              ? SizedBox(
+                  height: 180,
+                  child: Center(
+                    child: Text(
+                      "Not enough data to show a trend",
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                ],
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (touchedSpot) =>
-                        colorScheme.inverseSurface,
-                    tooltipBorderRadius: BorderRadius.circular(8),
-                    getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
-                      return touchedBarSpots.map((barSpot) {
-                        final flSpot = barSpot;
-                        return LineTooltipItem(
-                          "${flSpot.y} $unit\n${DateFormat('MMM dd, yyyy HH:mm').format(stats.dataPoints[flSpot.x.toInt()].timestamp)}",
-                          TextStyle(
-                            color: colorScheme.onInverseSurface,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                )
+              : SizedBox(
+                  height: 180,
+                  child: LineChart(
+                    LineChartData(
+                      minY:
+                          stats.min -
+                          ((stats.max - stats.min == 0
+                                  ? 1
+                                  : stats.max - stats.min) *
+                              0.2),
+                      maxY:
+                          stats.max +
+                          ((stats.max - stats.min == 0
+                                  ? 1
+                                  : stats.max - stats.min) *
+                              0.2),
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: stats.max - stats.min == 0
+                            ? 1
+                            : ((stats.max - stats.min) * 1.4 / 4),
+                        getDrawingHorizontalLine: (value) => FlLine(
+                          color: colorScheme.outlineVariant,
+                          strokeWidth: 1,
+                        ),
+                      ),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30,
+                            interval: _calculateInterval(
+                              stats.dataPoints.length,
+                            ),
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() < 0 ||
+                                  value.toInt() >= stats.dataPoints.length) {
+                                return const SizedBox.shrink();
+                              }
+                              final date =
+                                  stats.dataPoints[value.toInt()].timestamp;
+                              return SideTitleWidget(
+                                meta: meta,
+                                child: Text(
+                                  DateFormat('MM/dd').format(date),
+                                  style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      }).toList();
-                    },
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              return SideTitleWidget(
+                                meta: meta,
+                                child: Text(
+                                  value.toStringAsFixed(1),
+                                  style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: stats.dataPoints.asMap().entries.map((e) {
+                            return FlSpot(e.key.toDouble(), e.value.value);
+                          }).toList(),
+                          isCurved: true,
+                          gradient: LinearGradient(
+                            colors: [color.withValues(alpha: 0.8), color],
+                          ),
+                          barWidth: 4,
+                          isStrokeCapRound: true,
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) =>
+                                FlDotCirclePainter(
+                                  radius: 4,
+                                  color: colorScheme.surfaceContainer,
+                                  strokeWidth: 2,
+                                  strokeColor: color,
+                                ),
+                          ),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            gradient: LinearGradient(
+                              colors: [
+                                color.withValues(alpha: 0.2),
+                                color.withValues(alpha: 0.0),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                      ],
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                          fitInsideHorizontally: true,
+                          fitInsideVertically: true,
+                          getTooltipColor: (touchedSpot) =>
+                              colorScheme.inverseSurface,
+                          tooltipBorderRadius: BorderRadius.circular(8),
+                          getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                            return touchedBarSpots.map((barSpot) {
+                              final flSpot = barSpot;
+                              return LineTooltipItem(
+                                "${flSpot.y} $unit\n${DateFormat('MMM dd, yyyy HH:mm').format(stats.dataPoints[flSpot.x.toInt()].timestamp)}",
+                                TextStyle(
+                                  color: colorScheme.onInverseSurface,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              );
+                            }).toList();
+                          },
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/trends_repository.dart';
@@ -7,11 +8,15 @@ import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.
 class PhysicalParametersChart extends StatefulWidget {
   final Map<String, List<NormalizedTrendPoint>> normalizedData;
   final String species;
+  final DateTime startDate;
+  final DateTime endDate;
 
   const PhysicalParametersChart({
     super.key,
     required this.normalizedData,
     required this.species,
+    required this.startDate,
+    required this.endDate,
   });
 
   @override
@@ -55,14 +60,16 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: isDark ? Border.all(color: Colors.white12) : null,
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+        ),
         boxShadow: isDark
             ? []
             : [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: theme.colorScheme.shadow.withValues(alpha: 0.04),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -92,7 +99,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
   LineChartData _buildChartData(bool isDark) {
     List<LineChartBarData> lineBars = [];
 
-    final Set<DateTime> allTimestamps = {};
+    final Set<DateTime> allTimestamps = {widget.startDate, widget.endDate};
     for (var list in widget.normalizedData.values) {
       allTimestamps.addAll(list.map((p) => p.timestamp));
     }
@@ -113,7 +120,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
         parameterName,
         widget.species,
       );
-      final color = paramItem?.color ?? Colors.grey;
+      final paramColor = paramItem?.getColor(context) ?? Colors.grey;
 
       final spots = points.map((p) {
         final x = timestampIndices[p.timestamp]!.toDouble();
@@ -123,11 +130,11 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       lineBars.add(
         LineChartBarData(
           spots: spots,
-          isCurved: true,
-          color: color,
+          isCurved: points.length > 1,
+          color: paramColor,
           barWidth: 3,
           isStrokeCapRound: true,
-          dotData: const FlDotData(show: false),
+          dotData: FlDotData(show: points.length == 1),
           belowBarData: BarAreaData(show: false),
         ),
       );
@@ -199,6 +206,8 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       lineBarsData: lineBars,
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
+          fitInsideHorizontally: true,
+          fitInsideVertically: true,
           getTooltipColor: (touchedSpot) => isDark
               ? Colors.black87
               : Colors.blueGrey.shade900.withValues(alpha: 0.9),
@@ -225,7 +234,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
                   widget.species,
                 );
                 final unit = paramItem?.unit ?? '';
-                final color = paramItem?.color ?? Colors.white;
+                final paramColor = paramItem?.getColor(context) ?? Colors.white;
 
                 final point = widget.normalizedData[matchedParam]!.firstWhere(
                   (p) => p.timestamp == timestamp,
@@ -234,7 +243,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
                 return LineTooltipItem(
                   "$matchedParam\n${point.actualValue} $unit",
                   TextStyle(
-                    color: color,
+                    color: paramColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -263,11 +272,12 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
           param,
           widget.species,
         );
-        final color = paramItem?.color ?? Colors.grey;
+        final paramColor = paramItem?.getColor(context) ?? Colors.grey;
         final isVisible = _visibleParameters[param]!;
 
         return GestureDetector(
           onTap: () {
+            HapticFeedback.lightImpact();
             setState(() {
               _visibleParameters[param] = !isVisible;
             });
@@ -280,7 +290,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
                 height: 12,
                 decoration: BoxDecoration(
                   color: isVisible
-                      ? color
+                      ? paramColor
                       : (isDark ? Colors.white24 : Colors.grey.shade300),
                   shape: BoxShape.circle,
                 ),

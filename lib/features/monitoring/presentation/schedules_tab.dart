@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
-import 'package:pondstat/core/utils/helpers.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
+import 'package:pondstat/core/utils/string_extensions.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/features/dashboard/data/pond_repository.dart';
+import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/primary_button.dart';
 
-class SchedulesTab extends StatefulWidget {
+class SchedulesTab extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final bool canEdit;
@@ -18,10 +24,11 @@ class SchedulesTab extends StatefulWidget {
   });
 
   @override
-  State<SchedulesTab> createState() => _SchedulesTabState();
+  ConsumerState<SchedulesTab> createState() => _SchedulesTabState();
 }
 
-class _SchedulesTabState extends State<SchedulesTab> {
+class _SchedulesTabState extends ConsumerState<SchedulesTab>
+    with AutomaticKeepAliveClientMixin {
   final Color primaryBlue = const Color(0xFF0A74DA);
   final List<String> _daysOfWeek = [
     'Monday',
@@ -32,6 +39,9 @@ class _SchedulesTabState extends State<SchedulesTab> {
     'Saturday',
     'Sunday',
   ];
+
+  @override
+  bool get wantKeepAlive => true;
 
   void _showAssignSheet() {
     HapticFeedback.lightImpact();
@@ -54,10 +64,11 @@ class _SchedulesTabState extends State<SchedulesTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirestoreHelper.schedulesCollection
+        stream: ref.read(monitoringRepositoryProvider).schedulesCollection
             .where('pondId', isEqualTo: widget.pondId)
             .snapshots(),
         builder: (context, snapshot) {
@@ -100,6 +111,28 @@ class _SchedulesTabState extends State<SchedulesTab> {
                 }
               }
             }
+          }
+
+          // Check if all schedules are empty
+          bool isCompletelyEmpty = true;
+          for (var day in _daysOfWeek) {
+            if (groupedSchedules[day]!['morning']!.isNotEmpty ||
+                groupedSchedules[day]!['afternoon']!.isNotEmpty) {
+              isCompletelyEmpty = false;
+              break;
+            }
+          }
+
+          if (isCompletelyEmpty && !widget.canEdit) {
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: EmptyStateCard(
+                image: const Icon(Icons.event_busy_rounded),
+                title: 'No Schedules Assigned',
+                description:
+                    'There are currently no shifts scheduled for this pond.',
+              ),
+            );
           }
 
           return ListView.builder(
@@ -341,7 +374,7 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                                   user['name'],
                                 ).withValues(alpha: 0.2),
                                 child: Text(
-                                  StringUtils.getInitials(user['name']),
+                                  (user['name'] as String?).initials,
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -446,7 +479,7 @@ class _OverlapAvatarGroup extends StatelessWidget {
               radius: 14,
               backgroundColor: color.withValues(alpha: 0.2),
               child: Text(
-                StringUtils.getInitials(name),
+                name.initials,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -465,7 +498,7 @@ class _OverlapAvatarGroup extends StatelessWidget {
 // Phase 3: Shift-First Assignment Sheet (Multi-select)
 // -----------------------------------------------------------------------------
 
-class AssignShiftSheet extends StatefulWidget {
+class AssignShiftSheet extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final ScrollController scrollController;
@@ -478,12 +511,11 @@ class AssignShiftSheet extends StatefulWidget {
   });
 
   @override
-  State<AssignShiftSheet> createState() => _AssignShiftSheetState();
+  ConsumerState<AssignShiftSheet> createState() => _AssignShiftSheetState();
 }
 
-class _AssignShiftSheetState extends State<AssignShiftSheet> {
+class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
   final Color primaryBlue = const Color(0xFF0A74DA);
-  final MonitoringRepository _repository = MonitoringRepository();
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -519,18 +551,19 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
   Future<void> _loadData() async {
     try {
       // 1. Fetch eligible users
-      final pondDoc = await FirestoreHelper.pondsCollection
+      final pondDoc = await ref.read(pondRepositoryProvider).pondsCollection
           .doc(widget.pondId)
           .get();
       if (!pondDoc.exists) return;
 
-      final data = pondDoc.data() ?? {};
-      final roles = data['roles'] as Map<String, dynamic>? ?? {};
+      final pond = pondDoc.data();
+      if (pond == null) return;
+      final roles = pond.roles;
 
       List<Map<String, dynamic>> users = [];
       for (var entry in roles.entries) {
         if (entry.value == 'owner' || entry.value == 'editor') {
-          final userDoc = await FirestoreHelper.usersCollection
+          final userDoc = await ref.read(authRepositoryProvider).usersCollection
               .doc(entry.key)
               .get();
           if (userDoc.exists) {
@@ -546,7 +579,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
       // 2. Fetch existing schedules for all those users
       for (var user in users) {
         final userId = user['id'];
-        final scheduleData = await _repository.getJobSchedule(
+        final scheduleData = await ref.read(monitoringRepositoryProvider).getJobSchedule(
           widget.pondId,
           userId,
         );
@@ -581,8 +614,8 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      debugPrint("Error loading data for assignment: $e");
+    } catch (e, stackTrace) {
+      ref.read(appLoggerProvider).error('Error loading data for assignment', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -637,7 +670,7 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
         }
 
         if (userChanged) {
-          await _repository.saveJobSchedule(
+          await ref.read(monitoringRepositoryProvider).saveJobSchedule(
             pondId: widget.pondId,
             userId: userId,
             userName: user['name'],
@@ -649,20 +682,12 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
 
       if (mounted) {
         Navigator.pop(context); // close bottom sheet
-        SnackbarHelper.show(
-          context,
-          "Schedules updated successfully for $updatedCount members",
-          backgroundColor: Colors.green.shade600,
-        );
+        SnackbarHelper.showSuccess(context, "Schedules updated successfully for $updatedCount members");
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        SnackbarHelper.show(
-          context,
-          "Error saving schedules: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Error saving schedules: $e");
       }
     }
   }
@@ -696,9 +721,9 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(
         top: 12,
@@ -775,9 +800,13 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(
+                      color: isDark ? Colors.white12 : Colors.grey.shade200,
+                    ),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
@@ -815,13 +844,21 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                   ),
                   decoration: BoxDecoration(
                     color: _selectedShift == 'morning'
-                        ? Colors.amber.shade50
-                        : Colors.indigo.shade50,
+                        ? (isDark
+                              ? Colors.amber.withValues(alpha: 0.1)
+                              : Colors.amber.shade50)
+                        : (isDark
+                              ? Colors.indigo.withValues(alpha: 0.1)
+                              : Colors.indigo.shade50),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: _selectedShift == 'morning'
-                          ? Colors.amber.shade200
-                          : Colors.indigo.shade200,
+                          ? (isDark
+                                ? Colors.amber.withValues(alpha: 0.3)
+                                : Colors.amber.shade200)
+                          : (isDark
+                                ? Colors.indigo.withValues(alpha: 0.3)
+                                : Colors.indigo.shade200),
                     ),
                   ),
                   child: DropdownButtonHideUnderline(
@@ -831,15 +868,23 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                       icon: Icon(
                         Icons.expand_more_rounded,
                         color: _selectedShift == 'morning'
-                            ? Colors.amber.shade700
-                            : Colors.indigo.shade700,
+                            ? (isDark
+                                  ? Colors.amber.shade300
+                                  : Colors.amber.shade700)
+                            : (isDark
+                                  ? Colors.indigo.shade300
+                                  : Colors.indigo.shade700),
                       ),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: _selectedShift == 'morning'
-                            ? Colors.amber.shade800
-                            : Colors.indigo.shade800,
+                            ? (isDark
+                                  ? Colors.amber.shade300
+                                  : Colors.amber.shade800)
+                            : (isDark
+                                  ? Colors.indigo.shade300
+                                  : Colors.indigo.shade800),
                       ),
                       onChanged: (val) {
                         if (val != null) setState(() => _selectedShift = val);
@@ -957,13 +1002,17 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
                           color: isAssigned
-                              ? primaryBlue.withValues(alpha: 0.05)
-                              : Colors.white,
+                              ? primaryBlue.withValues(alpha: 0.15)
+                              : (isDark
+                                    ? Colors.white.withValues(alpha: 0.05)
+                                    : Colors.white),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isAssigned
                                 ? primaryBlue.withValues(alpha: 0.3)
-                                : Colors.grey.shade200,
+                                : (isDark
+                                      ? Colors.white12
+                                      : Colors.grey.shade200),
                           ),
                         ),
                         child: CheckboxListTile(
@@ -983,13 +1032,17 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
                             children: [
                               CircleAvatar(
                                 radius: 14,
-                                backgroundColor: Colors.grey.shade200,
+                                backgroundColor: isDark
+                                    ? Colors.white12
+                                    : Colors.grey.shade200,
                                 child: Text(
-                                  StringUtils.getInitials(user['name']),
+                                  (user['name'] as String?).initials,
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade700,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.grey.shade700,
                                   ),
                                 ),
                               ),
@@ -1016,38 +1069,10 @@ class _AssignShiftSheetState extends State<AssignShiftSheet> {
           const SizedBox(height: 16),
 
           // Save Button
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey.shade300,
-                disabledForegroundColor: Colors.grey.shade500,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              onPressed: _hasChanges() && !_isSaving ? _saveChanges : null,
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 3,
-                      ),
-                    )
-                  : const Text(
-                      "Save Shift Assignments",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
+          PrimaryButton(
+            text: "Save Shift Assignments",
+            onPressed: _hasChanges() ? _saveChanges : null,
+            isLoading: _isSaving,
           ),
         ],
       ),

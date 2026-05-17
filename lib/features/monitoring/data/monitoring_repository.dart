@@ -1,17 +1,99 @@
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:clock/clock.dart';
+import 'package:pondstat/core/utils/datetime_extensions.dart';
+
+part 'monitoring_repository.g.dart';
+
+@riverpod
+MonitoringRepository monitoringRepository(Ref ref) {
+  final baseRef = ref.watch(appBaseRefProvider);
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final auth = ref.watch(firebaseAuthProvider);
+  return MonitoringRepository(baseRef, firestore, auth);
+}
 
 class MonitoringRepository {
-  static final MonitoringRepository _instance =
-      MonitoringRepository._internal();
-  factory MonitoringRepository() => _instance;
-  MonitoringRepository._internal();
+  final DocumentReference<Map<String, dynamic>> _baseRef;
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  MonitoringRepository(this._baseRef, this._firestore, this._auth);
 
   User? get currentUser => _auth.currentUser;
+
+  // ─── Collection References ───────────────────────────────────────────
+  // These replace all the static references that were in FirestoreHelper.
+
+  CollectionReference<Map<String, dynamic>> get measurementsCollection =>
+      _baseRef.collection('measurements');
+
+  CollectionReference<Map<String, dynamic>> get measurementHistoryCollection =>
+      _baseRef.collection('measurement_history');
+
+  CollectionReference<Map<String, dynamic>> get customParametersCollection =>
+      _baseRef.collection('custom_parameters');
+
+  CollectionReference<Map<String, dynamic>> get schedulesCollection =>
+      _baseRef.collection('schedules');
+
+  CollectionReference<Map<String, dynamic>> get expensesCollection =>
+      _baseRef.collection('expenses');
+
+  // ─── Historical Queries (with clock for testable time) ───────────────
+
+  /// Returns a paginated query for historical measurements.
+  /// Uses [clock.now()] instead of [DateTime.now()] for testability.
+  Query<Map<String, dynamic>> getHistoricalMeasurements(
+    String pondId,
+    int days, {
+    int limit = 500,
+    DocumentSnapshot? startAfter,
+  }) {
+    final DateTime cutoff = clock.now().subtract(Duration(days: days));
+    Query<Map<String, dynamic>> query = measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+        .orderBy('timestamp', descending: false)
+        .limit(limit);
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+    return query;
+  }
+
+  /// Returns a paginated query for measurements in a specific date range.
+  /// Uses [DateTimeX.toEndOfDay()] extension to eliminate boilerplate.
+  Query<Map<String, dynamic>> getMeasurementsByDateRange(
+    String pondId,
+    DateTime startDate,
+    DateTime endDate, {
+    int limit = 500,
+    DocumentSnapshot? startAfter,
+  }) {
+    Query<Map<String, dynamic>> query = measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .where(
+          'timestamp',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+        )
+        .where(
+          'timestamp',
+          isLessThanOrEqualTo: Timestamp.fromDate(endDate.toEndOfDay()),
+        )
+        .orderBy('timestamp', descending: false)
+        .limit(limit);
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+    return query;
+  }
+
+  // ─── CRUD Operations ────────────────────────────────────────────────
 
   /// Saves a new measurement to Firestore and logs it to history.
   Future<String> saveMeasurement({
@@ -32,7 +114,7 @@ class MonitoringRepository {
     final String dateKey =
         "${selectedDay.year}-${selectedDay.month}-${selectedDay.day}";
     final batch = _firestore.batch();
-    final measurementRef = FirestoreHelper.measurementsCollection.doc();
+    final measurementRef = measurementsCollection.doc();
 
     final measurementData = {
       'pondId': pondId,
@@ -82,9 +164,7 @@ class MonitoringRepository {
     if (currentUser == null) throw Exception('User not authenticated');
 
     final batch = _firestore.batch();
-    final measurementRef = FirestoreHelper.measurementsCollection.doc(
-      measurementId,
-    );
+    final measurementRef = measurementsCollection.doc(measurementId);
 
     batch.delete(measurementRef);
 
@@ -147,64 +227,59 @@ class MonitoringRepository {
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
-    await _firestore.runTransaction((transaction) async {
-      // Step 1: Read all fresh snapshots in parallel
-      final snapshots = await Future.wait(
-        docs.map((doc) => transaction.get(doc.reference)),
+    final batch = _firestore.batch();
+
+    for (var doc in docs) {
+      if (!doc.exists) continue;
+
+      final data = doc.data() as Map<String, dynamic>;
+      final newPointValues = updatedPointValues[doc.id];
+      final newReplicateValues = updatedReplicateValues[doc.id];
+      final newNote = updatedNotes?[doc.id];
+
+      if (newPointValues == null || newReplicateValues == null) continue;
+
+      final double avg = double.parse(
+        (newPointValues.values.reduce((a, b) => a + b) / newPointValues.length)
+            .toStringAsFixed(2),
       );
 
-      // Step 2: Compute and Write
-      for (var snapshot in snapshots) {
-        if (!snapshot.exists) continue;
+      final updateData = {
+        'pointValues': newPointValues,
+        'replicateValues': newReplicateValues,
+        'value': avg,
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': currentUser?.uid,
+        'editorName': currentUser?.displayName ?? 'Unknown',
+      };
 
-        final data = snapshot.data() as Map<String, dynamic>;
-        final newPointValues = updatedPointValues[snapshot.id];
-        final newReplicateValues = updatedReplicateValues[snapshot.id];
-        final newNote = updatedNotes?[snapshot.id];
-
-        if (newPointValues == null || newReplicateValues == null) continue;
-
-        final double avg = double.parse(
-          (newPointValues.values.reduce((a, b) => a + b) /
-                  newPointValues.length)
-              .toStringAsFixed(2),
-        );
-
-        final updateData = {
-          'pointValues': newPointValues,
-          'replicateValues': newReplicateValues,
-          'value': avg,
-          'editedAt': FieldValue.serverTimestamp(),
-          'editedBy': currentUser?.uid,
-          'editorName': currentUser?.displayName ?? 'Unknown',
-        };
-
-        if (newNote != null) {
-          updateData['notes'] = newNote;
-        }
-
-        transaction.update(snapshot.reference, updateData);
-
-        // Step 3: Inline History Logging
-        final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
-        transaction.set(historyRef, {
-          'pondId': pondId,
-          'measurementId': snapshot.id,
-          'parameter': data['parameter'],
-          'action': 'update',
-          'editedAt': FieldValue.serverTimestamp(),
-          'editedBy': currentUser?.uid,
-          'editorName': currentUser?.displayName ?? 'Unknown',
-          'before': {
-            'value': data['value'],
-            'pointValues': data['pointValues'],
-            'replicateValues': data['replicateValues'],
-            'notes': data['notes'],
-          },
-          'after': updateData,
-        });
+      if (newNote != null) {
+        updateData['notes'] = newNote;
       }
-    });
+
+      batch.update(doc.reference, updateData);
+
+      // History logging
+      final historyRef = measurementHistoryCollection.doc();
+      batch.set(historyRef, {
+        'pondId': pondId,
+        'measurementId': doc.id,
+        'parameter': data['parameter'],
+        'action': 'update',
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': currentUser?.uid,
+        'editorName': currentUser?.displayName ?? 'Unknown',
+        'before': {
+          'value': data['value'],
+          'pointValues': data['pointValues'],
+          'replicateValues': data['replicateValues'],
+          'notes': data['notes'],
+        },
+        'after': updateData,
+      });
+    }
+
+    await batch.commit();
   }
 
   /// Adds a new custom parameter to Firestore.
@@ -216,7 +291,7 @@ class MonitoringRepository {
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
-    await FirestoreHelper.customParametersCollection.add({
+    await customParametersCollection.add({
       'label': label,
       'unit': unit,
       'type': type,
@@ -229,7 +304,7 @@ class MonitoringRepository {
   /// Deletes a custom parameter from Firestore.
   Future<void> deleteCustomParameter(String parameterId) async {
     if (currentUser == null) throw Exception('User not authenticated');
-    await FirestoreHelper.customParametersCollection.doc(parameterId).delete();
+    await customParametersCollection.doc(parameterId).delete();
   }
 
   /// Saves or updates a job schedule for a member.
@@ -242,7 +317,7 @@ class MonitoringRepository {
     if (currentUser == null) throw Exception('User not authenticated');
 
     final docId = "${pondId}_$userId";
-    await FirestoreHelper.schedulesCollection.doc(docId).set({
+    await schedulesCollection.doc(docId).set({
       'pondId': pondId,
       'userId': userId,
       'userName': userName,
@@ -258,7 +333,7 @@ class MonitoringRepository {
     String userId,
   ) async {
     final docId = "${pondId}_$userId";
-    final doc = await FirestoreHelper.schedulesCollection.doc(docId).get();
+    final doc = await schedulesCollection.doc(docId).get();
     return doc.exists ? doc.data() : null;
   }
 
@@ -272,7 +347,7 @@ class MonitoringRepository {
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
-    await FirestoreHelper.expensesCollection.add({
+    await expensesCollection.add({
       'pondId': pondId,
       'item': item,
       'quantity': quantity,
@@ -287,12 +362,12 @@ class MonitoringRepository {
   /// Deletes an expense from Firestore.
   Future<void> deleteExpense(String expenseId) async {
     if (currentUser == null) throw Exception('User not authenticated');
-    await FirestoreHelper.expensesCollection.doc(expenseId).delete();
+    await expensesCollection.doc(expenseId).delete();
   }
 
   /// Stream of expenses for a pond.
   Stream<QuerySnapshot<Map<String, dynamic>>> getExpensesStream(String pondId) {
-    return FirestoreHelper.expensesCollection
+    return expensesCollection
         .where('pondId', isEqualTo: pondId)
         .snapshots();
   }
@@ -306,7 +381,7 @@ class MonitoringRepository {
     required Map<String, dynamic>? before,
     required Map<String, dynamic>? after,
   }) {
-    final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
+    final historyRef = measurementHistoryCollection.doc();
     batch.set(historyRef, {
       'pondId': pondId,
       'measurementId': measurementId,

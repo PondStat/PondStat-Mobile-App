@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pondstat/core/widgets/pondstat_dropdown_field.dart';
+import 'package:pondstat/core/theme/app_theme.dart';
 
 void main() {
   testWidgets(
@@ -11,9 +12,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          ),
+          theme: AppTheme.lightTheme,
           home: Scaffold(
             body: StatefulBuilder(
               builder: (context, setState) {

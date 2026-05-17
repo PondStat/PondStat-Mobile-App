@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/features/profile/presentation/edit_profile_page.dart';
 import 'package:pondstat/features/profile/presentation/manage_collaborators_page.dart';
 import 'package:pondstat/features/profile/presentation/settings_page.dart';
+import 'package:pondstat/core/services/logger_service.dart';
 
 class ProfileBottomSheet extends StatefulWidget {
   final String? currentPondId;
@@ -96,11 +97,10 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
   Widget build(BuildContext context) {
     final User? user = FirebaseAuth.instance.currentUser;
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(32),
           topRight: Radius.circular(32),
@@ -119,7 +119,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                   height: 5,
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.grey.shade300,
+                    color: theme.colorScheme.outlineVariant,
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -129,13 +129,13 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                 opacity: _fadeHeader,
                 child: SlideTransition(
                   position: _slideUp,
-                  child: _buildUserInfo(user, theme, isDark),
+                  child: _buildUserInfo(user, theme),
                 ),
               ),
               const SizedBox(height: 24),
               Divider(
                 height: 1,
-                color: isDark ? Colors.white12 : Colors.grey.shade100,
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
               ),
               const SizedBox(height: 24),
 
@@ -158,11 +158,13 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _buildPondRoleCard(context, theme, isDark),
+                        _buildPondRoleCard(context, theme),
                         const SizedBox(height: 28),
                         Divider(
                           height: 1,
-                          color: isDark ? Colors.white12 : Colors.grey.shade100,
+                          color: theme.colorScheme.outlineVariant.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                         const SizedBox(height: 20),
                       ],
@@ -182,20 +184,14 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                       BouncyMenuButton(
                         icon: Icons.person_outline_rounded,
                         text: 'Edit Profile',
-                        onTap: () async {
-                          HapticFeedback.lightImpact();
+                        onTap: () {
                           Navigator.pop(context);
-                          await Future.delayed(
-                            const Duration(milliseconds: 150),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const EditProfilePage(),
+                            ),
                           );
-                          if (context.mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const EditProfilePage(),
-                              ),
-                            );
-                          }
                         },
                       ),
 
@@ -204,23 +200,17 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                         BouncyMenuButton(
                           icon: Icons.group_add_outlined,
                           text: 'Manage Collaborators',
-                          onTap: () async {
-                            HapticFeedback.lightImpact();
+                          onTap: () {
                             Navigator.pop(context);
-                            await Future.delayed(
-                              const Duration(milliseconds: 150),
-                            );
-                            if (context.mounted) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ManageCollaboratorsPage(
-                                    pondId: widget.currentPondId!,
-                                    pondName: widget.currentPondName ?? 'Pond',
-                                  ),
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ManageCollaboratorsPage(
+                                  pondId: widget.currentPondId!,
+                                  pondName: widget.currentPondName ?? 'Pond',
                                 ),
-                              );
-                            }
+                              ),
+                            );
                           },
                         ),
 
@@ -229,20 +219,14 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                       BouncyMenuButton(
                         icon: Icons.settings_rounded,
                         text: 'App Settings',
-                        onTap: () async {
-                          HapticFeedback.lightImpact();
+                        onTap: () {
                           Navigator.pop(context);
-                          await Future.delayed(
-                            const Duration(milliseconds: 150),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsPage(),
+                            ),
                           );
-                          if (context.mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SettingsPage(),
-                              ),
-                            );
-                          }
                         },
                       ),
 
@@ -252,7 +236,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                         icon: Icons.logout_rounded,
                         text: 'Sign Out',
                         isDestructive: true,
-                        onTap: () => _confirmSignOut(context, theme, isDark),
+                        onTap: () => _confirmSignOut(context, theme),
                       ),
                     ],
                   ),
@@ -280,7 +264,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     );
   }
 
-  Widget _buildUserInfo(User? user, ThemeData theme, bool isDark) {
+  Widget _buildUserInfo(User? user, ThemeData theme) {
     final name = user?.displayName ?? 'PondStat User';
     final email = user?.email ?? 'No Email';
     final avatarColor = _getAvatarColor(name);
@@ -291,7 +275,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isDark ? theme.scaffoldBackgroundColor : Colors.white,
+            color: theme.scaffoldBackgroundColor,
             boxShadow: [
               BoxShadow(
                 color: avatarColor.withValues(alpha: 0.3),
@@ -311,19 +295,37 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
             child: CircleAvatar(
               radius: 32,
               backgroundColor: avatarColor.withValues(alpha: 0.15),
-              backgroundImage: user?.photoURL != null
-                  ? NetworkImage(user!.photoURL!)
-                  : null,
-              child: user?.photoURL == null
-                  ? Text(
-                      StringUtils.getInitials(name),
+              child: user?.photoURL != null
+                  ? ClipOval(
+                      child: Image.network(
+                        user!.photoURL!,
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return CircularProgressIndicator(color: avatarColor);
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Text(
+                            name.initials,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: avatarColor,
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : Text(
+                      name.initials,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                         color: avatarColor,
                       ),
-                    )
-                  : null,
+                    ),
             ),
           ),
         ),
@@ -350,7 +352,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white12 : Colors.grey.shade100,
+                  color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -371,11 +373,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     );
   }
 
-  Widget _buildPondRoleCard(
-    BuildContext context,
-    ThemeData theme,
-    bool isDark,
-  ) {
+  Widget _buildPondRoleCard(BuildContext context, ThemeData theme) {
     IconData roleIcon = Icons.visibility_outlined;
     String roleTitle = 'Viewer';
     Color roleColor = theme.colorScheme.onSurfaceVariant;
@@ -383,7 +381,9 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     if (widget.currentUserRole == 'owner') {
       roleIcon = Icons.admin_panel_settings_rounded;
       roleTitle = 'Owner';
-      roleColor = isDark ? Colors.orange.shade400 : Colors.orange.shade600;
+      roleColor = theme.brightness == Brightness.dark
+          ? Colors.orange.shade400
+          : Colors.orange.shade600;
     } else if (widget.currentUserRole == 'editor') {
       roleIcon = Icons.edit_note_rounded;
       roleTitle = 'Editor';
@@ -392,10 +392,12 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? theme.scaffoldBackgroundColor : Colors.white,
+        color: theme.scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? Colors.white12 : roleColor.withValues(alpha: 0.15),
+          color: theme.brightness == Brightness.dark
+              ? Colors.white12
+              : roleColor.withValues(alpha: 0.15),
           width: 1.5,
         ),
         boxShadow: [
@@ -463,11 +465,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
     );
   }
 
-  Future<void> _confirmSignOut(
-    BuildContext context,
-    ThemeData theme,
-    bool isDark,
-  ) async {
+  Future<void> _confirmSignOut(BuildContext context, ThemeData theme) async {
     HapticFeedback.selectionClick();
     final shouldSignOut = await showDialog<bool>(
       context: context,
@@ -544,12 +542,11 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
 
     if (shouldSignOut == true) {
       if (context.mounted) Navigator.of(context).pop();
-      await Future.delayed(const Duration(milliseconds: 150));
       try {
         await FirebaseAuth.instance.signOut();
         await GoogleSignIn().signOut();
-      } catch (e) {
-        debugPrint('Sign out error: $e');
+      } catch (e, stackTrace) {
+        LoggerService.error("Sign out error", e, stackTrace);
       }
     }
   }
@@ -597,7 +594,11 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
     super.dispose();
   }
 
-  void _onTapDown(TapDownDetails details) => _controller.forward();
+  void _onTapDown(TapDownDetails details) {
+    HapticFeedback.lightImpact();
+    _controller.forward();
+  }
+
   void _onTapUp(TapUpDetails details) {
     _controller.reverse();
     widget.onTap();
@@ -608,14 +609,13 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     final Color itemColor = widget.isDestructive
         ? Colors.red.shade600
         : theme.colorScheme.onSurface;
     final Color iconBgColor = widget.isDestructive
         ? Colors.red.withValues(alpha: 0.1)
-        : (isDark ? Colors.white12 : Colors.grey.shade100);
+        : theme.colorScheme.surfaceContainerHighest;
     final Color iconColor = widget.isDestructive
         ? Colors.red.shade600
         : theme.colorScheme.onSurfaceVariant;
@@ -631,7 +631,7 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.transparent),
           ),
@@ -659,7 +659,9 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
               if (!widget.isDestructive)
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: isDark ? Colors.white38 : Colors.grey.shade400,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.5,
+                  ),
                   size: 24,
                 ),
             ],

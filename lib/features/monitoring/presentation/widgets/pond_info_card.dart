@@ -2,36 +2,35 @@ import 'package:flutter/material.dart';
 
 class PondInfoCard extends StatelessWidget {
   final String pondName;
-  final Color primaryBlue;
-  final Color secondaryBlue;
 
-  const PondInfoCard({
-    super.key,
-    required this.pondName,
-    required this.primaryBlue,
-    required this.secondaryBlue,
-  });
+  const PondInfoCard({super.key, required this.pondName});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [primaryBlue, secondaryBlue],
+            colors: [colorScheme.primary, colorScheme.secondary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: primaryBlue.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
         ),
         child: Row(
           children: [
@@ -61,6 +60,8 @@ class PondInfoCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     pondName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,

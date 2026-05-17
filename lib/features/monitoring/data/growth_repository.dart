@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
+import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+
+part 'growth_repository.g.dart';
 
 class GrowthMetrics {
   final DateTime date;
@@ -42,56 +46,89 @@ class GrowthMetrics {
   });
 }
 
+@riverpod
+GrowthRepository growthRepository(Ref ref) {
+  final baseRef = ref.watch(appBaseRefProvider);
+  return GrowthRepository(baseRef);
+}
+
 class GrowthRepository {
-  static Future<List<GrowthMetrics>> calculateGrowthMetrics(
+  final DocumentReference<Map<String, dynamic>> _baseRef;
+
+  GrowthRepository(this._baseRef);
+
+  // ─── Collection References ───────────────────────────────────────────
+  CollectionReference<Map<String, dynamic>> get pondsCollection =>
+      _baseRef.collection('ponds');
+
+  CollectionReference<Map<String, dynamic>> get measurementsCollection =>
+      _baseRef.collection('measurements');
+
+  CollectionReference<Map<String, dynamic>> get measurementHistoryCollection =>
+      _baseRef.collection('measurement_history');
+
+  Future<List<GrowthMetrics>> calculateGrowthMetrics(
     String pondId,
   ) async {
-    final pondDoc = await FirestoreHelper.pondsCollection.doc(pondId).get();
+    final pondDoc = await pondsCollection.doc(pondId).get();
     if (!pondDoc.exists) return [];
 
     final pondData = pondDoc.data() ?? {};
     final int fishCount = (pondData['stockingQuantity'] as num?)?.toInt() ?? 0;
 
-    final measurementsSnapshot = await FirestoreHelper.measurementsCollection
-        .where('pondId', isEqualTo: pondId)
-        .get();
-
     final relevantParams = [
-      'Total weight of sampled fish',
-      'Number of fish sampled',
-      'Feeding rate',
-      'Total feed consumed',
-      'Total weight gained',
-      'ABW',
-      'ADG',
-      'DFR',
-      'FCR',
+      ParameterNames.totalWeightSampled,
+      ParameterNames.numFishSampled,
+      ParameterNames.feedingRate,
+      ParameterNames.totalFeedConsumed,
+      ParameterNames.totalWeightGained,
+      ParameterNames.abw,
+      ParameterNames.adg,
+      ParameterNames.dfr,
+      ParameterNames.fcr,
     ];
 
-    final allDocs =
-        measurementsSnapshot.docs
-            .where((doc) => relevantParams.contains(doc.data()['parameter']))
-            .toList()
-          ..sort((a, b) {
-            final tA = a.data()['timestamp'] as Timestamp?;
-            final tB = b.data()['timestamp'] as Timestamp?;
-            if (tA == null || tB == null) return 0;
-            return tA.compareTo(tB);
-          });
-
+    final allDocs = await _fetchRelevantMeasurements(pondId, relevantParams);
     if (allDocs.isEmpty) return [];
 
     DateTime pondStartDate;
     if (pondData['createdAt'] != null) {
       pondStartDate = (pondData['createdAt'] as Timestamp).toDate();
     } else {
-      pondStartDate = (allDocs.first.data()['timestamp'] as Timestamp).toDate();
+      pondStartDate = (allDocs.first.data()!['timestamp'] as Timestamp)
+          .toDate();
     }
 
+    final weeklyBuckets = _bucketizeByWeek(allDocs, pondStartDate);
+
+    return _calculateWeeklyMetrics(weeklyBuckets, fishCount);
+  }
+
+  Future<List<DocumentSnapshot<Map<String, dynamic>>>>
+  _fetchRelevantMeasurements(String pondId, List<String> relevantParams) async {
+    final measurementsSnapshot = await measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .get();
+
+    return measurementsSnapshot.docs
+        .where((doc) => relevantParams.contains(doc.data()['parameter']))
+        .toList()
+      ..sort((a, b) {
+        final tA = a.data()['timestamp'] as Timestamp?;
+        final tB = b.data()['timestamp'] as Timestamp?;
+        if (tA == null || tB == null) return 0;
+        return tA.compareTo(tB);
+      });
+  }
+
+  Map<int, Map<String, dynamic>> _bucketizeByWeek(
+    List<DocumentSnapshot<Map<String, dynamic>>> allDocs,
+    DateTime pondStartDate,
+  ) {
     final Map<int, Map<String, dynamic>> weeklyBuckets = {};
 
     for (var doc in allDocs) {
-      final data = doc.data();
+      final data = doc.data()!;
       if (data['timestamp'] == null || data['value'] == null) continue;
 
       final date = (data['timestamp'] as Timestamp).toDate();
@@ -106,36 +143,33 @@ class GrowthRepository {
         displayWeek,
         () => {
           'date': date,
-          'Total weight of sampled fish': 0.0,
-          'Number of fish sampled': 0.0,
-          'Feeding rate': 0.0,
-          'Total feed consumed': 0.0,
-          'Total weight gained': 0.0,
-          'ABW': 0.0,
-          'ADG': 0.0,
-          'DFR': 0.0,
-          'FCR': 0.0,
+          ParameterNames.totalWeightSampled: 0.0,
+          ParameterNames.numFishSampled: 0.0,
+          ParameterNames.feedingRate: 0.0,
+          ParameterNames.totalFeedConsumed: 0.0,
+          ParameterNames.totalWeightGained: 0.0,
+          ParameterNames.abw: 0.0,
+          ParameterNames.adg: 0.0,
+          ParameterNames.dfr: 0.0,
+          ParameterNames.fcr: 0.0,
         },
       );
 
-      // Keep the latest date for this week's card
       weeklyBuckets[displayWeek]!['date'] = date;
-
-      // Add value to the bucket (sums if recorded multiple times, typically just once)
       weeklyBuckets[displayWeek]![param] =
           (weeklyBuckets[displayWeek]![param] as double) + val;
 
-      if (param == 'Total weight of sampled fish') {
+      if (param == ParameterNames.totalWeightSampled) {
         weeklyBuckets[displayWeek]!['weightDocId'] = doc.id;
-      } else if (param == 'Number of fish sampled') {
+      } else if (param == ParameterNames.numFishSampled) {
         weeklyBuckets[displayWeek]!['countDocId'] = doc.id;
-      } else if (param == 'ABW') {
+      } else if (param == ParameterNames.abw) {
         weeklyBuckets[displayWeek]!['abwDocId'] = doc.id;
-      } else if (param == 'ADG') {
+      } else if (param == ParameterNames.adg) {
         weeklyBuckets[displayWeek]!['adgDocId'] = doc.id;
-      } else if (param == 'DFR') {
+      } else if (param == ParameterNames.dfr) {
         weeklyBuckets[displayWeek]!['dfrDocId'] = doc.id;
-      } else if (param == 'FCR') {
+      } else if (param == ParameterNames.fcr) {
         weeklyBuckets[displayWeek]!['fcrDocId'] = doc.id;
       }
 
@@ -147,7 +181,13 @@ class GrowthRepository {
         weeklyBuckets[displayWeek]!['editorName'] = data['editorName'];
       }
     }
+    return weeklyBuckets;
+  }
 
+  List<GrowthMetrics> _calculateWeeklyMetrics(
+    Map<int, Map<String, dynamic>> weeklyBuckets,
+    int fishCount,
+  ) {
     final sortedWeeks = weeklyBuckets.keys.toList()..sort();
     final List<GrowthMetrics> metrics = [];
 
@@ -155,16 +195,16 @@ class GrowthRepository {
       final week = sortedWeeks[i];
       final bucket = weeklyBuckets[week]!;
 
-      final double totalWeight = bucket['Total weight of sampled fish'];
-      final double sampleCount = bucket['Number of fish sampled'];
-      final double feedingRate = bucket['Feeding rate'];
-      final double feedConsumed = bucket['Total feed consumed'];
-      final double weightGained = bucket['Total weight gained'];
+      final double totalWeight = bucket[ParameterNames.totalWeightSampled];
+      final double sampleCount = bucket[ParameterNames.numFishSampled];
+      final double feedingRate = bucket[ParameterNames.feedingRate];
+      final double feedConsumed = bucket[ParameterNames.totalFeedConsumed];
+      final double weightGained = bucket[ParameterNames.totalWeightGained];
 
-      final double explicitAbw = bucket['ABW'];
-      final double explicitAdg = bucket['ADG'];
-      final double explicitDfr = bucket['DFR'];
-      final double explicitFcr = bucket['FCR'];
+      final double explicitAbw = bucket[ParameterNames.abw];
+      final double explicitAdg = bucket[ParameterNames.adg];
+      final double explicitDfr = bucket[ParameterNames.dfr];
+      final double explicitFcr = bucket[ParameterNames.fcr];
 
       final double currentAbw = explicitAbw > 0
           ? explicitAbw
@@ -183,9 +223,10 @@ class GrowthRepository {
         final prevBucket = weeklyBuckets[prevWeek]!;
 
         final prevTotalWeight =
-            prevBucket['Total weight of sampled fish'] as double;
-        final prevSampleCount = prevBucket['Number of fish sampled'] as double;
-        final prevExplicitAbw = prevBucket['ABW'] as double;
+            prevBucket[ParameterNames.totalWeightSampled] as double;
+        final prevSampleCount =
+            prevBucket[ParameterNames.numFishSampled] as double;
+        final prevExplicitAbw = prevBucket[ParameterNames.abw] as double;
 
         final prevAbw = prevExplicitAbw > 0
             ? prevExplicitAbw
@@ -230,8 +271,49 @@ class GrowthRepository {
   static double _round(double value, int places) {
     return double.parse(value.toStringAsFixed(places));
   }
-}
 
-final growthRepositoryProvider = Provider<GrowthRepository>((ref) {
-  return GrowthRepository();
-});
+  Future<void> deleteGrowthSampling(
+    GrowthMetrics m,
+    User? user,
+    String pondId,
+  ) async {
+    final docIds = [
+      m.abwDocId,
+      m.adgDocId,
+      m.dfrDocId,
+      m.fcrDocId,
+    ].whereType<String>().toList();
+    if (docIds.isEmpty) return;
+
+    // Fetch all docs in parallel
+    final snapshots = await Future.wait(
+      docIds.map((id) => measurementsCollection.doc(id).get()),
+    );
+
+    final batch = FirebaseFirestore.instance.batch();
+
+    for (var i = 0; i < docIds.length; i++) {
+      final id = docIds[i];
+      final docSnap = snapshots[i];
+      if (!docSnap.exists) continue;
+
+      final data = docSnap.data() as Map<String, dynamic>;
+      final historyRef = measurementHistoryCollection.doc();
+
+      batch.set(historyRef, {
+        'pondId': pondId,
+        'measurementId': id,
+        'parameter': data['parameter'],
+        'action': 'delete',
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': user?.uid,
+        'editorName': user?.displayName ?? 'Unknown',
+        'before': {'value': data['value']},
+        'after': null,
+      });
+
+      batch.delete(docSnap.reference);
+    }
+    await batch.commit();
+  }
+}

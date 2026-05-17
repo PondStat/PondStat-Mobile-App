@@ -80,54 +80,77 @@ class _ShiftButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final activeColor = label == "Morning"
         ? Colors.amber.shade700
         : Colors.indigo.shade600;
-    final activeBgColor = label == "Morning"
-        ? Colors.amber.shade50
-        : Colors.indigo.shade50;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBgColor : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? activeColor : Colors.grey.shade200,
-            width: 1.5,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: activeColor.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
+    final activeBgColor = isDark
+        ? activeColor.withValues(alpha: 0.15)
+        : (label == "Morning" ? Colors.amber.shade50 : Colors.indigo.shade50);
+
+    final defaultBgColor = isDark
+        ? theme.colorScheme.surfaceContainerHighest
+        : Colors.grey.shade50;
+    final defaultBorderColor = isDark ? Colors.white12 : Colors.grey.shade200;
+    final defaultIconTextColor = isDark
+        ? Colors.grey.shade400
+        : Colors.grey.shade500;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: isSelected ? activeBgColor : defaultBgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? activeColor : defaultBorderColor,
+          width: 1.5,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? activeColor : Colors.grey.shade400,
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: activeColor.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: isSelected ? activeColor : defaultIconTextColor,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: isSelected ? activeColor : defaultIconTextColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected ? activeColor : Colors.grey.shade500,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

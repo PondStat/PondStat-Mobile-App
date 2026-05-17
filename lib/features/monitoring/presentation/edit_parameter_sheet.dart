@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
@@ -33,8 +33,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
   late final Map<String, TextEditingController> notesControllers;
   bool _isSaving = false;
   bool _isDeleting = false;
-
-  final Color primaryBlue = const Color(0xFF0A74DA);
+  bool _isDirty = false;
 
   @override
   void initState() {
@@ -62,19 +61,89 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
         }
       }
     }
+
+    for (var docControllers in groupControllers.values) {
+      for (var controller in docControllers.values) {
+        controller.addListener(_checkDirtyState);
+      }
+    }
+    for (var controller in notesControllers.values) {
+      controller.addListener(_checkDirtyState);
+    }
   }
 
   @override
   void dispose() {
     for (var docControllers in groupControllers.values) {
       for (var controller in docControllers.values) {
+        controller.removeListener(_checkDirtyState);
         controller.dispose();
       }
     }
     for (var controller in notesControllers.values) {
+      controller.removeListener(_checkDirtyState);
       controller.dispose();
     }
     super.dispose();
+  }
+
+  void _checkDirtyState() {
+    bool isNowDirty = false;
+    for (var doc in widget.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final replicateValuesMap =
+          data['replicateValues'] as Map<String, dynamic>? ?? {};
+      final initialNote = data['notes'] as String? ?? '';
+
+      if (notesControllers[doc.id]?.text != initialNote) {
+        isNowDirty = true;
+        break;
+      }
+
+      for (var p in points) {
+        final replicatesList = replicateValuesMap[p] as List<dynamic>? ?? [];
+        for (var r in replicates) {
+          final key = '$p-$r';
+          final initialValue = r <= replicatesList.length
+              ? replicatesList[r - 1].toString()
+              : '';
+          if (groupControllers[doc.id]?[key]?.text != initialValue) {
+            isNowDirty = true;
+            break;
+          }
+        }
+        if (isNowDirty) break;
+      }
+      if (isNowDirty) break;
+    }
+
+    if (_isDirty != isNowDirty) {
+      setState(() {
+        _isDirty = isNowDirty;
+      });
+    }
+  }
+
+  Future<bool?> _showDiscardDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Changes?'),
+        content: const Text(
+          'You have unsaved changes. Are you sure you want to discard them?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleBatchDelete() async {
@@ -117,11 +186,11 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
       if (mounted) {
         widget.onSave();
         Navigator.pop(context); // close the edit sheet
-        SnackbarHelper.show(context, "Measurements deleted");
+        SnackbarHelper.showInfo(context, "Measurements deleted");
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+        SnackbarHelper.showError(context, "Error: $e");
       }
     } finally {
       if (mounted) setState(() => _isDeleting = false);
@@ -129,6 +198,8 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
   }
 
   Future<void> _handleBatchUpdateWithReplicates() async {
+    if (!_isDirty) return;
+
     setState(() => _isSaving = true);
 
     final Map<String, Map<String, double>> updatedPointValues = {};
@@ -182,15 +253,11 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
       if (mounted) {
         widget.onSave();
         Navigator.pop(context);
-        SnackbarHelper.show(
-          context,
-          "Measurements updated",
-          backgroundColor: Colors.green,
-        );
+        SnackbarHelper.showSuccess(context, "Measurements updated");
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(context, "Error: $e", backgroundColor: Colors.red);
+        SnackbarHelper.showError(context, "Error: $e");
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -221,7 +288,8 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
   Widget _buildEditReplicateGroup(
     DocumentSnapshot doc,
     Map<String, TextEditingController> controllers,
-    TextEditingController notesController, {
+    TextEditingController notesController,
+    ColorScheme colorScheme, {
     bool isSinglePoint = false,
   }) {
     final data = doc.data() as Map<String, dynamic>;
@@ -234,7 +302,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
             "${data['parameter']} (${data['unit'] ?? ''})",
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: primaryBlue,
+              color: colorScheme.primary,
               fontSize: 16,
             ),
           ),
@@ -267,7 +335,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
-                          color: Colors.grey.shade700,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -295,11 +363,18 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                                   labelText: "R${replicates[rIdx]}",
                                   isDense: true,
                                   filled: true,
-                                  fillColor: Colors.grey.shade50,
+                                  fillColor:
+                                      colorScheme.surfaceContainerHighest,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: BorderSide(
-                                      color: Colors.grey.shade200,
+                                      color: colorScheme.outlineVariant,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.outlineVariant,
                                     ),
                                   ),
                                 ),
@@ -315,10 +390,10 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: primaryBlue.withValues(alpha: 0.1),
+                        color: colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: primaryBlue.withValues(alpha: 0.3),
+                          color: colorScheme.primary.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -329,7 +404,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade600,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                           Text(
@@ -340,7 +415,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w900,
-                              color: primaryBlue,
+                              color: colorScheme.primary,
                             ),
                           ),
                         ],
@@ -362,9 +437,11 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(
@@ -373,113 +450,137 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
         right: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 48,
-              height: 5,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outlineVariant,
-                borderRadius: BorderRadius.circular(10),
+      child: PopScope(
+        canPop: !_isDirty,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          final shouldPop = await _showDiscardDialog();
+          if (shouldPop == true) {
+            if (context.mounted) {
+              Navigator.pop(context);
+            }
+          }
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 48,
+                height: 5,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Edit Measurements",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      color: Theme.of(context).colorScheme.onSurface,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Edit Measurements",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: colorScheme.onSurface,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "${widget.docs.length} Parameter${widget.docs.length > 1 ? 's' : ''}",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    const SizedBox(height: 4),
+                    Text(
+                      "${widget.docs.length} Parameter${widget.docs.length > 1 ? 's' : ''}",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.close_rounded,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                  ],
                 ),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Flexible(
-            child: SingleChildScrollView(
-              child: Column(
-                children: widget.docs.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final paramItem = MonitoringParameters.getParameterByLabel(
-                    data['parameter'],
-                    widget.species,
-                  );
-                  return _buildEditReplicateGroup(
-                    doc,
-                    groupControllers[doc.id]!,
-                    notesControllers[doc.id]!,
-                    isSinglePoint: paramItem?.isSinglePoint ?? false,
-                  );
-                }).toList(),
+                IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.outlineVariant,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  onPressed: () => Navigator.maybePop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: widget.docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final paramItem = MonitoringParameters.getParameterByLabel(
+                      data['parameter'],
+                      widget.species,
+                    );
+                    return _buildEditReplicateGroup(
+                      doc,
+                      groupControllers[doc.id]!,
+                      notesControllers[doc.id]!,
+                      colorScheme,
+                      isSinglePoint: paramItem?.isSinglePoint ?? false,
+                    );
+                  }).toList(),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              TextButton.icon(
-                onPressed: _isSaving || _isDeleting ? null : _handleBatchDelete,
-                icon: const Icon(
-                  Icons.delete_outline_rounded,
-                  color: Colors.red,
-                ),
-                label: const Text(
-                  "Delete All",
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: PrimaryButton(
-                  text: "Save Changes",
-                  isLoading: _isSaving,
-                  onPressed: _isDeleting
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _isSaving || _isDeleting
                       ? null
-                      : _handleBatchUpdateWithReplicates,
+                      : _handleBatchDelete,
+                  icon: _isDeleting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.red,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.red,
+                        ),
+                  label: const Text(
+                    "Delete All",
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: PrimaryButton(
+                    text: "Save Changes",
+                    isLoading: _isSaving,
+                    onPressed: _isDeleting || !_isDirty
+                        ? null
+                        : _handleBatchUpdateWithReplicates,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

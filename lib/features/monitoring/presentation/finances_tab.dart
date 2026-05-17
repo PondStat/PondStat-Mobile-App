@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/features/monitoring/presentation/expenses_tab.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/expense_sheet.dart';
+import 'package:pondstat/core/widgets/empty_state_card.dart';
 
 class FinancesTab extends StatefulWidget {
   final String pondId;
@@ -13,7 +14,8 @@ class FinancesTab extends StatefulWidget {
   State<FinancesTab> createState() => _FinancesTabState();
 }
 
-class _FinancesTabState extends State<FinancesTab> {
+class _FinancesTabState extends State<FinancesTab>
+    with AutomaticKeepAliveClientMixin {
   int _selectedFilterIndex = 0;
   final List<String> _filters = [
     "Group Expenses",
@@ -21,86 +23,24 @@ class _FinancesTabState extends State<FinancesTab> {
     "Pond Sales",
   ];
 
-  final Color primaryBlue = const Color(0xFF0A74DA);
-
-  void _showComingSoonModal(String title) {
-    HapticFeedback.lightImpact();
-    showDialog(
-      context: context,
-      builder: (context) {
-        final colorScheme = Theme.of(context).colorScheme;
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.construction_rounded,
-                  color: Colors.orange.shade700,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  "Coming Soon",
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            "The '$title' feature is currently under development. Stay tuned for updates!",
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              height: 1.4,
-              fontSize: 15,
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Got it!",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  @override
+  bool get wantKeepAlive => true;
 
   void _handleFabPressed() {
-    if (_selectedFilterIndex == 0) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => ExpenseSheet(pondId: widget.pondId),
-      );
-    } else {
-      _showComingSoonModal("Add ${_filters[_selectedFilterIndex]}");
-    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ExpenseSheet(pondId: widget.pondId),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final primaryColor = colorScheme.primary;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -114,7 +54,7 @@ class _FinancesTabState extends State<FinancesTab> {
                 _filters.length,
                 (index) => Padding(
                   padding: const EdgeInsets.only(right: 8.0),
-                  child: FilterChip(
+                  child: ChoiceChip(
                     selected: _selectedFilterIndex == index,
                     label: Text(
                       _filters[index],
@@ -129,13 +69,13 @@ class _FinancesTabState extends State<FinancesTab> {
                       ),
                     ),
                     backgroundColor: colorScheme.surfaceContainer,
-                    selectedColor: primaryBlue,
-                    checkmarkColor: colorScheme.onPrimary,
+                    selectedColor: primaryColor,
+                    showCheckmark: false,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
                         color: _selectedFilterIndex == index
-                            ? primaryBlue
+                            ? primaryColor
                             : colorScheme.outlineVariant,
                       ),
                     ),
@@ -161,24 +101,15 @@ class _FinancesTabState extends State<FinancesTab> {
           ),
         ],
       ),
-      floatingActionButton: widget.canEdit
+      floatingActionButton: (widget.canEdit && _selectedFilterIndex == 0)
           ? FloatingActionButton.extended(
               heroTag: 'finances_fab',
               onPressed: _handleFabPressed,
-              backgroundColor: _selectedFilterIndex == 0
-                  ? Colors.teal
-                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-              icon: Icon(
-                _selectedFilterIndex == 2
-                    ? Icons.point_of_sale_rounded
-                    : Icons.receipt_long_rounded,
-                color: Colors.white,
-              ),
-              label: Text(
-                _selectedFilterIndex == 0
-                    ? "Add Expenses"
-                    : "Add ${_filters[_selectedFilterIndex].split(' ').last}",
-                style: const TextStyle(
+              backgroundColor: Colors.teal,
+              icon: const Icon(Icons.receipt_long_rounded, color: Colors.white),
+              label: const Text(
+                "Add Expenses",
+                style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -201,36 +132,15 @@ class _FinancesTabState extends State<FinancesTab> {
   }
 
   Widget _buildComingSoon({required Key key, required String title}) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       key: key,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.construction_rounded,
-            size: 64,
-            color: colorScheme.outlineVariant,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            "$title Coming Soon",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "This feature is currently under development.",
-            style: TextStyle(
-              fontSize: 14,
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: EmptyStateCard(
+          image: const Icon(Icons.construction_rounded),
+          title: "$title Coming Soon",
+          description: "This feature is currently under development.",
+        ),
       ),
     );
   }

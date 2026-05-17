@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/utils/helpers.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
-class MeasurementCard extends StatelessWidget {
+class MeasurementCard extends ConsumerWidget {
   final String time;
   final String title;
   final String content;
@@ -25,10 +26,7 @@ class MeasurementCard extends StatelessWidget {
     this.notes,
   });
 
-  final Color primaryBlue = const Color(0xFF0A74DA);
-  final Color secondaryBlue = const Color(0xFF4FA0F0);
-
-  void _confirmGroupDelete(BuildContext context) {
+  void _confirmGroupDelete(BuildContext context, MonitoringRepository monitoringRepo) {
     final Color textDark = Theme.of(context).colorScheme.onSurface;
     final Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
 
@@ -49,12 +47,12 @@ class MeasurementCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color: Theme.of(context).colorScheme.errorContainer,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.warning_amber_rounded,
-                      color: Colors.red,
+                      color: Theme.of(context).colorScheme.error,
                       size: 24,
                     ),
                   ),
@@ -95,8 +93,10 @@ class MeasurementCard extends StatelessWidget {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade50,
-                    foregroundColor: Colors.red,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.errorContainer,
+                    foregroundColor: Theme.of(context).colorScheme.error,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -116,7 +116,7 @@ class MeasurementCard extends StatelessWidget {
 
                           for (var doc in groupDocs) {
                             final data = doc.data() as Map<String, dynamic>;
-                            final historyRef = FirestoreHelper
+                            final historyRef = monitoringRepo
                                 .measurementHistoryCollection
                                 .doc();
 
@@ -144,20 +144,12 @@ class MeasurementCard extends StatelessWidget {
 
                             if (context.mounted) {
                               Navigator.pop(context);
-                              SnackbarHelper.show(
-                                context,
-                                "$title entry deleted",
-                                backgroundColor: Colors.grey.shade800,
-                              );
+                              SnackbarHelper.showInfo(context, "$title entry deleted");
                             }
                           } catch (e) {
                             if (context.mounted) {
                               setState(() => isDeleting = false);
-                              SnackbarHelper.show(
-                                context,
-                                "Failed to delete: $e",
-                                backgroundColor: Colors.red,
-                              );
+                              SnackbarHelper.showError(context, "Failed to delete: $e");
                             }
                           }
                         },
@@ -187,38 +179,40 @@ class MeasurementCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final Color textDark = Theme.of(context).colorScheme.onSurface;
-    final Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final monitoringRepo = ref.watch(monitoringRepositoryProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+    final primaryColor = colorScheme.primary;
+    final Color textDark = colorScheme.onSurface;
+    final Color textMuted = colorScheme.onSurfaceVariant;
+    final isLightMode = Theme.of(context).brightness == Brightness.light;
 
     final parts = content.split('\n');
     final mainValue = parts.isNotEmpty ? parts[0] : '';
     final subtitle = parts.length > 1 ? parts.sublist(1).join('\n') : '';
 
-    if (groupDocs.isNotEmpty) {
-      // final data = groupDocs.first.data() as Map<String, dynamic>;
-      // recorderName = data['recorderName'] as String? ?? 'Unknown';
-      // editorName = data['editorName'] as String?;
-    }
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: primaryBlue.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: !isLightMode
+            ? Border.all(color: colorScheme.outlineVariant)
+            : null,
+        boxShadow: isLightMode
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color: primaryColor.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -235,19 +229,17 @@ class MeasurementCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [secondaryBlue, primaryBlue],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: primaryColor.withValues(alpha: 0.8),
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: primaryBlue.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                          boxShadow: isLightMode
+                              ? [
+                                  BoxShadow(
+                                    color: primaryColor.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: const Icon(
                           Icons.analytics_rounded,
@@ -286,7 +278,7 @@ class MeasurementCard extends StatelessWidget {
                     onSelected: (value) {
                       HapticFeedback.selectionClick();
                       if (value == 'edit') onEdit();
-                      if (value == 'delete') _confirmGroupDelete(context);
+                      if (value == 'delete') _confirmGroupDelete(context, monitoringRepo);
                     },
                     itemBuilder: (context) => [
                       PopupMenuItem(
@@ -296,7 +288,7 @@ class MeasurementCard extends StatelessWidget {
                             Icon(
                               Icons.edit_rounded,
                               size: 18,
-                              color: primaryBlue,
+                              color: primaryColor,
                             ),
                             const SizedBox(width: 12),
                             const Text(
@@ -306,20 +298,20 @@ class MeasurementCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: Row(
                           children: [
                             Icon(
                               Icons.delete_outline_rounded,
                               size: 18,
-                              color: Colors.red,
+                              color: colorScheme.error,
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
                               'Delete',
                               style: TextStyle(
-                                color: Colors.red,
+                                color: colorScheme.error,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -344,7 +336,7 @@ class MeasurementCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
-                          color: primaryBlue,
+                          color: primaryColor,
                           letterSpacing: -1.0,
                           height: 1.1,
                         ),
@@ -375,7 +367,7 @@ class MeasurementCard extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
+                      color: colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Row(
@@ -384,7 +376,9 @@ class MeasurementCard extends StatelessWidget {
                         Icon(
                           Icons.access_time_filled_rounded,
                           size: 12,
-                          color: Colors.grey.shade400,
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         Flexible(
@@ -411,9 +405,11 @@ class MeasurementCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50.withValues(alpha: 0.5),
+                  color: colorScheme.tertiaryContainer,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.shade100),
+                  border: Border.all(
+                    color: colorScheme.tertiary.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,7 +417,7 @@ class MeasurementCard extends StatelessWidget {
                     Icon(
                       Icons.sticky_note_2_rounded,
                       size: 16,
-                      color: Colors.amber.shade700,
+                      color: colorScheme.onTertiaryContainer,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -429,7 +425,7 @@ class MeasurementCard extends StatelessWidget {
                         notes!,
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.amber.shade900,
+                          color: colorScheme.onTertiaryContainer,
                           fontWeight: FontWeight.w500,
                           fontStyle: FontStyle.italic,
                           height: 1.4,

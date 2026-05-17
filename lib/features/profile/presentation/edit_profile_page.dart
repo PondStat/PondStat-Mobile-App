@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/core/utils/string_extensions.dart';
+import 'package:pondstat/core/services/logger_service.dart';
+import 'package:pondstat/features/auth/data/auth_repository.dart';
 
-class EditProfilePage extends StatefulWidget {
+class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
 
   @override
-  State<EditProfilePage> createState() => _EditProfilePageState();
+  ConsumerState<EditProfilePage> createState() => _EditProfilePageState();
 }
 
-class _EditProfilePageState extends State<EditProfilePage> {
+class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _nameController = TextEditingController();
@@ -32,7 +35,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final Color secondaryBlue = const Color(0xFF4FA0F0);
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
-  final Color backgroundLight = const Color(0xFFF8FAFC);
+  Color get backgroundLight => Theme.of(context).scaffoldBackgroundColor;
 
   @override
   void initState() {
@@ -73,7 +76,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _initialName = user.displayName ?? '';
 
       try {
-        final doc = await FirestoreHelper.usersCollection.doc(user.uid).get();
+        final doc = await ref.read(authRepositoryProvider).usersCollection.doc(user.uid).get();
         if (doc.exists && doc.data() != null) {
           final data = doc.data()!;
           final sNum = data['studentNumber']?.toString() ?? '';
@@ -87,8 +90,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
             _initialName = fName;
           }
         }
-      } catch (e) {
-        debugPrint("Error fetching user data: $e");
+      } catch (e, stackTrace) {
+        LoggerService.error("Error fetching user data", e, stackTrace);
       }
     }
 
@@ -111,7 +114,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final shouldDiscard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
@@ -200,7 +203,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
 
       if (firestoreUpdates.isNotEmpty) {
-        await FirestoreHelper.usersCollection
+        await ref.read(authRepositoryProvider).usersCollection
             .doc(user.uid)
             .update(firestoreUpdates);
       }
@@ -214,20 +217,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _checkForChanges();
         HapticFeedback.heavyImpact();
 
-        SnackbarHelper.show(
-          context,
-          'Profile updated successfully!',
-          backgroundColor: Colors.grey.shade800,
-        );
+        SnackbarHelper.showInfo(context, 'Profile updated successfully!');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.show(
-          context,
-          "Failed to update profile: $e",
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, "Failed to update profile: $e");
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -261,7 +256,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         icon: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
@@ -342,7 +337,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
@@ -355,28 +350,49 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           child: CircleAvatar(
                             radius: 60,
                             backgroundColor: Colors.blue.shade50,
-                            backgroundImage: photoUrl != null
-                                ? NetworkImage(photoUrl)
-                                : null,
-                            child: photoUrl == null
-                                ? Text(
-                                    StringUtils.getInitials(displayName),
+                            child: photoUrl != null
+                                ? ClipOval(
+                                    child: Image.network(
+                                      photoUrl,
+                                      width: 120,
+                                      height: 120,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                            if (loadingProgress == null) {
+                                              return child;
+                                            }
+                                            return CircularProgressIndicator(
+                                              color: primaryBlue,
+                                            );
+                                          },
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Text(
+                                              displayName.initials,
+                                              style: TextStyle(
+                                                fontSize: 40,
+                                                fontWeight: FontWeight.w900,
+                                                color: primaryBlue,
+                                              ),
+                                            );
+                                          },
+                                    ),
+                                  )
+                                : Text(
+                                    displayName.initials,
                                     style: TextStyle(
                                       fontSize: 40,
                                       fontWeight: FontWeight.w900,
                                       color: primaryBlue,
                                     ),
-                                  )
-                                : null,
+                                  ),
                           ),
                         ),
                         GestureDetector(
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            SnackbarHelper.show(
-                              context,
-                              'Profile picture uploads coming soon!',
-                            );
+                            SnackbarHelper.showInfo(context, 'Profile picture uploads coming soon!',);
                           },
                           child: Container(
                             padding: const EdgeInsets.all(10),
@@ -387,7 +403,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 end: Alignment.bottomRight,
                               ),
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 3),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.surface,
+                                width: 3,
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: primaryBlue.withValues(alpha: 0.4),
@@ -487,9 +506,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    backgroundColor: hasChanges
-                        ? primaryBlue
-                        : Colors.grey.shade300,
+                    backgroundColor: primaryBlue,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -537,10 +554,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isFocused ? primaryBlue : Colors.white,
+          color: isFocused
+              ? primaryBlue
+              : Theme.of(context).colorScheme.surface,
           width: 2,
         ),
         boxShadow: [

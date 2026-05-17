@@ -19,42 +19,20 @@ class RecordSubmitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              side: BorderSide(color: themeColor),
-            ),
-            onPressed: isSaving ? null : onSaveNext,
-            child: Text(
-              isLastParameter ? "Save & Finish" : "Save & Next",
-              style: TextStyle(
-                color: themeColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: Theme.of(context).colorScheme.copyWith(primary: themeColor),
-            ),
-            child: PrimaryButton(
-              text: 'Save',
-              icon: Icons.check_circle_outline_rounded,
-              isLoading: isSaving,
-              onPressed: onSaveFinish,
-            ),
-          ),
-        ),
-      ],
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(
+          context,
+        ).colorScheme.copyWith(primary: themeColor),
+      ),
+      child: PrimaryButton(
+        text: isLastParameter ? 'Save & Finish' : 'Save & Next',
+        icon: isLastParameter
+            ? Icons.check_circle_outline_rounded
+            : Icons.arrow_forward_rounded,
+        isLoading: isSaving,
+        onPressed: isLastParameter ? onSaveFinish : onSaveNext,
+      ),
     );
   }
 }

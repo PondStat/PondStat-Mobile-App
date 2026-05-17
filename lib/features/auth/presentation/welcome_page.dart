@@ -1,10 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 
 class OnboardingStep {
@@ -19,14 +20,14 @@ class OnboardingStep {
   });
 }
 
-class WelcomePage extends StatefulWidget {
+class WelcomePage extends ConsumerStatefulWidget {
   const WelcomePage({super.key});
 
   @override
-  State<WelcomePage> createState() => _WelcomePageState();
+  ConsumerState<WelcomePage> createState() => _WelcomePageState();
 }
 
-class _WelcomePageState extends State<WelcomePage>
+class _WelcomePageState extends ConsumerState<WelcomePage>
     with TickerProviderStateMixin {
   late AnimationController _bubbleController;
   late AnimationController _textController;
@@ -35,6 +36,7 @@ class _WelcomePageState extends State<WelcomePage>
   late Animation<double> _fadeAnimation;
 
   bool _isLoading = false;
+  bool _isCheckingOnboarding = true;
   late PageController _pageController;
   int _currentPage = 0;
 
@@ -71,8 +73,6 @@ class _WelcomePageState extends State<WelcomePage>
     ),
   ];
 
-  final AuthRepository _authRepository = AuthRepository();
-
   @override
   void initState() {
     super.initState();
@@ -106,11 +106,23 @@ class _WelcomePageState extends State<WelcomePage>
   Future<void> _checkOnboardingStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final hasSeen = prefs.getBool('hasSeenOnboarding') ?? false;
-    if (hasSeen && mounted) {
-      setState(() {
-        _currentPage = _steps.length;
-      });
-      _pageController.jumpToPage(_steps.length);
+    if (mounted) {
+      if (hasSeen) {
+        setState(() {
+          _currentPage = _steps.length;
+          _isCheckingOnboarding = false;
+        });
+        // Jump after the frame is built
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_pageController.hasClients) {
+            _pageController.jumpToPage(_steps.length);
+          }
+        });
+      } else {
+        setState(() {
+          _isCheckingOnboarding = false;
+        });
+      }
     }
   }
 
@@ -131,23 +143,15 @@ class _WelcomePageState extends State<WelcomePage>
     setState(() => _isLoading = true);
 
     try {
-      final userCredential = await _authRepository.signInWithGoogle();
+      final authRepository = ref.read(authRepositoryProvider);
+      final userCredential = await authRepository.signInWithGoogle();
 
       if (userCredential == null) {
         if (mounted) setState(() => _isLoading = false);
         return;
       }
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const Scaffold(
-              body: Center(child: Text("Dashboard Placeholder")),
-            ),
-          ),
-        );
-      }
+      // Navigator.pushReplacement removed because AuthWrapper handles navigation automatically upon auth state change.
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -178,11 +182,7 @@ class _WelcomePageState extends State<WelcomePage>
           errorMessage = "A platform error occurred during Sign-In.";
         }
 
-        SnackbarHelper.show(
-          context,
-          errorMessage,
-          backgroundColor: Colors.redAccent,
-        );
+        SnackbarHelper.showError(context, errorMessage);
       }
     }
   }
@@ -252,77 +252,82 @@ class _WelcomePageState extends State<WelcomePage>
             ),
           ),
           SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 20.0,
-                  ),
-                  child: Row(
+            child: _isCheckingOnboarding
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
+                : Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 20.0,
                         ),
-                        child: const Icon(
-                          Icons.water_drop,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12.0),
-                      const Text(
-                        'PondStat',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22.0,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (_currentPage < _steps.length)
-                        TextButton(
-                          onPressed: () {
-                            _completeOnboarding();
-                            _pageController.animateToPage(
-                              _steps.length,
-                              duration: const Duration(milliseconds: 600),
-                              curve: Curves.easeInOutQuart,
-                            );
-                          },
-                          child: const Text(
-                            'Skip',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8.0),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.water_drop,
+                                color: Colors.white,
+                                size: 24,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 12.0),
+                            const Text(
+                              'PondStat',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 22.0,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (_currentPage < _steps.length)
+                              TextButton(
+                                onPressed: () {
+                                  _completeOnboarding();
+                                  _pageController.animateToPage(
+                                    _steps.length,
+                                    duration: const Duration(milliseconds: 600),
+                                    curve: Curves.easeInOutQuart,
+                                  );
+                                },
+                                child: const Text(
+                                  'Skip',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
+                      ),
+                      Expanded(
+                        child: PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() => _currentPage = index);
+                            _textController.forward(from: 0.0);
+                          },
+                          itemCount: _steps.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == _steps.length) {
+                              return _buildSignInPage(primaryColor);
+                            }
+                            return _buildOnboardingPage(_steps[index]);
+                          },
+                        ),
+                      ),
+                      _buildBottomControls(primaryColor),
                     ],
                   ),
-                ),
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() => _currentPage = index);
-                    },
-                    itemCount: _steps.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == _steps.length) {
-                        return _buildSignInPage(primaryColor);
-                      }
-                      return _buildOnboardingPage(_steps[index]);
-                    },
-                  ),
-                ),
-                _buildBottomControls(primaryColor),
-              ],
-            ),
           ),
         ],
       ),
@@ -538,21 +543,24 @@ class _WelcomePageState extends State<WelcomePage>
     final y = 15 * math.sin(t * 2 * math.pi + offset);
 
     return Positioned(
-      top: top + y,
-      left: left + x,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 15.0,
-              spreadRadius: 2.0,
-            ),
-          ],
+      top: top,
+      left: left,
+      child: Transform.translate(
+        offset: Offset(x, y),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 15.0,
+                spreadRadius: 2.0,
+              ),
+            ],
+          ),
         ),
       ),
     );

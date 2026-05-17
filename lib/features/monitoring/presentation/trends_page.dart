@@ -5,12 +5,13 @@ import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
-import 'package:pondstat/features/monitoring/presentation/trends_tab.dart';
 import 'package:pondstat/features/monitoring/presentation/periodic_parameters_chart.dart';
-import 'package:pondstat/core/utils/helpers.dart';
+import 'package:pondstat/features/monitoring/presentation/trends_tab.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
-class TrendsPage extends StatefulWidget {
+class TrendsPage extends ConsumerStatefulWidget {
   final String pondId;
   final String species;
   final String userRole;
@@ -23,12 +24,13 @@ class TrendsPage extends StatefulWidget {
   });
 
   @override
-  State<TrendsPage> createState() => _TrendsPageState();
+  ConsumerState<TrendsPage> createState() => _TrendsPageState();
 }
 
-class _TrendsPageState extends State<TrendsPage> {
+class _TrendsPageState extends ConsumerState<TrendsPage> {
   late DateTime _startDate;
   late DateTime _endDate;
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -40,11 +42,7 @@ class _TrendsPageState extends State<TrendsPage> {
 
   Future<void> _selectDateRange(BuildContext context) async {
     if (widget.userRole != 'owner') {
-      SnackbarHelper.show(
-        context,
-        "Only the owner can set the date range.",
-        backgroundColor: Colors.orange.shade600,
-      );
+      SnackbarHelper.showInfo(context, "Only the owner can set the date range.");
       return;
     }
 
@@ -54,13 +52,12 @@ class _TrendsPageState extends State<TrendsPage> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) {
+        final brightness = Theme.of(context).brightness;
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF0A74DA),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black87,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF0A74DA),
+              brightness: brightness,
             ),
           ),
           child: child!,
@@ -78,10 +75,16 @@ class _TrendsPageState extends State<TrendsPage> {
   }
 
   Future<void> _exportReport(BuildContext context) async {
-    try {
-      SnackbarHelper.show(context, "Generating report...");
+    if (_isExporting) return;
 
-      final querySnapshot = await FirestoreHelper.getMeasurementsByDateRange(
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      SnackbarHelper.showInfo(context, "Generating report...");
+
+      final querySnapshot = await ref.read(monitoringRepositoryProvider).getMeasurementsByDateRange(
         widget.pondId,
         _startDate,
         _endDate,
@@ -89,22 +92,19 @@ class _TrendsPageState extends State<TrendsPage> {
 
       if (querySnapshot.docs.isEmpty) {
         if (!context.mounted) return;
-        SnackbarHelper.show(
-          context,
-          "No data to export for this date range.",
-          backgroundColor: Colors.orange.shade600,
-        );
+        SnackbarHelper.showInfo(context, "No data to export for this date range.");
         return;
       }
 
       List<List<dynamic>> rows = [
-        ["Date", "Time", "Type", "Parameter", "Value", "Unit"],
+        ["ISO Timestamp", "Date", "Time", "Type", "Parameter", "Value", "Unit"],
       ];
 
       for (var doc in querySnapshot.docs) {
         final data = doc.data();
         final ts =
             (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final isoStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(ts);
         final dateStr = DateFormat('yyyy-MM-dd').format(ts);
         final timeStr = DateFormat('HH:mm').format(ts);
         final type = data['type']?.toString() ?? 'N/A';
@@ -112,7 +112,7 @@ class _TrendsPageState extends State<TrendsPage> {
         final value = data['value']?.toString() ?? 'N/A';
         final unit = data['unit']?.toString() ?? '';
 
-        rows.add([dateStr, timeStr, type, parameter, value, unit]);
+        rows.add([isoStr, dateStr, timeStr, type, parameter, value, unit]);
       }
 
       String csvData = csv.encode(rows);
@@ -129,19 +129,17 @@ class _TrendsPageState extends State<TrendsPage> {
 
       if (result.status == ShareResultStatus.success) {
         if (!context.mounted) return;
-        SnackbarHelper.show(
-          context,
-          "Report exported successfully!",
-          backgroundColor: Colors.green,
-        );
+        SnackbarHelper.showSuccess(context, "Report exported successfully!");
       }
     } catch (e) {
       if (!context.mounted) return;
-      SnackbarHelper.show(
-        context,
-        "Failed to export report: $e",
-        backgroundColor: Colors.red.shade600,
-      );
+      SnackbarHelper.showError(context, "Failed to export report: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+        });
+      }
     }
   }
 
@@ -236,7 +234,7 @@ class _TrendsPageState extends State<TrendsPage> {
                     children: [
                       SingleChildScrollView(
                         child: Padding(
-                          padding: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.only(top: 12, bottom: 100),
                           child: PeriodicParametersChart(
                             pondId: widget.pondId,
                             species: widget.species,
@@ -248,7 +246,7 @@ class _TrendsPageState extends State<TrendsPage> {
                       ),
                       SingleChildScrollView(
                         child: Padding(
-                          padding: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.only(top: 12, bottom: 100),
                           child: PeriodicParametersChart(
                             pondId: widget.pondId,
                             species: widget.species,
@@ -260,7 +258,7 @@ class _TrendsPageState extends State<TrendsPage> {
                       ),
                       SingleChildScrollView(
                         child: Padding(
-                          padding: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.only(top: 12, bottom: 100),
                           child: PeriodicParametersChart(
                             pondId: widget.pondId,
                             species: widget.species,
@@ -270,12 +268,15 @@ class _TrendsPageState extends State<TrendsPage> {
                           ),
                         ),
                       ),
-                      TrendsTab(
-                        pondId: widget.pondId,
-                        species: widget.species,
-                        userRole: widget.userRole,
-                        startDate: _startDate,
-                        endDate: _endDate,
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 100),
+                        child: TrendsTab(
+                          pondId: widget.pondId,
+                          species: widget.species,
+                          userRole: widget.userRole,
+                          startDate: _startDate,
+                          endDate: _endDate,
+                        ),
                       ),
                     ],
                   ),
@@ -286,12 +287,26 @@ class _TrendsPageState extends State<TrendsPage> {
         ),
         floatingActionButton: FloatingActionButton.extended(
           heroTag: 'export_btn',
-          onPressed: () => _exportReport(context),
-          backgroundColor: const Color(0xFF0A74DA),
-          icon: const Icon(Icons.ios_share_rounded, color: Colors.white),
-          label: const Text(
-            "Export CSV",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          onPressed: _isExporting ? null : () => _exportReport(context),
+          backgroundColor: _isExporting
+              ? Colors.grey.shade400
+              : const Color(0xFF0A74DA),
+          icon: _isExporting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.ios_share_rounded, color: Colors.white),
+          label: Text(
+            _isExporting ? "Exporting..." : "Export CSV",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),

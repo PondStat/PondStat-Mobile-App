@@ -1,7 +1,11 @@
-import 'dart:developer' as developer;
+import 'package:pondstat/core/services/logging/app_logger.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
+
+part 'notifications_repository.g.dart';
 
 class NotificationModel {
   final String id;
@@ -36,21 +40,33 @@ class NotificationModel {
   }
 }
 
-class NotificationsRepository {
-  static final NotificationsRepository _instance =
-      NotificationsRepository._internal();
-  factory NotificationsRepository() => _instance;
-  NotificationsRepository._internal();
+@riverpod
+NotificationsRepository notificationsRepository(Ref ref) {
+  final baseRef = ref.watch(appBaseRefProvider);
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final auth = ref.watch(firebaseAuthProvider);
+  final logger = ref.watch(appLoggerProvider);
+  return NotificationsRepository(baseRef, firestore, auth, logger);
+}
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+class NotificationsRepository {
+  final DocumentReference<Map<String, dynamic>> _baseRef;
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+  final AppLogger _log;
+
+  NotificationsRepository(this._baseRef, this._firestore, this._auth, this._log);
 
   User? get currentUser => _auth.currentUser;
+
+  // ─── Collection References ───────────────────────────────────────────
+  CollectionReference<Map<String, dynamic>> get usersCollection =>
+      _baseRef.collection('users');
 
   CollectionReference<Map<String, dynamic>>? get _notificationsCollection {
     final user = currentUser;
     if (user == null) return null;
-    return FirestoreHelper.usersCollection
+    return usersCollection
         .doc(user.uid)
         .collection('notifications');
   }
@@ -69,14 +85,14 @@ class NotificationsRepository {
               .toList(),
         )
         .handleError((error, stackTrace) {
-      developer.log(
-        'Error in getNotificationsStream',
-        name: 'notifications.repository',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      throw error;
-    });
+          _log.error(
+            'Error in getNotificationsStream',
+            error: error,
+            stackTrace: stackTrace,
+            tag: 'NOTIFICATIONS',
+          );
+          throw error;
+        });
   }
 
   Stream<int> getUnreadCountStream() {
@@ -88,14 +104,14 @@ class NotificationsRepository {
         .snapshots()
         .map((snapshot) => snapshot.docs.length)
         .handleError((error, stackTrace) {
-      developer.log(
-        'Error in getUnreadCountStream',
-        name: 'notifications.repository',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      throw error;
-    });
+          _log.error(
+            'Error in getUnreadCountStream',
+            error: error,
+            stackTrace: stackTrace,
+            tag: 'NOTIFICATIONS',
+          );
+          throw error;
+        });
   }
 
   Future<void> markAsRead(String notificationId) async {
@@ -108,8 +124,11 @@ class NotificationsRepository {
       if (collection == null) return;
       await collection.doc(notificationId).update({'isRead': isRead});
     } catch (e) {
-      developer.log('Error updating notification read status',
-          error: e, name: 'notifications.repository');
+      _log.error(
+        'Error updating notification read status',
+        error: e,
+        tag: 'NOTIFICATIONS',
+      );
     }
   }
 
@@ -122,14 +141,25 @@ class NotificationsRepository {
 
       if (unread.docs.isEmpty) return;
 
-      final batch = _firestore.batch();
-      for (var doc in unread.docs) {
-        batch.update(doc.reference, {'isRead': true});
+      const batchSize = 400;
+      final docs = unread.docs;
+
+      for (var i = 0; i < docs.length; i += batchSize) {
+        final end = (i + batchSize < docs.length) ? i + batchSize : docs.length;
+        final chunk = docs.sublist(i, end);
+
+        final batch = _firestore.batch();
+        for (var doc in chunk) {
+          batch.update(doc.reference, {'isRead': true});
+        }
+        await batch.commit();
       }
-      await batch.commit();
     } catch (e) {
-      developer.log('Error marking all as read',
-          error: e, name: 'notifications.repository');
+      _log.error(
+        'Error marking all as read',
+        error: e,
+        tag: 'NOTIFICATIONS',
+      );
     }
   }
 
@@ -139,8 +169,11 @@ class NotificationsRepository {
       if (collection == null) return;
       await collection.doc(notificationId).delete();
     } catch (e) {
-      developer.log('Error deleting notification',
-          error: e, name: 'notifications.repository');
+      _log.error(
+        'Error deleting notification',
+        error: e,
+        tag: 'NOTIFICATIONS',
+      );
     }
   }
 }

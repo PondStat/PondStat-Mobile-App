@@ -1,83 +1,31 @@
-import 'package:equatable/equatable.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pondstat/core/utils/datetime_extensions.dart'; // We'll create a custom converter
 
-class Pond extends Equatable {
-  final String id;
-  final String name;
-  final String species;
-  final int stockingQuantity;
-  final int targetCulturePeriodDays;
-  final String ownerId;
-  final List<String> memberIds;
-  final Map<String, String> roles;
+part 'pond.freezed.dart';
+part 'pond.g.dart';
 
-  const Pond({
-    required this.id,
-    required this.name,
-    required this.species,
-    required this.stockingQuantity,
-    required this.targetCulturePeriodDays,
-    required this.ownerId,
-    required this.memberIds,
-    required this.roles,
-  });
+@freezed
+abstract class Pond with _$Pond {
+  const Pond._();
+  const factory Pond({
+    required String id,
+    @Default('') String name,
+    @Default('') String species,
+    @Default(0) int stockingQuantity,
+    @Default(0) int targetCulturePeriodDays,
+    @Default('') String ownerId,
+    @Default([]) List<String> memberIds,
+    @Default({}) Map<String, String> roles,
+    @TimestampConverter() DateTime? createdAt,
+  }) = _Pond;
 
-  factory Pond.fromJson(Map<String, dynamic> json, String id) {
-    return Pond(
-      id: id,
-      name: json['name'] as String? ?? '',
-      species: json['species'] as String? ?? '',
-      stockingQuantity: json['stockingQuantity'] as int? ?? 0,
-      targetCulturePeriodDays: json['targetCulturePeriodDays'] as int? ?? 0,
-      ownerId: json['ownerId'] as String? ?? '',
-      memberIds: List<String>.from(json['memberIds'] ?? []),
-      roles: Map<String, String>.from(json['roles'] ?? {}),
-    );
+  factory Pond.fromJson(Map<String, dynamic> json) => _$PondFromJson(json);
+  
+  // Custom factory to inject document ID from Firestore if needed
+  factory Pond.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data()!;
+    data['id'] = doc.id; // Ensure ID is parsed
+    return Pond.fromJson(data);
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'species': species,
-      'stockingQuantity': stockingQuantity,
-      'targetCulturePeriodDays': targetCulturePeriodDays,
-      'ownerId': ownerId,
-      'memberIds': memberIds,
-      'roles': roles,
-      // createdAt is handled by server timestamp at creation time
-    };
-  }
-
-  Pond copyWith({
-    String? id,
-    String? name,
-    String? species,
-    int? stockingQuantity,
-    int? targetCulturePeriodDays,
-    String? ownerId,
-    List<String>? memberIds,
-    Map<String, String>? roles,
-  }) {
-    return Pond(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      species: species ?? this.species,
-      stockingQuantity: stockingQuantity ?? this.stockingQuantity,
-      targetCulturePeriodDays: targetCulturePeriodDays ?? this.targetCulturePeriodDays,
-      ownerId: ownerId ?? this.ownerId,
-      memberIds: memberIds ?? this.memberIds,
-      roles: roles ?? this.roles,
-    );
-  }
-
-  @override
-  List<Object?> get props => [
-        id,
-        name,
-        species,
-        stockingQuantity,
-        targetCulturePeriodDays,
-        ownerId,
-        memberIds,
-        roles,
-      ];
 }
