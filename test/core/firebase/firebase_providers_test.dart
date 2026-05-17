@@ -10,7 +10,9 @@ void main() {
       final fakeFirestore = FakeFirebaseFirestore();
 
       final container = ProviderContainer(
-        overrides: [firebaseFirestoreProvider.overrideWithValue(fakeFirestore)],
+        overrides: [
+          firebaseFirestoreProvider.overrideWith((ref) => fakeFirestore)
+        ],
       );
 
       addTearDown(container.dispose);

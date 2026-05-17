@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'dart:developer' as developer;
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,11 +7,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/services/notification_service.dart';
 
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
+part 'auth_repository.g.dart';
+
+@riverpod
+AuthRepository authRepository(Ref ref) {
   final auth = ref.watch(firebaseAuthProvider);
   final notificationService = ref.watch(notificationServiceProvider);
   return AuthRepository(auth, notificationService);
-});
+}
 
 class AuthException implements Exception {
   final String message;
