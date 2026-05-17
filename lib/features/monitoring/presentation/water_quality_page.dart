@@ -64,13 +64,21 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
         widget.species,
       );
 
-      Map<String, dynamic>? alertPayload;
+      Map<String, dynamic>? alertMap;
       if (parameterItem != null) {
-        alertPayload = ref.read(safetyServiceProvider).getAlertPayload(
+        final alertPayload = ref.read(safetyServiceProvider).getAlertPayload(
           parameter: parameterItem,
           value: averageValue,
+          pondId: widget.pondId,
           pondName: widget.pondName,
         );
+        if (alertPayload != null) {
+          alertMap = {
+            'title': alertPayload.title,
+            'body': alertPayload.body,
+            'tier': alertPayload.tier.name,
+          };
+        }
       }
 
       await ref.read(monitoringRepositoryProvider).saveMeasurement(
@@ -84,7 +92,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
         replicateValues: replicateValues,
         selectedDay: widget.selectedDay,
         notes: notes,
-        alert: alertPayload,
+        alert: alertMap,
       );
 
       if (parameterItem != null) {

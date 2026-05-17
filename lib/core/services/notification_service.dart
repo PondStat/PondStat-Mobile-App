@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:pondstat/core/services/safety/app_notifier.dart';
 import 'package:pondstat/core/services/logger_service.dart';
 import 'package:pondstat/core/services/notification_types.dart';
 
@@ -29,7 +30,7 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 ///   Call [requestPermission] contextually (e.g., after onboarding, from settings).
 /// - **Type Safety**: All channel IDs, action IDs, and alert statuses use enums
 ///   from [notification_types.dart] — no raw strings.
-class NotificationService {
+class NotificationService implements AppNotifier {
   NotificationService();
 
   final FlutterLocalNotificationsPlugin _localNotifications =
@@ -125,18 +126,22 @@ class NotificationService {
 
   void _onNotificationTapped(NotificationResponse response) {
     final actionId = response.actionId;
+    final payload = response.payload;
 
     if (actionId == NotificationAction.acknowledge.id) {
       // TODO: Mark the alert as acknowledged in Firestore
       return;
     }
 
-    if (actionId == NotificationAction.viewChart.id) {
-      // TODO: Deep-link to the pond's trends/chart page
+    if (actionId == NotificationAction.viewChart.id || actionId == null) {
+      // Deep-link to the pond's trends/chart page using payload if available
+      if (payload != null && payload.isNotEmpty) {
+        LoggerService.info('Deep linking to: $payload');
+        // Example: router.go(payload);
+        // Note: Actual routing implementation depends on go_router setup
+      }
       return;
     }
-
-    // Default tap — app opens normally via the OS launcher.
   }
 
   // ─── Generic Local Notification ─────────────────────────────────────
@@ -180,19 +185,18 @@ class NotificationService {
   /// - Importance: **High** (heads-up, vibrates, LED)
   /// - Grouped by [pondId] so multiple alerts for the same pond collapse
   /// - Actions: "Acknowledge" and "View Chart" buttons
-  Future<void> showParameterAlert({
+  @override
+  Future<void> dispatchParameterAlert({
     required String pondId,
     required String pondName,
     required String parameter,
     required double value,
     required String unit,
-    required double minValue,
-    required double maxValue,
-    required AlertStatus status,
+    required String title,
+    required String body,
+    required String routePayload,
+    required bool isCritical,
   }) async {
-    final String title = '⚠️ $parameter Alert - $pondName';
-    final String body =
-        '$parameter is ${status.label}: $value $unit\nSafe range: $minValue - $maxValue $unit';
 
     // ── Notification Grouping: collapse by pondId ──────────────────────
     final String groupKey = 'pond_alerts_$pondId';
@@ -201,11 +205,11 @@ class NotificationService {
       NotificationChannel.parameterAlerts.id,
       NotificationChannel.parameterAlerts.name,
       channelDescription: NotificationChannel.parameterAlerts.description,
-      importance: Importance.high,
-      priority: Priority.high,
+      importance: isCritical ? Importance.high : Importance.defaultImportance,
+      priority: isCritical ? Priority.high : Priority.defaultPriority,
       ticker: 'ticker',
       color: const Color(0xFF0A74DA),
-      ledColor: const Color(0xFFFFA726),
+      ledColor: isCritical ? const Color(0xFFD32F2F) : const Color(0xFFFFA726),
       ledOnMs: 1000,
       ledOffMs: 500,
       // Grouping: all alerts for same pond collapse into one summary
@@ -245,6 +249,7 @@ class NotificationService {
       title,
       body,
       details,
+      payload: routePayload,
     );
 
     // Show the group summary (collapses individual notifications)
