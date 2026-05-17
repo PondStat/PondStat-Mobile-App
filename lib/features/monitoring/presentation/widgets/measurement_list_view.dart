@@ -233,7 +233,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
 
   Widget _buildEmptyState() {
     return EmptyStateCard(
-      icon: Icons.assignment_outlined,
+      image: const Icon(Icons.assignment_outlined),
       title: "No ${widget.type} records",
       description: "Tap 'Record Data' to log a measurement.",
     );

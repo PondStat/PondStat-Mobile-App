@@ -432,14 +432,14 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
   }
 
   Widget _buildEmptyState() {
-    return const SliverFillRemaining(
+    return SliverFillRemaining(
       hasScrollBody: false,
       child: Padding(
         padding: EdgeInsets.all(24.0),
         child: EmptyStateCard(
-          icon: Icons.receipt_long_rounded,
-          title: "No expenses recorded yet",
-          description: "Expenses added for this pond will appear here.",
+          image: const Icon(Icons.receipt_long_rounded),
+          title: "No group expenses records",
+          description: "Tap 'Add Expenses' to log an expense.",
         ),
       ),
     );

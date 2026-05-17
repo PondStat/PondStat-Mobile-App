@@ -124,10 +124,10 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
           }
 
           if (isCompletelyEmpty && !widget.canEdit) {
-            return const Padding(
-              padding: EdgeInsets.all(24.0),
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
               child: EmptyStateCard(
-                icon: Icons.event_busy_rounded,
+                image: const Icon(Icons.event_busy_rounded),
                 title: 'No Schedules Assigned',
                 description:
                     'There are currently no shifts scheduled for this pond.',

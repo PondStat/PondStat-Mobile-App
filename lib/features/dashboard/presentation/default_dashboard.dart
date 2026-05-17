@@ -847,7 +847,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     }
 
     return EmptyStateCard(
-      icon: Icons.cloud_off_rounded,
+      image: const Icon(Icons.cloud_off_rounded),
       title: "Unable to Load",
       description: friendlyMessage,
       action: SecondaryButton(

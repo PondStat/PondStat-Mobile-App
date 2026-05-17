@@ -90,10 +90,10 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                     ),
                     child: Center(
                       child: EmptyStateCard(
-                        icon: Icons.query_stats_rounded,
-                        title: "No Growth Records Yet",
+                        image: const Icon(Icons.query_stats_rounded),
+                        title: "No growth records",
                         description:
-                            "Start recording weight and fish count weekly to see performance metrics here.",
+                            "Tap 'Record Sampling' to log a measurement.",
                       ),
                     ),
                   ),

@@ -163,12 +163,15 @@ class _EditHistorySheetState extends ConsumerState<EditHistorySheet> {
                 });
 
                 if (docs.isEmpty) {
-                  return const Center(
-                    child: EmptyStateCard(
-                      icon: Icons.history_rounded,
-                      title: "No history yet",
-                      description:
-                          "Changes made to the sampling metrics will appear here.",
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: EmptyStateCard(
+                        image: const Icon(Icons.history_rounded),
+                        title: "No history yet",
+                        description:
+                            "Changes made to the sampling metrics will appear here.",
+                      ),
                     ),
                   );
                 }

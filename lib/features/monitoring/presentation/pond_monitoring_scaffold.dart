@@ -162,7 +162,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
             padding: const EdgeInsets.all(24.0),
             child: Center(
               child: EmptyStateCard(
-                icon: Icons.calendar_month_rounded,
+                image: const Icon(Icons.calendar_month_rounded),
                 title: "No Day Selected",
                 description:
                     "Please return to the Overview tab and select a specific day on the calendar to view water quality parameters.",

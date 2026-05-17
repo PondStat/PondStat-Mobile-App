@@ -110,10 +110,10 @@ class _TrendsTabState extends ConsumerState<TrendsTab> {
                 final customParamsDocs = customParamsSnapshot.data?.docs ?? [];
 
                 if (docs.isEmpty && growthMetrics.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(24.0),
+                  return Padding(
+                    padding: const EdgeInsets.all(24.0),
                     child: EmptyStateCard(
-                      icon: Icons.analytics_outlined,
+                      image: const Icon(Icons.analytics_outlined),
                       title: 'No Data Found',
                       description:
                           'No measurements recorded for the selected date range.',

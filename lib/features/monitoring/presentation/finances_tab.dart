@@ -137,7 +137,7 @@ class _FinancesTabState extends State<FinancesTab>
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: EmptyStateCard(
-          icon: Icons.construction_rounded,
+          image: const Icon(Icons.construction_rounded),
           title: "$title Coming Soon",
           description: "This feature is currently under development.",
         ),

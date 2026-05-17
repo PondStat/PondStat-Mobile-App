@@ -383,9 +383,9 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
   }
 
   Widget _buildEmptyOverview() {
-    return const Center(
+    return Center(
       child: EmptyStateCard(
-        icon: Icons.event_busy_rounded,
+        image: const Icon(Icons.event_busy_rounded),
         title: "No Schedules Set",
         description: "Use the Assign tab to create schedules.",
       ),

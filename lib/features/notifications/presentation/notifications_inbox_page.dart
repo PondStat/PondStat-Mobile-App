@@ -164,9 +164,9 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
                     height: MediaQuery.of(context).size.height * 0.7,
                     child: Center(
                       child: EmptyStateCard(
-                        icon: _showUnreadOnly
+                        image: Icon(_showUnreadOnly
                             ? Icons.mark_email_read_rounded
-                            : Icons.notifications_none_rounded,
+                            : Icons.notifications_none_rounded),
                         title: _showUnreadOnly
                             ? 'No unread notifications'
                             : 'No notifications yet',
