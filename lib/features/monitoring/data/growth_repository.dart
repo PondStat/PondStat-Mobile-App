@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+
+part 'growth_repository.g.dart';
 
 class GrowthMetrics {
   final DateTime date;
@@ -44,11 +46,31 @@ class GrowthMetrics {
   });
 }
 
+@riverpod
+GrowthRepository growthRepository(Ref ref) {
+  final baseRef = ref.watch(appBaseRefProvider);
+  return GrowthRepository(baseRef);
+}
+
 class GrowthRepository {
-  static Future<List<GrowthMetrics>> calculateGrowthMetrics(
+  final DocumentReference<Map<String, dynamic>> _baseRef;
+
+  GrowthRepository(this._baseRef);
+
+  // ─── Collection References ───────────────────────────────────────────
+  CollectionReference<Map<String, dynamic>> get pondsCollection =>
+      _baseRef.collection('ponds');
+
+  CollectionReference<Map<String, dynamic>> get measurementsCollection =>
+      _baseRef.collection('measurements');
+
+  CollectionReference<Map<String, dynamic>> get measurementHistoryCollection =>
+      _baseRef.collection('measurement_history');
+
+  Future<List<GrowthMetrics>> calculateGrowthMetrics(
     String pondId,
   ) async {
-    final pondDoc = await FirestoreHelper.pondsCollection.doc(pondId).get();
+    final pondDoc = await pondsCollection.doc(pondId).get();
     if (!pondDoc.exists) return [];
 
     final pondData = pondDoc.data() ?? {};
@@ -82,9 +104,9 @@ class GrowthRepository {
     return _calculateWeeklyMetrics(weeklyBuckets, fishCount);
   }
 
-  static Future<List<DocumentSnapshot<Map<String, dynamic>>>>
+  Future<List<DocumentSnapshot<Map<String, dynamic>>>>
   _fetchRelevantMeasurements(String pondId, List<String> relevantParams) async {
-    final measurementsSnapshot = await FirestoreHelper.measurementsCollection
+    final measurementsSnapshot = await measurementsCollection
         .where('pondId', isEqualTo: pondId)
         .get();
 
@@ -99,7 +121,7 @@ class GrowthRepository {
       });
   }
 
-  static Map<int, Map<String, dynamic>> _bucketizeByWeek(
+  Map<int, Map<String, dynamic>> _bucketizeByWeek(
     List<DocumentSnapshot<Map<String, dynamic>>> allDocs,
     DateTime pondStartDate,
   ) {
@@ -162,7 +184,7 @@ class GrowthRepository {
     return weeklyBuckets;
   }
 
-  static List<GrowthMetrics> _calculateWeeklyMetrics(
+  List<GrowthMetrics> _calculateWeeklyMetrics(
     Map<int, Map<String, dynamic>> weeklyBuckets,
     int fishCount,
   ) {
@@ -250,7 +272,7 @@ class GrowthRepository {
     return double.parse(value.toStringAsFixed(places));
   }
 
-  static Future<void> deleteGrowthSampling(
+  Future<void> deleteGrowthSampling(
     GrowthMetrics m,
     User? user,
     String pondId,
@@ -265,7 +287,7 @@ class GrowthRepository {
 
     // Fetch all docs in parallel
     final snapshots = await Future.wait(
-      docIds.map((id) => FirestoreHelper.measurementsCollection.doc(id).get()),
+      docIds.map((id) => measurementsCollection.doc(id).get()),
     );
 
     final batch = FirebaseFirestore.instance.batch();
@@ -276,7 +298,7 @@ class GrowthRepository {
       if (!docSnap.exists) continue;
 
       final data = docSnap.data() as Map<String, dynamic>;
-      final historyRef = FirestoreHelper.measurementHistoryCollection.doc();
+      final historyRef = measurementHistoryCollection.doc();
 
       batch.set(historyRef, {
         'pondId': pondId,
@@ -295,7 +317,3 @@ class GrowthRepository {
     await batch.commit();
   }
 }
-
-final growthRepositoryProvider = Provider<GrowthRepository>((ref) {
-  return GrowthRepository();
-});

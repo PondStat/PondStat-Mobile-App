@@ -109,11 +109,12 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     try {
       final updatedPond = Pond.fromJson({
         ...widget.initialData,
+        'id': widget.pondId,
         'name': pondName,
         'species': species,
         'stockingQuantity': quantity,
         'targetCulturePeriodDays': culturePeriod,
-      }, widget.pondId);
+      });
 
       await ref.read(pondRepositoryProvider).updatePond(updatedPond);
 

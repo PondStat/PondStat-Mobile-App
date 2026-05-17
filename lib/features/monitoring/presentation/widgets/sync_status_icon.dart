@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
-class SyncStatusIcon extends StatelessWidget {
+class SyncStatusIcon extends ConsumerWidget {
   const SyncStatusIcon({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -15,7 +16,7 @@ class SyncStatusIcon extends StatelessWidget {
     final greenIcon = isDark ? Colors.green.shade300 : Colors.green.shade400;
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirestoreHelper.measurementsCollection
+      stream: ref.watch(monitoringRepositoryProvider).measurementsCollection
           .orderBy('timestamp', descending: true)
           .limit(1)
           .snapshots(includeMetadataChanges: true),

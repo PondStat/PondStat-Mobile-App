@@ -55,4 +55,4 @@ final class MonitoringRepositoryProvider
 }
 
 String _$monitoringRepositoryHash() =>
-    r'4d8610d10c5442c92c9bd74dec8a489c4f77d74e';
+    r'083c6ce9321373be73f86de7152bba058d69dfc3';

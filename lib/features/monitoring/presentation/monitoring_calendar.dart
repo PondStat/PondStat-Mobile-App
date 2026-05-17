@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
-class MonitoringCalendar extends StatelessWidget {
+class MonitoringCalendar extends ConsumerWidget {
   final String pondId;
   final DateTime focusedDay;
   final DateTime? selectedDay;
@@ -61,7 +62,7 @@ class MonitoringCalendar extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final primaryColor = colorScheme.primary;
     final Color textDark = colorScheme.onSurface;
@@ -79,7 +80,7 @@ class MonitoringCalendar extends StatelessWidget {
     );
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirestoreHelper.measurementsCollection
+      stream: ref.watch(monitoringRepositoryProvider).measurementsCollection
           .where('pondId', isEqualTo: pondId)
           .where(
             'timestamp',

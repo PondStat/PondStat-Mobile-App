@@ -4,16 +4,16 @@ import 'dart:developer' as developer;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
 import 'package:pondstat/core/services/notification_service.dart';
 
 part 'auth_repository.g.dart';
 
 @riverpod
 AuthRepository authRepository(Ref ref) {
+  final baseRef = ref.watch(appBaseRefProvider);
   final auth = ref.watch(firebaseAuthProvider);
   final notificationService = ref.watch(notificationServiceProvider);
-  return AuthRepository(auth, notificationService);
+  return AuthRepository(baseRef, auth, notificationService);
 }
 
 class AuthException implements Exception {
@@ -24,15 +24,20 @@ class AuthException implements Exception {
 }
 
 class AuthRepository {
+  final DocumentReference<Map<String, dynamic>> _baseRef;
   final FirebaseAuth _auth;
   final NotificationService _notificationService;
 
-  AuthRepository(this._auth, this._notificationService);
+  AuthRepository(this._baseRef, this._auth, this._notificationService);
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId:
         '624574025589-5390binsi9sh8plk6ii0h929dtq63dvu.apps.googleusercontent.com',
   );
+
+  // ─── Collection References ───────────────────────────────────────────
+  CollectionReference<Map<String, dynamic>> get usersCollection =>
+      _baseRef.collection('users');
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -64,10 +69,10 @@ class AuthRepository {
     final user = userCredential.user;
 
     if (user != null) {
-      final userDoc = await FirestoreHelper.usersCollection.doc(user.uid).get();
+      final userDoc = await usersCollection.doc(user.uid).get();
 
       if (!userDoc.exists) {
-        await FirestoreHelper.usersCollection.doc(user.uid).set({
+        await usersCollection.doc(user.uid).set({
           'fullName': user.displayName ?? 'New User',
           'email': user.email,
           'role': 'member',
@@ -90,7 +95,7 @@ class AuthRepository {
     final token = await _notificationService.getDeviceToken();
     if (token != null) {
       try {
-        await FirestoreHelper.usersCollection.doc(user.uid).set({
+        await usersCollection.doc(user.uid).set({
           'fcmToken': token,
           'lastTokenUpdate': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));

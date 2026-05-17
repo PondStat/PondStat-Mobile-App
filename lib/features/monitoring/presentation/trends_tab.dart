@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/features/monitoring/data/trends_repository.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
@@ -9,7 +10,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/chemical_param
 import 'package:pondstat/features/monitoring/presentation/widgets/biological_parameters_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/fish_gains_chart.dart';
 
-class TrendsTab extends StatefulWidget {
+class TrendsTab extends ConsumerStatefulWidget {
   final String pondId;
   final String species;
   final String userRole;
@@ -26,10 +27,10 @@ class TrendsTab extends StatefulWidget {
   });
 
   @override
-  State<TrendsTab> createState() => _TrendsTabState();
+  ConsumerState<TrendsTab> createState() => _TrendsTabState();
 }
 
-class _TrendsTabState extends State<TrendsTab> {
+class _TrendsTabState extends ConsumerState<TrendsTab> {
   late Stream<QuerySnapshot<Map<String, dynamic>>>
   _historicalMeasurementsStream;
   late Stream<QuerySnapshot<Map<String, dynamic>>> _customParamsStream;
@@ -52,17 +53,18 @@ class _TrendsTabState extends State<TrendsTab> {
   }
 
   void _initData() {
-    _historicalMeasurementsStream = FirestoreHelper.getMeasurementsByDateRange(
+    final monitoringRepo = ref.read(monitoringRepositoryProvider);
+    _historicalMeasurementsStream = monitoringRepo.getMeasurementsByDateRange(
       widget.pondId,
       widget.startDate,
       widget.endDate,
     ).snapshots();
 
-    _customParamsStream = FirestoreHelper.customParametersCollection
+    _customParamsStream = monitoringRepo.customParametersCollection
         .snapshots();
 
     _growthMetricsFuture =
-        GrowthRepository.calculateGrowthMetrics(widget.pondId).then((metrics) {
+        ref.read(growthRepositoryProvider).calculateGrowthMetrics(widget.pondId).then((metrics) {
           final endOfDay = DateTime(
             widget.endDate.year,
             widget.endDate.month,

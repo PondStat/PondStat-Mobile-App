@@ -11,7 +11,8 @@ class MonitoringNotifier extends Notifier<MonitoringState> {
   Future<void> fetchGrowthMetrics(String pondId) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final metrics = await GrowthRepository.calculateGrowthMetrics(pondId);
+      final repo = ref.read(growthRepositoryProvider);
+      final metrics = await repo.calculateGrowthMetrics(pondId);
       state = state.copyWith(isLoading: false, metrics: metrics);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

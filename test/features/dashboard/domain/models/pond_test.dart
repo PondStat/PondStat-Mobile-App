@@ -14,7 +14,7 @@ void main() {
         'roles': {'user1': 'owner', 'user2': 'viewer'},
       };
 
-      final pond = Pond.fromJson(json, 'p1');
+      final pond = Pond.fromJson({...json, 'id': 'p1'});
 
       expect(pond.id, 'p1');
       expect(pond.name, 'Pond 1');
@@ -29,7 +29,7 @@ void main() {
     test('fromJson handles missing optional keys with defaults', () {
       final Map<String, dynamic> json = {};
 
-      final pond = Pond.fromJson(json, 'p2');
+      final pond = Pond.fromJson({...json, 'id': 'p2'});
 
       expect(pond.id, 'p2');
       expect(pond.name, '');
@@ -62,7 +62,7 @@ void main() {
       expect(json['ownerId'], 'user1');
       expect(json['memberIds'], ['user1']);
       expect(json['roles'], {'user1': 'owner'});
-      expect(json.containsKey('id'), isFalse);
+      expect(json.containsKey('id'), isTrue);
     });
 
     test('copyWith updates specified fields', () {

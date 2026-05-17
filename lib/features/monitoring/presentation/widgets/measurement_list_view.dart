@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/measurement_card.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 
-class MeasurementListView extends StatefulWidget {
+class MeasurementListView extends ConsumerStatefulWidget {
   final String pondId;
   final String type;
   final String dateKey;
@@ -25,10 +26,10 @@ class MeasurementListView extends StatefulWidget {
   });
 
   @override
-  State<MeasurementListView> createState() => _MeasurementListViewState();
+  ConsumerState<MeasurementListView> createState() => _MeasurementListViewState();
 }
 
-class _MeasurementListViewState extends State<MeasurementListView> {
+class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
   String? _selectedFilter;
   late Stream<QuerySnapshot> _measurementsStream;
 
@@ -50,7 +51,7 @@ class _MeasurementListViewState extends State<MeasurementListView> {
   }
 
   void _initStream() {
-    _measurementsStream = FirestoreHelper.measurementsCollection
+    _measurementsStream = ref.read(monitoringRepositoryProvider).measurementsCollection
         .where('pondId', isEqualTo: widget.pondId)
         .where('type', isEqualTo: widget.type)
         .where('dateKey', isEqualTo: widget.dateKey)

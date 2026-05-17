@@ -1,9 +1,10 @@
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
+
+part 'notifications_repository.g.dart';
 
 class NotificationModel {
   final String id;
@@ -38,24 +39,31 @@ class NotificationModel {
   }
 }
 
-final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) {
+@riverpod
+NotificationsRepository notificationsRepository(Ref ref) {
+  final baseRef = ref.watch(appBaseRefProvider);
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
-  return NotificationsRepository(firestore, auth);
-});
+  return NotificationsRepository(baseRef, firestore, auth);
+}
 
 class NotificationsRepository {
+  final DocumentReference<Map<String, dynamic>> _baseRef;
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
-  NotificationsRepository(this._firestore, this._auth);
+  NotificationsRepository(this._baseRef, this._firestore, this._auth);
 
   User? get currentUser => _auth.currentUser;
+
+  // ─── Collection References ───────────────────────────────────────────
+  CollectionReference<Map<String, dynamic>> get usersCollection =>
+      _baseRef.collection('users');
 
   CollectionReference<Map<String, dynamic>>? get _notificationsCollection {
     final user = currentUser;
     if (user == null) return null;
-    return FirestoreHelper.usersCollection
+    return usersCollection
         .doc(user.uid)
         .collection('notifications');
   }

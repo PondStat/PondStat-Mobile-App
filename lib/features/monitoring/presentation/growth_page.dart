@@ -9,7 +9,7 @@ import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.da
 import 'package:pondstat/features/monitoring/presentation/edit_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+
 
 class GrowthPage extends ConsumerStatefulWidget {
   final String pondId;
@@ -54,7 +54,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
               try {
                 final now = DateTime.now();
                 final sixDaysAgo = now.subtract(const Duration(days: 6));
-                final snapshot = await FirestoreHelper.measurementsCollection
+                final snapshot = await ref.read(monitoringRepositoryProvider).measurementsCollection
                     .where('pondId', isEqualTo: widget.pondId)
                     .where('parameter', isEqualTo: label)
                     .where(
@@ -170,7 +170,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                             final user = FirebaseAuth.instance.currentUser;
 
                             try {
-                              await GrowthRepository.deleteGrowthSampling(
+                              await ref.read(growthRepositoryProvider).deleteGrowthSampling(
                                 m,
                                 user,
                                 widget.pondId,

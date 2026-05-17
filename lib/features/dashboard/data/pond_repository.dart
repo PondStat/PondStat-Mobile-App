@@ -21,8 +21,11 @@ class PondRepository {
     return _baseRef
         .collection('ponds')
         .withConverter<Pond>(
-          fromFirestore: (snapshot, _) =>
-              Pond.fromJson(snapshot.data()!, snapshot.id),
+          fromFirestore: (snapshot, _) {
+              final data = snapshot.data()!;
+              data['id'] = snapshot.id;
+              return Pond.fromJson(data);
+            },
           toFirestore: (pond, _) => pond.toJson(),
         );
   }

@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/utils/helpers.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
-class MeasurementCard extends StatelessWidget {
+class MeasurementCard extends ConsumerWidget {
   final String time;
   final String title;
   final String content;
@@ -25,7 +26,7 @@ class MeasurementCard extends StatelessWidget {
     this.notes,
   });
 
-  void _confirmGroupDelete(BuildContext context) {
+  void _confirmGroupDelete(BuildContext context, MonitoringRepository monitoringRepo) {
     final Color textDark = Theme.of(context).colorScheme.onSurface;
     final Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
 
@@ -115,7 +116,7 @@ class MeasurementCard extends StatelessWidget {
 
                           for (var doc in groupDocs) {
                             final data = doc.data() as Map<String, dynamic>;
-                            final historyRef = FirestoreHelper
+                            final historyRef = monitoringRepo
                                 .measurementHistoryCollection
                                 .doc();
 
@@ -186,7 +187,8 @@ class MeasurementCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final monitoringRepo = ref.watch(monitoringRepositoryProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final primaryColor = colorScheme.primary;
     final Color textDark = colorScheme.onSurface;
@@ -284,7 +286,7 @@ class MeasurementCard extends StatelessWidget {
                     onSelected: (value) {
                       HapticFeedback.selectionClick();
                       if (value == 'edit') onEdit();
-                      if (value == 'delete') _confirmGroupDelete(context);
+                      if (value == 'delete') _confirmGroupDelete(context, monitoringRepo);
                     },
                     itemBuilder: (context) => [
                       PopupMenuItem(

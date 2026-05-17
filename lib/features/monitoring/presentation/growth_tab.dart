@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 
-class GrowthTab extends StatefulWidget {
+class GrowthTab extends ConsumerStatefulWidget {
   final String pondId;
   final bool canEdit;
   final void Function(GrowthMetrics) onEdit;
@@ -18,10 +19,10 @@ class GrowthTab extends StatefulWidget {
   });
 
   @override
-  State<GrowthTab> createState() => _GrowthTabState();
+  ConsumerState<GrowthTab> createState() => _GrowthTabState();
 }
 
-class _GrowthTabState extends State<GrowthTab> {
+class _GrowthTabState extends ConsumerState<GrowthTab> {
   final Color primaryIndigo = Colors.indigo;
 
   late Future<List<GrowthMetrics>> _growthMetricsFuture;
@@ -29,7 +30,7 @@ class _GrowthTabState extends State<GrowthTab> {
   @override
   void initState() {
     super.initState();
-    _growthMetricsFuture = GrowthRepository.calculateGrowthMetrics(
+    _growthMetricsFuture = ref.read(growthRepositoryProvider).calculateGrowthMetrics(
       widget.pondId,
     );
   }
@@ -38,7 +39,7 @@ class _GrowthTabState extends State<GrowthTab> {
   void didUpdateWidget(covariant GrowthTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pondId != widget.pondId) {
-      _growthMetricsFuture = GrowthRepository.calculateGrowthMetrics(
+      _growthMetricsFuture = ref.read(growthRepositoryProvider).calculateGrowthMetrics(
         widget.pondId,
       );
     }
@@ -46,7 +47,7 @@ class _GrowthTabState extends State<GrowthTab> {
 
   Future<void> _refreshData() async {
     setState(() {
-      _growthMetricsFuture = GrowthRepository.calculateGrowthMetrics(
+      _growthMetricsFuture = ref.read(growthRepositoryProvider).calculateGrowthMetrics(
         widget.pondId,
       );
     });

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pondstat/core/firebase/firestore_helper.dart';
+import 'package:pondstat/core/config/env.dart';
 
 import 'package:pondstat/core/services/logger_service.dart';
 
@@ -40,7 +40,14 @@ class NotificationService {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         try {
-          await FirestoreHelper.usersCollection.doc(user.uid).set({
+          await FirebaseFirestore.instance
+              .collection('artifacts')
+              .doc(Env.appId)
+              .collection('public')
+              .doc('data')
+              .collection('users')
+              .doc(user.uid)
+              .set({
             'fcmToken': newToken,
             'lastTokenUpdate': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
