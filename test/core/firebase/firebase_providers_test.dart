@@ -1,7 +1,7 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pondstat/core/config/env_config.dart';
+import 'package:pondstat/core/config/app_config_provider.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 
 void main() {
@@ -16,8 +16,9 @@ void main() {
       addTearDown(container.dispose);
 
       final ref = container.read(appBaseRefProvider);
+      final config = container.read(appConfigProvider);
 
-      expect(ref.path, 'artifacts/${EnvConfig.appId}/public/data');
+      expect(ref.path, 'artifacts/${config.appId}/public/data');
     });
   });
 }
