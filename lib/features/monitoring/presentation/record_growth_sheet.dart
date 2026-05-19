@@ -126,7 +126,7 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
   double? _calculateABW() {
     final w = double.tryParse(_abwWeightCtrl.text);
     final c = double.tryParse(_abwCountCtrl.text);
-    if (w != null && c != null && c > 0) return w / c;
+    if (w != null && c != null && w > 0 && c > 0) return w / c;
     return null;
   }
 
@@ -134,7 +134,7 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
     final cur = double.tryParse(_adgCurrentCtrl.text);
     final prev = double.tryParse(_adgPreviousCtrl.text);
     final days = double.tryParse(_adgDaysCtrl.text);
-    if (cur != null && prev != null && days != null && days > 0) {
+    if (cur != null && prev != null && days != null && cur > 0 && prev > 0 && days > 0) {
       return (cur - prev) / days;
     }
     return null;
@@ -145,7 +145,16 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
     final surv = double.tryParse(_dfrSurvivalCtrl.text);
     final abw = double.tryParse(_dfrCurrentAbwCtrl.text);
     final feedRate = double.tryParse(_dfrFeedingRateCtrl.text);
-    if (stocked != null && surv != null && abw != null && feedRate != null) {
+    if (stocked != null &&
+        surv != null &&
+        abw != null &&
+        feedRate != null &&
+        stocked > 0 &&
+        surv >= 0 &&
+        surv <= 100 &&
+        abw > 0 &&
+        feedRate >= 0 &&
+        feedRate <= 100) {
       return (stocked * (surv / 100.0) * abw * (feedRate / 100.0)) / 1000.0;
     }
     return null;
@@ -154,7 +163,7 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
   double? _calculateFCR() {
     final feed = double.tryParse(_fcrFeedCtrl.text);
     final gained = double.tryParse(_fcrWeightGainedCtrl.text);
-    if (feed != null && gained != null && gained > 0) {
+    if (feed != null && gained != null && feed > 0 && gained > 0) {
       return feed / gained;
     }
     return null;

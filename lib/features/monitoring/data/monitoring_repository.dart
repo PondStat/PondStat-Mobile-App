@@ -181,6 +181,37 @@ class MonitoringRepository {
     await batch.commit();
   }
 
+  /// Deletes a list/group of measurements from Firestore in a batch and logs to history.
+  Future<void> deleteMeasurementsGroup({
+    required String pondId,
+    required List<DocumentSnapshot> docs,
+  }) async {
+    if (currentUser == null) throw Exception('User not authenticated');
+
+    final batch = _firestore.batch();
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+
+      batch.delete(doc.reference);
+
+      _logHistory(
+        batch: batch,
+        pondId: pondId,
+        measurementId: doc.id,
+        parameter: data['parameter'],
+        action: 'delete',
+        before: {
+          'value': data['value'],
+          'pointValues': data['pointValues'] ?? {},
+        },
+        after: null,
+      );
+    }
+
+    await batch.commit();
+  }
+
   /// Updates multiple measurements in a single batch and logs them to history.
   Future<void> updateMeasurements({
     required String pondId,

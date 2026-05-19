@@ -15,9 +15,9 @@ class AppTheme {
     brightness: Brightness.light,
     surface: Colors.white,
     onSurface: AppColors.slate800,
-    outline: AppColors.slate400,
+    outline: AppColors.slate500,
     surfaceContainerHighest: AppColors.slate100,
-    error: Colors.redAccent,
+    error: const Color(0xFFBA1A1A),
   );
 
   static final ColorScheme _darkColorScheme = ColorScheme.fromSeed(

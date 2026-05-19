@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -111,35 +110,15 @@ class MeasurementCard extends ConsumerWidget {
                       : () async {
                           setState(() => isDeleting = true);
 
-                          final user = FirebaseAuth.instance.currentUser;
-                          final batch = FirebaseFirestore.instance.batch();
-
-                          for (var doc in groupDocs) {
-                            final data = doc.data() as Map<String, dynamic>;
-                            final historyRef = monitoringRepo
-                                .measurementHistoryCollection
-                                .doc();
-
-                            batch.set(historyRef, {
-                              'pondId': data['pondId'],
-                              'measurementId': doc.id,
-                              'parameter': data['parameter'],
-                              'action': 'delete',
-                              'editedAt': FieldValue.serverTimestamp(),
-                              'editedBy': user?.uid,
-                              'editorName': user?.displayName ?? 'Unknown',
-                              'before': {
-                                'value': data['value'],
-                                'pointValues': data['pointValues'] ?? {},
-                              },
-                              'after': null,
-                            });
-
-                            batch.delete(doc.reference);
-                          }
-
                           try {
-                            await batch.commit();
+                            final firstDocData = groupDocs.first.data() as Map<String, dynamic>;
+                            final pondId = firstDocData['pondId'] as String;
+
+                            await monitoringRepo.deleteMeasurementsGroup(
+                              pondId: pondId,
+                              docs: groupDocs,
+                            );
+
                             HapticFeedback.heavyImpact();
 
                             if (context.mounted) {

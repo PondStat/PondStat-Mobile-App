@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pondstat/core/services/safety/app_notifier.dart';
 import 'package:pondstat/core/services/logger_service.dart';
+import 'package:pondstat/core/services/logging/app_logger.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/core/services/notification_types.dart';
 
 @pragma('vm:entry-point')
@@ -18,7 +20,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService();
+  return NotificationService(ref.watch(appLoggerProvider));
 });
 
 /// Notification service responsible for local + FCM push notification display.
@@ -31,7 +33,9 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 /// - **Type Safety**: All channel IDs, action IDs, and alert statuses use enums
 ///   from [notification_types.dart] — no raw strings.
 class NotificationService implements AppNotifier {
-  NotificationService();
+  final AppLogger _logger;
+
+  NotificationService(this._logger);
 
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
@@ -116,8 +120,7 @@ class NotificationService implements AppNotifier {
       if (!hasPermission) return null;
       return await _fcm.getToken();
     } catch (e, stackTrace) {
-      // ignore: deprecated_member_use
-      LoggerService.error('Error getting device token', e, stackTrace);
+      _logger.error('Error getting device token', error: e, stackTrace: stackTrace, tag: 'FCM');
       return null;
     }
   }
@@ -136,7 +139,7 @@ class NotificationService implements AppNotifier {
     if (actionId == NotificationAction.viewChart.id || actionId == null) {
       // Deep-link to the pond's trends/chart page using payload if available
       if (payload != null && payload.isNotEmpty) {
-        LoggerService.info('Deep linking to: $payload');
+        _logger.info('Deep linking to: $payload', tag: 'NOTIFICATION');
         // Example: router.go(payload);
         // Note: Actual routing implementation depends on go_router setup
       }

@@ -158,7 +158,12 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+            child: Text(
+              "Cancel",
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -199,6 +204,36 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
 
   Future<void> _handleBatchUpdateWithReplicates() async {
     if (!_isDirty) return;
+
+    // Validate that all entered values are valid numbers (typo safety)
+    for (var doc in widget.docs) {
+      final controllersMap = groupControllers[doc.id]!;
+      final data = doc.data() as Map<String, dynamic>;
+      final paramName = data['parameter'] ?? 'Parameter';
+
+      for (var p in points) {
+        for (var r in replicates) {
+          final key = '$p-$r';
+          final textVal = controllersMap[key]?.text.trim() ?? '';
+          if (textVal.isNotEmpty) {
+            final val = double.tryParse(textVal);
+            if (val == null) {
+              final paramItem = MonitoringParameters.getParameterByLabel(
+                paramName,
+                widget.species,
+              );
+              final isSinglePoint = paramItem?.isSinglePoint ?? false;
+              final fieldDesc = isSinglePoint ? "Value" : "Point $p, Replicate $r";
+              SnackbarHelper.showError(
+                context,
+                "Invalid value for $paramName ($fieldDesc): '$textVal' is not a valid number",
+              );
+              return;
+            }
+          }
+        }
+      }
+    }
 
     setState(() => _isSaving = true);
 

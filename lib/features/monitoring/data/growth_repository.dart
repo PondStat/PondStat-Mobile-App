@@ -290,7 +290,7 @@ class GrowthRepository {
       docIds.map((id) => measurementsCollection.doc(id).get()),
     );
 
-    final batch = FirebaseFirestore.instance.batch();
+    final batch = _baseRef.firestore.batch();
 
     for (var i = 0; i < docIds.length; i++) {
       final id = docIds[i];
@@ -314,6 +314,76 @@ class GrowthRepository {
 
       batch.delete(docSnap.reference);
     }
+    await batch.commit();
+  }
+
+  /// Updates growth sampling metrics in a single batch and logs them to history.
+  Future<void> updateGrowthSampling({
+    required String pondId,
+    required User? user,
+    required double? newAbw,
+    required double? newAdg,
+    required double? newDfr,
+    required double? newFcr,
+    required GrowthMetrics metrics,
+  }) async {
+    final docIds = [
+      if (newAbw != null && newAbw != metrics.abw) metrics.abwDocId,
+      if (newAdg != null && newAdg != metrics.adg) metrics.adgDocId,
+      if (newDfr != null && newDfr != metrics.dfr) metrics.dfrDocId,
+      if (newFcr != null && newFcr != metrics.fcr) metrics.fcrDocId,
+    ].whereType<String>().toList();
+
+    if (docIds.isEmpty) return;
+
+    // Fetch all docs in parallel
+    final snapshots = await Future.wait(
+      docIds.map((id) => measurementsCollection.doc(id).get()),
+    );
+
+    final batch = _baseRef.firestore.batch();
+
+    for (var i = 0; i < docIds.length; i++) {
+      final id = docIds[i];
+      final docSnap = snapshots[i];
+      if (!docSnap.exists) continue;
+
+      final data = docSnap.data() as Map<String, dynamic>;
+
+      double? newValue;
+      if (id == metrics.abwDocId) {
+        newValue = newAbw;
+      } else if (id == metrics.adgDocId) {
+        newValue = newAdg;
+      } else if (id == metrics.dfrDocId) {
+        newValue = newDfr;
+      } else if (id == metrics.fcrDocId) {
+        newValue = newFcr;
+      }
+
+      if (newValue == null) continue;
+
+      batch.update(docSnap.reference, {
+        'value': newValue,
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': user?.uid,
+        'editorName': user?.displayName,
+      });
+
+      final historyRef = measurementHistoryCollection.doc();
+      batch.set(historyRef, {
+        'pondId': pondId,
+        'measurementId': id,
+        'parameter': data['parameter'],
+        'action': 'update',
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': user?.uid,
+        'editorName': user?.displayName ?? 'Unknown',
+        'before': {'value': data['value']},
+        'after': {'value': newValue},
+      });
+    }
+
     await batch.commit();
   }
 }

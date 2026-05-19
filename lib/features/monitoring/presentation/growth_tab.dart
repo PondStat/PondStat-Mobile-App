@@ -94,6 +94,7 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                         title: "No growth records",
                         description:
                             "Tap 'Record Sampling' to log a measurement.",
+                        scrollable: false,
                       ),
                     ),
                   ),

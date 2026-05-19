@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/utils/string_extensions.dart';
-import 'package:pondstat/core/services/logger_service.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
@@ -64,7 +64,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
         return _userCache[userId]!;
       }
     } catch (e, stackTrace) {
-      LoggerService.error("Error fetching user", e, stackTrace);
+      ref.read(appLoggerProvider).error("Error fetching user", error: e, stackTrace: stackTrace, tag: 'COLLABORATORS');
     }
     return {'fullName': 'Unknown User', 'email': 'No email found'};
   }
@@ -189,9 +189,12 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               "Cancel",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           ElevatedButton(

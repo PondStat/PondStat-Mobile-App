@@ -223,6 +223,24 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
       return;
     }
 
+    // Validate that all entered values are valid numbers (typo safety)
+    for (var p in points) {
+      for (var r in replicates) {
+        final key = '$p-$r';
+        final textVal = valueControllers[key]!.text.trim();
+        if (textVal.isNotEmpty) {
+          final val = double.tryParse(textVal);
+          if (val == null) {
+            SnackbarHelper.showError(
+              context,
+              "Invalid value at Point $p, Replicate $r: '$textVal' is not a valid number",
+            );
+            return;
+          }
+        }
+      }
+    }
+
     double totalSum = 0;
     int pointsWithData = 0;
     Map<String, double> pointValues = {};
@@ -308,12 +326,6 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   }
 
   Future<void> _saveBacterialAnalysis({bool keepOpen = false}) async {
-    setState(() => _isSaving = true);
-    String type =
-        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
-    final timeStr = selectedTime.format(context);
-    final notes = _notesController.text.trim();
-
     final mappings = {
       'Test 10-1 (Average yellow colonies)': {
         'val': _yAvg1Controller.text.trim(),
@@ -349,26 +361,52 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
       },
     };
 
+    // Pre-validate all inputs to ensure they are non-negative numbers
+    for (var entry in mappings.entries) {
+      final textVal = entry.value['val']!;
+      if (textVal.isNotEmpty) {
+        final doubleVal = double.tryParse(textVal);
+        if (doubleVal == null) {
+          SnackbarHelper.showError(
+            context,
+            "Invalid value for ${entry.key}: '$textVal' is not a valid number",
+          );
+          return;
+        }
+        if (doubleVal < 0) {
+          SnackbarHelper.showError(
+            context,
+            "Value for ${entry.key} cannot be negative",
+          );
+          return;
+        }
+      }
+    }
+
+    setState(() => _isSaving = true);
+    String type =
+        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+    final timeStr = selectedTime.format(context);
+    final notes = _notesController.text.trim();
+
     int saves = 0;
     try {
       for (var entry in mappings.entries) {
         if (entry.value['val']!.isNotEmpty) {
-          final doubleVal = double.tryParse(entry.value['val']!);
-          if (doubleVal != null) {
-            await widget.onSave(
-              label: entry.key,
-              unit: entry.value['unit']!,
-              timeString: timeStr,
-              averageValue: doubleVal,
-              type: type,
-              pointValues: {'A': doubleVal}, // Treated as single point
-              replicateValues: {
-                'A': [doubleVal],
-              },
-              notes: notes,
-            );
-            saves++;
-          }
+          final doubleVal = double.tryParse(entry.value['val']!)!;
+          await widget.onSave(
+            label: entry.key,
+            unit: entry.value['unit']!,
+            timeString: timeStr,
+            averageValue: doubleVal,
+            type: type,
+            pointValues: {'A': doubleVal}, // Treated as single point
+            replicateValues: {
+              'A': [doubleVal],
+            },
+            notes: notes,
+          );
+          saves++;
         }
       }
 
@@ -376,6 +414,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
         if (mounted) {
           SnackbarHelper.showInfo(context, "Please enter at least one value");
         }
+        setState(() => _isSaving = false);
         return;
       }
 
@@ -569,9 +608,12 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               "Cancel",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           ElevatedButton(

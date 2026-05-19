@@ -14,6 +14,7 @@ import 'package:pondstat/features/dashboard/presentation/create_pond_sheet.dart'
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/dashboard/presentation/edit_pond_sheet.dart';
 import 'package:pondstat/features/dashboard/presentation/pond_list_card.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/pondy_aquarium_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
@@ -311,427 +312,432 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        toolbarHeight: 90,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            color: isDark ? theme.scaffoldBackgroundColor : null,
-            gradient: isDark
-                ? null
-                : LinearGradient(
-                    colors: [primaryBlue, secondaryBlue],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-          ),
-        ),
-        foregroundColor: isDark ? colorScheme.onSurface : Colors.white,
-        elevation: 0,
-        title: Padding(
-          padding: const EdgeInsets.only(left: 20, top: 12, bottom: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Pondstat",
-                      style: TextStyle(
-                        color: isDark ? colorScheme.primary : Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 26,
-                        letterSpacing: -0.5,
+    return StreamBuilder<List<Pond>>(
+      stream: _userPondsStream,
+      builder: (context, snapshot) {
+        final ponds = snapshot.data ?? [];
+        final hasPonds = ponds.isNotEmpty;
+
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            toolbarHeight: 90,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                color: isDark ? theme.scaffoldBackgroundColor : null,
+                gradient: isDark
+                    ? null
+                    : LinearGradient(
+                        colors: [primaryBlue, secondaryBlue],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        _getGreeting(user),
-                        style: TextStyle(
-                          color: isDark
-                              ? colorScheme.onSurfaceVariant
-                              : Colors.white.withValues(alpha: 0.9),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          letterSpacing: 0.2,
-                        ),
-                        maxLines: 1,
-                      ),
-                    ),
-                  ],
-                ),
               ),
-            ],
-          ),
-        ),
-        actions: [
-          _NotificationBadge(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationsInboxPage(),
-                ),
-              );
-            },
-            isDark: isDark,
-            primaryBlue: primaryBlue,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 20.0),
-            child: Center(
-              child: GestureDetector(
-                onTap: () => _showProfileSheet(context),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white12
-                          : Colors.white.withValues(alpha: 0.5),
-                      width: 2,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: isDark
-                        ? colorScheme.primaryContainer
-                        : Colors.white,
-                    backgroundImage: user.photoURL != null
-                        ? NetworkImage(user.photoURL!)
-                        : null,
-                    child: user.photoURL == null
-                        ? Text(
-                            user.displayName?.isNotEmpty == true
-                                ? user.displayName![0].toUpperCase()
-                                : 'U',
+            ),
+            foregroundColor: isDark ? colorScheme.onSurface : Colors.white,
+            elevation: 0,
+            title: Padding(
+              padding: const EdgeInsets.only(left: 20, top: 12, bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Pondstat",
+                          style: TextStyle(
+                            color: isDark ? colorScheme.primary : Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 26,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _getGreeting(user),
                             style: TextStyle(
                               color: isDark
-                                  ? colorScheme.onPrimaryContainer
-                                  : primaryBlue,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                                  ? colorScheme.onSurfaceVariant
+                                  : Colors.white.withValues(alpha: 0.9),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              letterSpacing: 0.2,
                             ),
-                          )
-                        : null,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    const PondBackground(),
-                    StreamBuilder<List<Pond>>(
-                      stream: _userPondsStream,
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData &&
-                            snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                          return _buildSkeletonLoader();
-                        }
-
-                        if (snapshot.hasError) {
-                          return _buildErrorState(snapshot.error.toString());
-                        }
-
-                        final ponds = snapshot.data ?? [];
-
-                        if (ponds.isEmpty) {
-                          return _buildEmptyState(context);
-                        }
-
-                        // Sort client-side by createdAt descending without mutating original list
-                        final sortedPonds = List<Pond>.from(ponds)
-                          ..sort((a, b) {
-                            final tA = a.createdAt;
-                            final tB = b.createdAt;
-                            if (tA == null && tB == null) return 0;
-                            if (tA == null) return 1;
-                            if (tB == null) return -1;
-                            return tB.compareTo(tA);
-                          });
-
-                        return NotificationListener<ScrollNotification>(
-                          onNotification: (ScrollNotification notification) {
-                            if (notification is ScrollStartNotification ||
-                                notification is ScrollUpdateNotification) {
-                              if (_isFabVisible) {
-                                setState(() => _isFabVisible = false);
-                              }
-                            } else if (notification is ScrollEndNotification) {
-                              if (!_isFabVisible) {
-                                setState(() => _isFabVisible = true);
-                              }
-                            }
-                            return false;
-                          },
-                          child: RefreshIndicator(
-                            color: primaryBlue,
-                            backgroundColor: Colors.white,
-                            triggerMode: RefreshIndicatorTriggerMode.anywhere,
-                            onRefresh: () async => await Future.delayed(
-                              const Duration(milliseconds: 800),
-                            ),
-                            child: ListView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.all(
-                                16,
-                              ).copyWith(bottom: 100),
-                              itemCount: sortedPonds.length + 1,
-                              itemBuilder: (context, index) {
-                                if (index == 0) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(
-                                      bottom: 16.0,
-                                      left: 4.0,
-                                    ),
-                                    child: Text(
-                                      "Pond List",
-                                      style: TextStyle(
-                                        color: colorScheme.onSurface,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 22,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                final pond = sortedPonds[index - 1];
-                                final String pondName = pond.name.isNotEmpty ? pond.name : 'Unnamed Pond';
-                                final String userRole = pond.roles[user.uid] ?? 'viewer';
-                                final bool isOwner = userRole == 'owner';
-
-                                final card = PondListCard(
-                                  pondId: pond.id,
-                                  pondName: pondName,
-                                  species: pond.species.isNotEmpty ? pond.species : 'Unspecified',
-                                  userRole: userRole,
-                                  createdAt: pond.createdAt ?? DateTime.now(),
-                                  targetCulturePeriodDays: pond.targetCulturePeriodDays > 0 ? pond.targetCulturePeriodDays : 90,
-                                );
-
-                                if (isOwner) {
-                                  return Slidable(
-                                    key: Key(pond.id),
-                                    endActionPane: ActionPane(
-                                      motion: const ScrollMotion(),
-                                      extentRatio: 0.50,
-                                      children: [
-                                        CustomSlidableAction(
-                                          onPressed: (context) {
-                                            HapticFeedback.mediumImpact();
-                                            _showEditPondSheet(
-                                              context,
-                                              pond.id,
-                                              pond.toJson(),
-                                            );
-                                          },
-                                          backgroundColor: Colors.transparent,
-                                          foregroundColor: Colors.white,
-                                          padding: EdgeInsets.zero,
-                                          child: Container(
-                                            margin: const EdgeInsets.only(
-                                              bottom: 16,
-                                              left: 8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: primaryBlue,
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: const Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.edit_rounded,
-                                                  size: 28,
-                                                ),
-                                                SizedBox(height: 4),
-                                                Text(
-                                                  'Edit',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        CustomSlidableAction(
-                                          onPressed: (context) async {
-                                            HapticFeedback.mediumImpact();
-                                            bool confirm =
-                                                await _confirmDelete(
-                                                  context,
-                                                  pondName,
-                                                ) ??
-                                                false;
-                                            if (confirm) {
-                                              _deletePond(pond.id, pondName);
-                                            }
-                                          },
-                                          backgroundColor: Colors.transparent,
-                                          foregroundColor: Colors.white,
-                                          padding: EdgeInsets.zero,
-                                          child: Container(
-                                            margin: const EdgeInsets.only(
-                                              bottom: 16,
-                                              left: 8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.red.shade400,
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: const Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.delete_sweep_rounded,
-                                                  size: 28,
-                                                ),
-                                                SizedBox(height: 4),
-                                                Text(
-                                                  'Delete',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    child: card,
-                                  );
-                                }
-
-                                return card;
-                              },
-                            ),
-                          ),
-                        );
-                      },
+            actions: [
+              _NotificationBadge(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationsInboxPage(),
                     ),
-                  ],
+                  );
+                },
+                isDark: isDark,
+                primaryBlue: primaryBlue,
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 20.0),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => _showProfileSheet(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white12
+                              : Colors.white.withValues(alpha: 0.5),
+                          width: 2,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: isDark
+                            ? colorScheme.primaryContainer
+                            : Colors.white,
+                        backgroundImage: user.photoURL != null
+                            ? NetworkImage(user.photoURL!)
+                            : null,
+                        child: user.photoURL == null
+                            ? Text(
+                                user.displayName?.isNotEmpty == true
+                                    ? user.displayName![0].toUpperCase()
+                                    : 'U',
+                                style: TextStyle(
+                                  color: isDark
+                                      ? colorScheme.onPrimaryContainer
+                                      : primaryBlue,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: !_hasConnection
-                    ? Container(
-                        key: const ValueKey('offline'),
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        color: Colors.grey.shade600,
-                        child: const Text(
-                          "You have no internet connection",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      )
-                    : _showOnlineMessage
-                    ? Container(
-                        key: const ValueKey('online'),
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        color: Colors.green,
-                        child: const Text(
-                          "Back online!",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(key: ValueKey('empty')),
+          body: Stack(
+            children: [
+              Column(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        const PondBackground(),
+                        if (!snapshot.hasData &&
+                            snapshot.connectionState ==
+                                ConnectionState.waiting)
+                          _buildSkeletonLoader()
+                        else if (snapshot.hasError)
+                          _buildErrorState(snapshot.error.toString())
+                        else if (ponds.isEmpty)
+                          _buildEmptyState(context)
+                        else
+                          _buildPondList(ponds, user, colorScheme),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: AnimatedSlide(
-        duration: const Duration(milliseconds: 250),
-        offset: _isFabVisible ? Offset.zero : const Offset(0, 2),
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 250),
-          opacity: _isFabVisible ? 1.0 : 0.0,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: primaryBlue.withValues(alpha: 0.4),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-              gradient: LinearGradient(
-                colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: FloatingActionButton.extended(
-              heroTag: 'dashboard_fab',
-              onPressed: () {
-                HapticFeedback.mediumImpact();
-                _showCreatePondSheet(context);
-              },
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              focusElevation: 0,
-              hoverElevation: 0,
-              highlightElevation: 0,
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text(
-                "New Pond",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  fontSize: 16,
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: !_hasConnection
+                        ? Container(
+                            key: const ValueKey('offline'),
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            color: Colors.grey.shade600,
+                            child: const Text(
+                              "You have no internet connection",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                        : _showOnlineMessage
+                        ? Container(
+                            key: const ValueKey('online'),
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            color: Colors.green,
+                            child: const Text(
+                              "Back online!",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(key: ValueKey('empty')),
+                  ),
                 ),
               ),
-              extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
-            ),
+            ],
           ),
+          floatingActionButton: hasPonds
+              ? AnimatedSlide(
+                  duration: const Duration(milliseconds: 250),
+                  offset: _isFabVisible ? Offset.zero : const Offset(0, 2),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 250),
+                    opacity: _isFabVisible ? 1.0 : 0.0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryBlue.withValues(alpha: 0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                        gradient: LinearGradient(
+                          colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: FloatingActionButton.extended(
+                        heroTag: 'dashboard_fab',
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          _showCreatePondSheet(context);
+                        },
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        focusElevation: 0,
+                        hoverElevation: 0,
+                        highlightElevation: 0,
+                        icon: const Icon(Icons.add_rounded, color: Colors.white),
+                        label: const Text(
+                          "New Pond",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                        extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
+                      ),
+                    ),
+                  ),
+                )
+              : null,
+        );
+      },
+    );
+  }
+
+  Widget _buildPondList(List<Pond> ponds, User user, ColorScheme colorScheme) {
+    // Sort client-side by createdAt descending without mutating original list
+    final sortedPonds = List<Pond>.from(ponds)
+      ..sort((a, b) {
+        final tA = a.createdAt;
+        final tB = b.createdAt;
+        if (tA == null && tB == null) return 0;
+        if (tA == null) return 1;
+        if (tB == null) return -1;
+        return tB.compareTo(tA);
+      });
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification notification) {
+        if (notification is ScrollStartNotification ||
+            notification is ScrollUpdateNotification) {
+          if (_isFabVisible) {
+            setState(() => _isFabVisible = false);
+          }
+        } else if (notification is ScrollEndNotification) {
+          if (!_isFabVisible) {
+            setState(() => _isFabVisible = true);
+          }
+        }
+        return false;
+      },
+      child: RefreshIndicator(
+        color: primaryBlue,
+        backgroundColor: Colors.white,
+        triggerMode: RefreshIndicatorTriggerMode.anywhere,
+        onRefresh: () async => await Future.delayed(
+          const Duration(milliseconds: 800),
+        ),
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(
+            16,
+          ).copyWith(bottom: 100),
+          itemCount: sortedPonds.length + 2,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return const PondyAquariumCard();
+            }
+            if (index == 1) {
+              return Padding(
+                padding: const EdgeInsets.only(
+                  bottom: 16.0,
+                  left: 4.0,
+                ),
+                child: Text(
+                  "Pond List",
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 22,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              );
+            }
+
+            final pond = sortedPonds[index - 2];
+            final String pondName = pond.name.isNotEmpty ? pond.name : 'Unnamed Pond';
+            final String userRole = pond.roles[user.uid] ?? 'viewer';
+            final bool isOwner = userRole == 'owner';
+
+            final card = PondListCard(
+              pondId: pond.id,
+              pondName: pondName,
+              species: pond.species.isNotEmpty ? pond.species : 'Unspecified',
+              userRole: userRole,
+              createdAt: pond.createdAt ?? DateTime.now(),
+              targetCulturePeriodDays: pond.targetCulturePeriodDays > 0 ? pond.targetCulturePeriodDays : 90,
+            );
+
+            if (isOwner) {
+              return Slidable(
+                key: Key(pond.id),
+                endActionPane: ActionPane(
+                  motion: const ScrollMotion(),
+                  extentRatio: 0.50,
+                  children: [
+                    CustomSlidableAction(
+                      onPressed: (context) {
+                        HapticFeedback.mediumImpact();
+                        _showEditPondSheet(
+                          context,
+                          pond.id,
+                          pond.toJson(),
+                        );
+                      },
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.zero,
+                      child: Container(
+                        margin: const EdgeInsets.only(
+                          bottom: 16,
+                          left: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primaryBlue,
+                          borderRadius:
+                              BorderRadius.circular(20),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Column(
+                          mainAxisAlignment:
+                              MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.edit_rounded,
+                              size: 28,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Edit',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    CustomSlidableAction(
+                      onPressed: (context) async {
+                        HapticFeedback.mediumImpact();
+                        bool confirm =
+                            await _confirmDelete(
+                              context,
+                              pondName,
+                            ) ??
+                            false;
+                        if (confirm) {
+                          _deletePond(pond.id, pondName);
+                        }
+                      },
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.zero,
+                      child: Container(
+                        margin: const EdgeInsets.only(
+                          bottom: 16,
+                          left: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade400,
+                          borderRadius:
+                              BorderRadius.circular(20),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Column(
+                          mainAxisAlignment:
+                              MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.delete_sweep_rounded,
+                              size: 28,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Delete',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                child: card,
+              );
+            }
+
+            return card;
+          },
         ),
       ),
     );
