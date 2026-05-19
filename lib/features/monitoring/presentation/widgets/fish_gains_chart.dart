@@ -149,7 +149,14 @@ class _FishGainsChartState extends State<FishGainsChart> {
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(height: 220, child: LineChart(_buildChartData(isDark))),
+          SizedBox(
+            height: 220,
+            child: LineChart(
+              _buildChartData(isDark),
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutQuad,
+            ),
+          ),
           const SizedBox(height: 24),
           _buildLegend(isDark),
         ],

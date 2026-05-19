@@ -10,6 +10,7 @@ import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
 
 class SchedulesTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -156,7 +157,10 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
                 return const SizedBox.shrink();
               }
 
-              return _buildDayCard(day, morningUsers, afternoonUsers);
+              return StaggeredListItem(
+                index: index,
+                child: _buildDayCard(day, morningUsers, afternoonUsers),
+              );
             },
           );
         },

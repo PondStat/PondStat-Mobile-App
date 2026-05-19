@@ -258,6 +258,8 @@ class ParameterChartCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutQuad,
                   ),
                 ),
           const SizedBox(height: 24),

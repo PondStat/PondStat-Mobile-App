@@ -69,35 +69,52 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.dashboard,
-        builder: (context, state) => const DefaultDashboardScreen(),
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const DefaultDashboardScreen(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.auth,
-        builder: (context, state) => const WelcomePage(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const WelcomePage(),
+          transitionDuration: const Duration(milliseconds: 400),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOut,
+              ),
+              child: child,
+            );
+          },
+        ),
       ),
       GoRoute(
         path: AppRoutes.notifications,
-        builder: (context, state) => const NotificationsInboxPage(),
+        pageBuilder: (context, state) => _buildSlideUpPage(state, const NotificationsInboxPage()),
       ),
       GoRoute(
         path: AppRoutes.settings,
-        builder: (context, state) => const SettingsPage(),
+        pageBuilder: (context, state) => _buildSlideUpPage(state, const SettingsPage()),
       ),
       GoRoute(
         path: AppRoutes.editProfile,
-        builder: (context, state) => const EditProfilePage(),
+        pageBuilder: (context, state) => _buildSlideUpPage(state, const EditProfilePage()),
       ),
       GoRoute(
         path: AppRoutes.pond,
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final pondId = state.pathParameters['pondId']!;
+          final Widget child;
 
           // Option A: data passed via `extra` (in-app navigation)
           final extra = state.extra;
           if (extra is Pond) {
             final user = authRepo.currentUser;
             final userRole = extra.roles[user?.uid] ?? 'viewer';
-            return PondMonitoringScaffold(
+            child = PondMonitoringScaffold(
               pondId: pondId,
               pondName: extra.name.isNotEmpty ? extra.name : 'Unnamed Pond',
               userRole: userRole,
@@ -106,12 +123,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               targetCulturePeriodDays:
                   extra.targetCulturePeriodDays > 0 ? extra.targetCulturePeriodDays : 90,
             );
-          }
-
-          // Option B: extra contains a Map with pre-extracted fields
-          // (used from PondListCard where we have all fields ready)
-          if (extra is Map<String, dynamic>) {
-            return PondMonitoringScaffold(
+          } else if (extra is Map<String, dynamic>) {
+            // Option B: extra contains a Map with pre-extracted fields
+            child = PondMonitoringScaffold(
               pondId: pondId,
               pondName: extra['pondName'] as String? ?? 'Unnamed Pond',
               userRole: extra['userRole'] as String? ?? 'viewer',
@@ -120,21 +134,26 @@ final routerProvider = Provider<GoRouter>((ref) {
               targetCulturePeriodDays:
                   extra['targetCulturePeriodDays'] as int? ?? 90,
             );
+          } else {
+            // Option C: deep link without data (e.g. from notification)
+            child = _DeepLinkPondLoader(pondId: pondId);
           }
 
-          // Option C: deep link without data (e.g. from notification)
-          // Show a lightweight loading scaffold that fetches pond data.
-          return _DeepLinkPondLoader(pondId: pondId);
+          // Slide from right — drill-down feel
+          return _buildSlideRightPage(state, child);
         },
         routes: [
           GoRoute(
             path: 'collaborators',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final pondId = state.pathParameters['pondId']!;
               final extra = state.extra as Map<String, dynamic>?;
-              return ManageCollaboratorsPage(
-                pondId: pondId,
-                pondName: extra?['pondName'] as String? ?? 'Pond',
+              return _buildSlideUpPage(
+                state,
+                ManageCollaboratorsPage(
+                  pondId: pondId,
+                  pondName: extra?['pondName'] as String? ?? 'Pond',
+                ),
               );
             },
           ),
@@ -184,6 +203,69 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return router;
 });
+
+// ── Page Transition Helpers ─────────────────────────────────────────────────
+
+/// Slide-from-bottom transition (300ms) — used for modal-like routes
+/// (notifications, settings, edit profile, collaborators).
+CustomTransitionPage<void> _buildSlideUpPage(
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 250),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0.0, 1.0),
+          end: Offset.zero,
+        ).animate(curved),
+        child: FadeTransition(
+          opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+            CurvedAnimation(parent: animation, curve: const Interval(0.0, 0.5)),
+          ),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+/// Slide-from-right transition (350ms, easeInOutCubic) — used for
+/// drill-down navigation (pond → monitoring scaffold).
+CustomTransitionPage<void> _buildSlideRightPage(
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 350),
+    reverseTransitionDuration: const Duration(milliseconds: 300),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeInOutCubic,
+        reverseCurve: Curves.easeInOutCubic,
+      );
+      return SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(1.0, 0.0),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
+      );
+    },
+  );
+}
 
 /// A fallback widget for when a pond route is accessed via deep link
 /// without `extra` data. Loads the pond from Firestore by ID.

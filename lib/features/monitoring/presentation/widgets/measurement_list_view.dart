@@ -6,6 +6,7 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/measurement_card.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
 
 class MeasurementListView extends ConsumerStatefulWidget {
   final String pondId;
@@ -166,16 +167,19 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
                   itemBuilder: (context, index) {
                     final data =
                         filteredDocs[index].data() as Map<String, dynamic>;
-                    return MeasurementCard(
-                      key: ValueKey(filteredDocs[index].id),
-                      time: data['timeString'] ?? 'Unknown Time',
-                      title: data['parameter'] ?? 'Unknown Parameter',
-                      content:
-                          "${data['value'] ?? '0'} ${data['unit'] ?? ''}\n(Avg across recorded points)",
-                      canEdit: widget.canEdit,
-                      groupDocs: [filteredDocs[index]],
-                      onEdit: () => widget.onEdit([filteredDocs[index]]),
-                      notes: data['notes'] as String?,
+                    return StaggeredListItem(
+                      index: index,
+                      child: MeasurementCard(
+                        key: ValueKey(filteredDocs[index].id),
+                        time: data['timeString'] ?? 'Unknown Time',
+                        title: data['parameter'] ?? 'Unknown Parameter',
+                        content:
+                            "${data['value'] ?? '0'} ${data['unit'] ?? ''}\n(Avg across recorded points)",
+                        canEdit: widget.canEdit,
+                        groupDocs: [filteredDocs[index]],
+                        onEdit: () => widget.onEdit([filteredDocs[index]]),
+                        notes: data['notes'] as String?,
+                      ),
                     );
                   },
                 ),

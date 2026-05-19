@@ -321,7 +321,7 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
   }
 }
 
-class _NotificationTile extends StatelessWidget {
+class _NotificationTile extends StatefulWidget {
   final NotificationModel notification;
   final VoidCallback onTap;
   final VoidCallback onToggleRead;
@@ -334,6 +334,11 @@ class _NotificationTile extends StatelessWidget {
     required this.onDelete,
   });
 
+  @override
+  State<_NotificationTile> createState() => _NotificationTileState();
+}
+
+class _NotificationTileState extends State<_NotificationTile> {
   IconData _getIconData(NotificationModel n) {
     final lowerTitle = n.title.toLowerCase();
     final lowerBody = n.body.toLowerCase();
@@ -378,11 +383,12 @@ class _NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final dynamicIcon = _getIconData(notification);
-    final dynamicColor = _getIconColor(notification, colorScheme);
+    final dynamicIcon = _getIconData(widget.notification);
+    final dynamicColor = _getIconColor(widget.notification, colorScheme);
+    final isRead = widget.notification.isRead;
 
     return Dismissible(
-      key: Key(notification.id),
+      key: Key(widget.notification.id),
       direction: DismissDirection.horizontal,
       background: Container(
         alignment: Alignment.centerLeft,
@@ -395,14 +401,14 @@ class _NotificationTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              notification.isRead
+              isRead
                   ? Icons.mark_as_unread_rounded
                   : Icons.mark_email_read_rounded,
               color: colorScheme.onSecondaryContainer,
             ),
             const SizedBox(width: 8),
             Text(
-              notification.isRead ? 'Mark Unread' : 'Mark Read',
+              isRead ? 'Mark Unread' : 'Mark Read',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: colorScheme.onSecondaryContainer,
                 fontWeight: FontWeight.bold,
@@ -440,106 +446,117 @@ class _NotificationTile extends StatelessWidget {
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
           HapticFeedback.mediumImpact();
-          onToggleRead();
+          widget.onToggleRead();
           return false; // Don't dismiss, just toggle
         }
         return true; // Proceed with deletion
       },
       onDismissed: (direction) {
         if (direction == DismissDirection.endToStart) {
-          onDelete();
+          widget.onDelete();
         }
       },
-      child: Card(
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: notification.isRead
-                ? colorScheme.outlineVariant.withValues(alpha: 0.5)
-                : colorScheme.primary.withValues(alpha: 0.2),
-            width: 1,
+      child: Material(
+        color: Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            color: isRead
+                ? colorScheme.surface
+                : colorScheme.primaryContainer.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isRead
+                  ? colorScheme.outlineVariant.withValues(alpha: 0.5)
+                  : colorScheme.primary.withValues(alpha: 0.2),
+              width: 1,
+            ),
           ),
-        ),
-        color: notification.isRead
-            ? colorScheme.surface
-            : colorScheme.primaryContainer.withValues(alpha: 0.1),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: notification.isRead
-                        ? colorScheme.surfaceContainerHighest
-                        : dynamicColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    dynamicIcon,
-                    color: notification.isRead
-                        ? colorScheme.onSurfaceVariant
-                        : dynamicColor,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              notification.title,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: notification.isRead
-                                    ? FontWeight.w500
-                                    : FontWeight.bold,
-                                color: notification.isRead
-                                    ? colorScheme.onSurface
-                                    : colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            _formatTimestamp(notification.timestamp),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        notification.body,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!notification.isRead)
-                  Container(
-                    margin: const EdgeInsets.only(left: 8, top: 4),
-                    width: 8,
-                    height: 8,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: colorScheme.primary,
+                      color: isRead
+                          ? colorScheme.surfaceContainerHighest
+                          : dynamicColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
+                    child: Icon(
+                      dynamicIcon,
+                      color: isRead
+                          ? colorScheme.onSurfaceVariant
+                          : dynamicColor,
+                      size: 20,
+                    ),
                   ),
-              ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                                style: (theme.textTheme.titleSmall ?? const TextStyle()).copyWith(
+                                  fontWeight: isRead
+                                      ? FontWeight.w500
+                                      : FontWeight.bold,
+                                  color: colorScheme.onSurface,
+                                ),
+                                child: Text(widget.notification.title),
+                              ),
+                            ),
+                            Text(
+                              _formatTimestamp(widget.notification.timestamp),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          style: (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                          child: Text(widget.notification.body),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedScale(
+                    scale: isRead ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutBack,
+                    child: Container(
+                      margin: const EdgeInsets.only(left: 8, top: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

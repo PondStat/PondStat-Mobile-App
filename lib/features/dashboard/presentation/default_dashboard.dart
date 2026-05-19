@@ -23,6 +23,7 @@ import 'package:pondstat/features/notifications/data/notifications_repository.da
 import 'package:pondstat/core/widgets/error_boundary.dart';
 import 'package:pondstat/core/router/route_names.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
 
 class DefaultDashboardScreen extends ConsumerStatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -43,6 +44,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   // Search & Filter state
   String _searchQuery = '';
   String? _filterRole;
+  String? _filterSpecies;
 
   late Stream<List<Pond>> _userPondsStream;
 
@@ -350,7 +352,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "Pondstat",
+                          "PondStat",
                           style: TextStyle(
                             color: isDark ? colorScheme.primary : Colors.white,
                             fontWeight: FontWeight.w900,
@@ -568,6 +570,13 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
         return tB.compareTo(tA);
       });
 
+    final uniqueSpecies = sortedPonds
+        .map((p) => p.species.trim())
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList();
+    uniqueSpecies.sort();
+
     // Apply search and filter
     final filteredPonds = sortedPonds.where((pond) {
       final String pondName = pond.name.isNotEmpty ? pond.name : 'Unnamed Pond';
@@ -584,6 +593,12 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 
       // Role filter
       if (_filterRole != null && userRole != _filterRole) {
+        return false;
+      }
+
+      // Species filter
+      if (_filterSpecies != null &&
+          pond.species.trim().toLowerCase() != _filterSpecies!.trim().toLowerCase()) {
         return false;
       }
 
@@ -663,16 +678,58 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       children: [
-                        _buildFilterChip('All', null, colorScheme),
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Text(
+                              'Roles:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                        _buildRoleFilterChip('All', null, colorScheme),
                         const SizedBox(width: 8),
-                        _buildFilterChip('Owner', 'owner', colorScheme),
+                        _buildRoleFilterChip('Owner', 'owner', colorScheme),
                         const SizedBox(width: 8),
-                        _buildFilterChip('Editor', 'editor', colorScheme),
+                        _buildRoleFilterChip('Editor', 'editor', colorScheme),
                         const SizedBox(width: 8),
-                        _buildFilterChip('Viewer', 'viewer', colorScheme),
+                        _buildRoleFilterChip('Viewer', 'viewer', colorScheme),
                       ],
                     ),
                   ),
+                  if (uniqueSpecies.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 38,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: Text(
+                                'Species:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                          _buildSpeciesFilterChip('All', null, colorScheme),
+                          for (final species in uniqueSpecies) ...[
+                            const SizedBox(width: 8),
+                            _buildSpeciesFilterChip(species, species, colorScheme),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                 ],
               );
@@ -694,8 +751,9 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
               ),
             );
 
+            final Widget itemContent;
             if (isOwner) {
-              return Slidable(
+              itemContent = Slidable(
                 key: Key(pond.id),
                 endActionPane: ActionPane(
                   motion: const ScrollMotion(),
@@ -792,15 +850,20 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                 ),
                 child: card,
               );
+            } else {
+              itemContent = card;
             }
 
-            return card;
+            return StaggeredListItem(
+              index: index - 2,
+              child: itemContent,
+            );
           },
         ),
     );
   }
 
-  Widget _buildFilterChip(String label, String? role, ColorScheme colorScheme) {
+  Widget _buildRoleFilterChip(String label, String? role, ColorScheme colorScheme) {
     final isActive = _filterRole == role;
     return FilterChip(
       label: Text(
@@ -813,6 +876,32 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
       ),
       selected: isActive,
       onSelected: (_) => setState(() => _filterRole = role),
+      selectedColor: colorScheme.primary,
+      backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isActive ? colorScheme.primary : Colors.transparent,
+        ),
+      ),
+      showCheckmark: false,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+    );
+  }
+
+  Widget _buildSpeciesFilterChip(String label, String? species, ColorScheme colorScheme) {
+    final isActive = _filterSpecies == species;
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+          color: isActive ? Colors.white : colorScheme.onSurfaceVariant,
+        ),
+      ),
+      selected: isActive,
+      onSelected: (_) => setState(() => _filterSpecies = species),
       selectedColor: colorScheme.primary,
       backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       shape: RoundedRectangleBorder(
@@ -948,7 +1037,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   }
 }
 
-class _NotificationBadge extends ConsumerWidget {
+class _NotificationBadge extends ConsumerStatefulWidget {
   final VoidCallback onTap;
   final bool isDark;
 
@@ -958,7 +1047,50 @@ class _NotificationBadge extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_NotificationBadge> createState() => _NotificationBadgeState();
+}
+
+class _NotificationBadgeState extends ConsumerState<_NotificationBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
+  int _lastCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.04), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -0.04, end: 0.04), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.04, end: -0.03), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.03, end: 0.03), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.03, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(
+      parent: _shakeController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
+  }
+
+  void _triggerShake() {
+    if (mounted) {
+      _shakeController.reset();
+      _shakeController.forward();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final repository = ref.read(notificationsRepositoryProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -966,6 +1098,15 @@ class _NotificationBadge extends ConsumerWidget {
       stream: repository.getUnreadCountStream(),
       builder: (context, snapshot) {
         final int unreadCount = snapshot.data ?? 0;
+
+        if (unreadCount > _lastCount) {
+          _lastCount = unreadCount;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _triggerShake();
+          });
+        } else if (unreadCount < _lastCount) {
+          _lastCount = unreadCount;
+        }
 
         return Stack(
           alignment: Alignment.center,
@@ -975,28 +1116,34 @@ class _NotificationBadge extends ConsumerWidget {
               label: unreadCount > 0
                   ? '$unreadCount unread notifications'
                   : 'Notifications',
-              child: IconButton(
-                icon: Icon(
-                  unreadCount > 0
-                      ? Icons.notifications_active_rounded
-                      : Icons.notifications_none_rounded,
-                  color: isDark ? null : Colors.white,
-                  size: 28,
+              child: RotationTransition(
+                turns: _shakeAnimation,
+                child: IconButton(
+                  icon: Icon(
+                    unreadCount > 0
+                        ? Icons.notifications_active_rounded
+                        : Icons.notifications_none_rounded,
+                    color: widget.isDark ? null : Colors.white,
+                    size: 28,
+                  ),
+                  onPressed: widget.onTap,
                 ),
-                onPressed: onTap,
               ),
             ),
-            if (unreadCount > 0)
-              Positioned(
-                right: 8,
-                top: 12,
+            Positioned(
+              right: 8,
+              top: 12,
+              child: AnimatedScale(
+                scale: unreadCount > 0 ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOutBack,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: Colors.red,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isDark ? Colors.black : colorScheme.primary,
+                      color: widget.isDark ? Colors.black : colorScheme.primary,
                       width: 1.5,
                     ),
                   ),
@@ -1004,23 +1151,38 @@ class _NotificationBadge extends ConsumerWidget {
                     minWidth: 18,
                     minHeight: 18,
                   ),
-                  child: Text(
-                    unreadCount > 9 ? '9+' : '$unreadCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return ScaleTransition(
+                        scale: animation,
+                        child: FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      unreadCount > 9 ? '9+' : '$unreadCount',
+                      key: ValueKey<int>(unreadCount),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
+            ),
           ],
         );
       },
     );
   }
 }
+
 
 class SlideGradientTransform extends GradientTransform {
   final double percent;
@@ -1035,3 +1197,4 @@ class SlideGradientTransform extends GradientTransform {
     );
   }
 }
+

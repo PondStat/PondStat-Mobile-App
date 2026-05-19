@@ -8,6 +8,7 @@ import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
 
 class ExpensesTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -124,10 +125,13 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) => _buildExpenseCard(
-                          context,
-                          docs[index],
-                          memberCount,
+                        (context, index) => StaggeredListItem(
+                          index: index,
+                          child: _buildExpenseCard(
+                            context,
+                            docs[index],
+                            memberCount,
+                          ),
                         ),
                         childCount: docs.length,
                       ),

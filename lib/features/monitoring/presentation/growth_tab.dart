@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
 
 class GrowthTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -122,11 +123,14 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                     final previous = (index < metrics.length - 1)
                         ? metrics[index + 1]
                         : null;
-                    return _buildGrowthCard(
-                      current,
-                      previous,
-                      colorScheme,
-                      isDark,
+                    return StaggeredListItem(
+                      index: index,
+                      child: _buildGrowthCard(
+                        current,
+                        previous,
+                        colorScheme,
+                        isDark,
+                      ),
                     );
                   }, childCount: metrics.length),
                 ),

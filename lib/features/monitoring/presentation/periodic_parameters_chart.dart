@@ -651,6 +651,8 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
             ),
           ],
         ),
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutQuad,
       ),
     );
   }
