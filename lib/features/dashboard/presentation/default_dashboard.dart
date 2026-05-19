@@ -21,6 +21,7 @@ import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 import 'package:pondstat/features/notifications/presentation/notifications_inbox_page.dart';
+import 'package:pondstat/core/widgets/error_boundary.dart';
 
 class DefaultDashboardScreen extends ConsumerStatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -38,8 +39,9 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   bool _showOnlineMessage = false;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
-  final Color primaryBlue = const Color(0xFF0A74DA);
-  final Color secondaryBlue = const Color(0xFF4FA0F0);
+  // Search & Filter state
+  String _searchQuery = '';
+  String? _filterRole;
 
   late Stream<List<Pond>> _userPondsStream;
 
@@ -328,7 +330,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                 gradient: isDark
                     ? null
                     : LinearGradient(
-                        colors: [primaryBlue, secondaryBlue],
+                        colors: [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.75)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -389,46 +391,49 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                   );
                 },
                 isDark: isDark,
-                primaryBlue: primaryBlue,
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 20.0),
                 child: Center(
-                  child: GestureDetector(
-                    onTap: () => _showProfileSheet(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.white12
-                              : Colors.white.withValues(alpha: 0.5),
-                          width: 2,
+                  child: Semantics(
+                    button: true,
+                    label: 'Open profile',
+                    child: GestureDetector(
+                      onTap: () => _showProfileSheet(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white12
+                                : Colors.white.withValues(alpha: 0.5),
+                            width: 2,
+                          ),
                         ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: isDark
-                            ? colorScheme.primaryContainer
-                            : Colors.white,
-                        backgroundImage: user.photoURL != null
-                            ? NetworkImage(user.photoURL!)
-                            : null,
-                        child: user.photoURL == null
-                            ? Text(
-                                user.displayName?.isNotEmpty == true
-                                    ? user.displayName![0].toUpperCase()
-                                    : 'U',
-                                style: TextStyle(
-                                  color: isDark
-                                      ? colorScheme.onPrimaryContainer
-                                      : primaryBlue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              )
-                            : null,
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: isDark
+                              ? colorScheme.primaryContainer
+                              : Colors.white,
+                          backgroundImage: user.photoURL != null
+                              ? NetworkImage(user.photoURL!)
+                              : null,
+                          child: user.photoURL == null
+                              ? Text(
+                                  user.displayName?.isNotEmpty == true
+                                      ? user.displayName![0].toUpperCase()
+                                      : 'U',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? colorScheme.onPrimaryContainer
+                                        : colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                )
+                              : null,
+                        ),
                       ),
                     ),
                   ),
@@ -518,7 +523,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
                           BoxShadow(
-                            color: primaryBlue.withValues(alpha: 0.4),
+                            color: colorScheme.primary.withValues(alpha: 0.4),
                             blurRadius: 16,
                             offset: const Offset(0, 8),
                           ),
@@ -531,10 +536,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                       ),
                       child: FloatingActionButton.extended(
                         heroTag: 'dashboard_fab',
-                        onPressed: () {
-                          HapticFeedback.mediumImpact();
-                          _showCreatePondSheet(context);
-                        },
+                        onPressed: () => _showCreatePondSheet(context),
                         backgroundColor: Colors.transparent,
                         elevation: 0,
                         focusElevation: 0,
@@ -572,6 +574,28 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
         return tB.compareTo(tA);
       });
 
+    // Apply search and filter
+    final filteredPonds = sortedPonds.where((pond) {
+      final String pondName = pond.name.isNotEmpty ? pond.name : 'Unnamed Pond';
+      final String userRole = pond.roles[user.uid] ?? 'viewer';
+
+      // Search filter
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        if (!pondName.toLowerCase().contains(query) &&
+            !pond.species.toLowerCase().contains(query)) {
+          return false;
+        }
+      }
+
+      // Role filter
+      if (_filterRole != null && userRole != _filterRole) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification notification) {
         if (notification is ScrollStartNotification ||
@@ -586,53 +610,94 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
         }
         return false;
       },
-      child: RefreshIndicator(
-        color: primaryBlue,
-        backgroundColor: Colors.white,
-        triggerMode: RefreshIndicatorTriggerMode.anywhere,
-        onRefresh: () async => await Future.delayed(
-          const Duration(milliseconds: 800),
-        ),
-        child: ListView.builder(
+      child: ListView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(
             16,
           ).copyWith(bottom: 100),
-          itemCount: sortedPonds.length + 2,
+          itemCount: filteredPonds.length + 2,
           itemBuilder: (context, index) {
             if (index == 0) {
               return const PondyAquariumCard();
             }
             if (index == 1) {
-              return Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 16.0,
-                  left: 4.0,
-                ),
-                child: Text(
-                  "Pond List",
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                    letterSpacing: -0.5,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 12.0,
+                      left: 4.0,
+                    ),
+                    child: Text(
+                      "Pond List",
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
                   ),
-                ),
+                  // Search bar
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: TextField(
+                      onChanged: (value) => setState(() => _searchQuery = value),
+                      decoration: InputDecoration(
+                        hintText: 'Search ponds...',
+                        hintStyle: TextStyle(
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  // Filter chips
+                  SizedBox(
+                    height: 38,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        _buildFilterChip('All', null, colorScheme),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('Owner', 'owner', colorScheme),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('Editor', 'editor', colorScheme),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('Viewer', 'viewer', colorScheme),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
               );
             }
 
-            final pond = sortedPonds[index - 2];
+            final pond = filteredPonds[index - 2];
             final String pondName = pond.name.isNotEmpty ? pond.name : 'Unnamed Pond';
             final String userRole = pond.roles[user.uid] ?? 'viewer';
             final bool isOwner = userRole == 'owner';
 
-            final card = PondListCard(
+            final card = ErrorBoundary(
+              child: PondListCard(
               pondId: pond.id,
               pondName: pondName,
               species: pond.species.isNotEmpty ? pond.species : 'Unspecified',
               userRole: userRole,
               createdAt: pond.createdAt ?? DateTime.now(),
               targetCulturePeriodDays: pond.targetCulturePeriodDays > 0 ? pond.targetCulturePeriodDays : 90,
+              ),
             );
 
             if (isOwner) {
@@ -644,7 +709,6 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                   children: [
                     CustomSlidableAction(
                       onPressed: (context) {
-                        HapticFeedback.mediumImpact();
                         _showEditPondSheet(
                           context,
                           pond.id,
@@ -660,7 +724,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                           left: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: primaryBlue,
+                          color: colorScheme.primary,
                           borderRadius:
                               BorderRadius.circular(20),
                         ),
@@ -739,7 +803,32 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
             return card;
           },
         ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String? role, ColorScheme colorScheme) {
+    final isActive = _filterRole == role;
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+          color: isActive ? Colors.white : colorScheme.onSurfaceVariant,
+        ),
       ),
+      selected: isActive,
+      onSelected: (_) => setState(() => _filterRole = role),
+      selectedColor: colorScheme.primary,
+      backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isActive ? colorScheme.primary : Colors.transparent,
+        ),
+      ),
+      showCheckmark: false,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
     );
   }
 
@@ -752,7 +841,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: 4,
+      itemCount: 2,
       itemBuilder: (context, index) {
         final double titleWidth = 140.0 + (index % 3) * 40.0;
         final double subWidth = 90.0 + (index % 2) * 30.0;
@@ -868,17 +957,16 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 class _NotificationBadge extends ConsumerWidget {
   final VoidCallback onTap;
   final bool isDark;
-  final Color primaryBlue;
 
   const _NotificationBadge({
     required this.onTap,
     required this.isDark,
-    required this.primaryBlue,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.read(notificationsRepositoryProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return StreamBuilder<int>(
       stream: repository.getUnreadCountStream(),
@@ -888,15 +976,21 @@ class _NotificationBadge extends ConsumerWidget {
         return Stack(
           alignment: Alignment.center,
           children: [
-            IconButton(
-              icon: Icon(
-                unreadCount > 0
-                    ? Icons.notifications_active_rounded
-                    : Icons.notifications_none_rounded,
-                color: isDark ? null : Colors.white,
-                size: 28,
+            Semantics(
+              button: true,
+              label: unreadCount > 0
+                  ? '$unreadCount unread notifications'
+                  : 'Notifications',
+              child: IconButton(
+                icon: Icon(
+                  unreadCount > 0
+                      ? Icons.notifications_active_rounded
+                      : Icons.notifications_none_rounded,
+                  color: isDark ? null : Colors.white,
+                  size: 28,
+                ),
+                onPressed: onTap,
               ),
-              onPressed: onTap,
             ),
             if (unreadCount > 0)
               Positioned(
@@ -908,7 +1002,7 @@ class _NotificationBadge extends ConsumerWidget {
                     color: Colors.red,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isDark ? Colors.black : primaryBlue,
+                      color: isDark ? Colors.black : colorScheme.primary,
                       width: 1.5,
                     ),
                   ),

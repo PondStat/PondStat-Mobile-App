@@ -44,7 +44,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
     OnboardingStep(
       title: 'Fish 125: Aquaculture Technologies',
       description:
-          'Learn the basic operation of different culture systems, soil and water chemistry and its influence in productivity, pond management, production of natural food, nutrition and feeding, water quality management, site selection, design and construction of aquaculture facilities as well as harvest and post-harvest handling.',
+          'Master pond operations, water chemistry, nutrition, and harvest handling in a hands-on aquaculture laboratory course.',
       icon: Icons.school_rounded,
     ),
     OnboardingStep(
@@ -487,21 +487,32 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
-            children: List.generate(
-              _steps.length + 1,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.only(right: 6),
-                height: 8,
-                width: _currentPage == index ? 24 : 8,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(
-                    alpha: _currentPage == index ? 1.0 : 0.4,
+            children: [
+              ...List.generate(
+                _steps.length + 1,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.only(right: 6),
+                  height: 10,
+                  width: _currentPage == index ? 28 : 10,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(
+                      alpha: _currentPage == index ? 1.0 : 0.4,
+                    ),
+                    borderRadius: BorderRadius.circular(5),
                   ),
-                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                '${_currentPage + 1} of ${_steps.length + 1}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
           if (_currentPage < _steps.length)
             SizedBox(

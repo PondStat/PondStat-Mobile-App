@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pondstat/features/monitoring/presentation/pond_monitoring_scaffold.dart';
 
@@ -34,8 +33,6 @@ class _PondListCardState extends State<PondListCard> {
     setState(() {
       _isNavigating = true;
     });
-
-    HapticFeedback.mediumImpact();
 
     await Navigator.push(
       context,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pondy_companion.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/monitoring_header.dart';
@@ -36,7 +35,8 @@ class PondMonitoringScaffold extends StatefulWidget {
 }
 
 class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
-  int _currentIndex = 2;
+  int _currentIndex = 0;
+  final Set<int> _visitedTabs = {0};
   late DateTime _focusedDay;
   DateTime? _selectedDay;
 
@@ -68,7 +68,6 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
   }
 
   void _showProfileSheet() {
-    HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -82,7 +81,6 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
   }
 
   void _showEditHistory() {
-    HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -105,73 +103,90 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final List<Widget> pages = [
-      OperationsPage(
-        pondId: widget.pondId,
-        pondName: widget.pondName,
-        userRole: widget.userRole,
-        canEdit: widget.userRole == 'owner',
-      ),
-      TrendsPage(
-        pondId: widget.pondId,
-        species: widget.species,
-        userRole: widget.userRole,
-      ),
-      OverviewTab(
-        pondId: widget.pondId,
-        pondName: widget.pondName,
-        userRole: widget.userRole,
-        species: widget.species,
-        createdAt: widget.createdAt,
-        targetCulturePeriodDays: widget.targetCulturePeriodDays,
-        focusedDay: _focusedDay,
-        selectedDay: _selectedDay,
-        onDaySelected: (selectedDay, focusedDay) {
-          setState(() {
-            _selectedDay = DateTime.utc(
-              selectedDay.year,
-              selectedDay.month,
-              selectedDay.day,
+    // Tab order: Overview(0), Operations(1), Growth(2), Trends(3), Parameter(4)
+    Widget buildTab(int index) {
+      switch (index) {
+        case 0:
+          return OverviewTab(
+            pondId: widget.pondId,
+            pondName: widget.pondName,
+            userRole: widget.userRole,
+            species: widget.species,
+            createdAt: widget.createdAt,
+            targetCulturePeriodDays: widget.targetCulturePeriodDays,
+            focusedDay: _focusedDay,
+            selectedDay: _selectedDay,
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = DateTime.utc(
+                  selectedDay.year,
+                  selectedDay.month,
+                  selectedDay.day,
+                );
+                _focusedDay = focusedDay;
+              });
+            },
+            onPageChanged: (focusedDay) {
+              setState(() {
+                _focusedDay = focusedDay;
+              });
+            },
+          );
+        case 1:
+          return OperationsPage(
+            pondId: widget.pondId,
+            pondName: widget.pondName,
+            userRole: widget.userRole,
+            canEdit: widget.userRole == 'owner',
+          );
+        case 2:
+          return GrowthPage(
+            pondId: widget.pondId,
+            pondName: widget.pondName,
+            species: widget.species,
+            canEdit: canEdit,
+          );
+        case 3:
+          return TrendsPage(
+            pondId: widget.pondId,
+            species: widget.species,
+            userRole: widget.userRole,
+          );
+        case 4:
+          if (_selectedDay != null) {
+            return WaterQualityPage(
+              pondId: widget.pondId,
+              pondName: widget.pondName,
+              species: widget.species,
+              canEdit: canEdit,
+              selectedDay: _selectedDay!,
             );
-            _focusedDay = focusedDay;
-          });
-        },
-        onPageChanged: (focusedDay) {
-          setState(() {
-            _focusedDay = focusedDay;
-          });
-        },
-      ),
-      GrowthPage(
-        pondId: widget.pondId,
-        pondName: widget.pondName,
-        species: widget.species,
-        canEdit: canEdit,
-      ),
-      if (_selectedDay != null)
-        WaterQualityPage(
-          pondId: widget.pondId,
-          pondName: widget.pondName,
-          species: widget.species,
-          canEdit: canEdit,
-          selectedDay: _selectedDay!,
-        )
-      else
-        Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Center(
-              child: EmptyStateCard(
-                image: const Icon(Icons.calendar_month_rounded),
-                title: "No Day Selected",
-                description:
-                    "Please return to the Overview tab and select a specific day on the calendar to view water quality parameters.",
+          }
+          return Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Center(
+                child: EmptyStateCard(
+                  image: const Icon(Icons.calendar_month_rounded),
+                  title: "No Day Selected",
+                  description:
+                      "Select a day on the calendar in the Overview tab to view water quality parameters.",
+                  action: ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() => _currentIndex = 0);
+                    },
+                    icon: const Icon(Icons.calendar_today_rounded),
+                    label: const Text('Go to Calendar'),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-    ];
+          );
+        default:
+          return const SizedBox.shrink();
+      }
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -195,7 +210,15 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
                   onProfileTap: _showProfileSheet,
                 ),
                 Expanded(
-                  child: IndexedStack(index: _currentIndex, children: pages),
+                  child: IndexedStack(
+                    index: _currentIndex,
+                    children: List.generate(5, (index) {
+                      if (!_visitedTabs.contains(index)) {
+                        return const SizedBox.shrink();
+                      }
+                      return buildTab(index);
+                    }),
+                  ),
                 ),
               ],
             ),
@@ -219,6 +242,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
           onTap: (index) {
             setState(() {
               _currentIndex = index;
+              _visitedTabs.add(index);
             });
           },
           type: BottomNavigationBarType.fixed,
@@ -238,20 +262,20 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
           elevation: 0,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_rounded),
-              label: "Operations",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.analytics_rounded),
-              label: "Trends",
-            ),
-            BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_rounded),
               label: "Overview",
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long_rounded),
+              label: "Operations",
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.trending_up_rounded),
               label: "Growth",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.analytics_rounded),
+              label: "Trends",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.water_drop_rounded),

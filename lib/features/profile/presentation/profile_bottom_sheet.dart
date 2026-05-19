@@ -27,7 +27,6 @@ class ProfileBottomSheet extends ConsumerStatefulWidget {
 
 class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
     with SingleTickerProviderStateMixin {
-  final Color primaryBlue = const Color(0xFF0A74DA);
 
   late AnimationController _entranceController;
   late Animation<double> _fadeHeader;
@@ -154,7 +153,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
                           style: TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 11,
-                            color: primaryBlue,
+                            color: theme.colorScheme.primary,
                             letterSpacing: 1.2,
                           ),
                         ),
@@ -258,7 +257,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
         style: TextStyle(
           fontWeight: FontWeight.w900,
           fontSize: 11,
-          color: primaryBlue,
+          color: Theme.of(context).colorScheme.primary,
           letterSpacing: 1.2,
         ),
       ),
@@ -388,7 +387,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
     } else if (widget.currentUserRole == 'editor') {
       roleIcon = Icons.edit_note_rounded;
       roleTitle = 'Editor';
-      roleColor = primaryBlue;
+      roleColor = theme.colorScheme.primary;
     }
 
     return Container(
@@ -467,7 +466,6 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
   }
 
   Future<void> _confirmSignOut(BuildContext context, ThemeData theme) async {
-    HapticFeedback.selectionClick();
     final shouldSignOut = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -621,51 +619,55 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
         ? Colors.red.shade600
         : theme.colorScheme.onSurfaceVariant;
 
-    return GestureDetector(
+    return InkWell(
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
-      behavior: HitTestBehavior.opaque,
+      borderRadius: BorderRadius.circular(16),
       child: ScaleTransition(
         scale: _scaleAnimation,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.transparent),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(12),
+        child: Semantics(
+          button: true,
+          label: widget.text,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.transparent),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(widget.icon, color: iconColor, size: 22),
                 ),
-                child: Icon(widget.icon, color: iconColor, size: 22),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  widget.text,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: itemColor,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    widget.text,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: itemColor,
+                    ),
                   ),
                 ),
-              ),
-              if (!widget.isDestructive)
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.5,
+                if (!widget.isDestructive)
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                    size: 24,
                   ),
-                  size: 24,
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

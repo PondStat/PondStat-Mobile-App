@@ -37,10 +37,7 @@ class MonitoringHeader extends StatelessWidget {
             offset: const Offset(-8, 0),
             child: IconButton(
               icon: Icon(Icons.arrow_back_rounded, color: onSurface),
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                onBackTap();
-              },
+              onPressed: onBackTap,
             ),
           ),
           const SizedBox(width: 0),

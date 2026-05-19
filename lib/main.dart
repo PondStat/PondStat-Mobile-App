@@ -112,8 +112,6 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
         await ref.read(notificationServiceProvider).initialize();
       }
 
-      await Future.delayed(const Duration(milliseconds: 1500));
-
       if (mounted) {
         setState(() {
           _isInitialized = true;

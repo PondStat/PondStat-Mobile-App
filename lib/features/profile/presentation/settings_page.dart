@@ -11,7 +11,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  final Color primaryBlue = const Color(0xFF0A74DA);
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +82,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         backgroundColor: WidgetStateProperty.resolveWith<Color?>(
                           (Set<WidgetState> states) {
                             if (states.contains(WidgetState.selected)) {
-                              return primaryBlue.withValues(alpha: 0.2);
+                              return theme.colorScheme.primary.withValues(alpha: 0.2);
                             }
                             return null;
                           },
@@ -156,7 +155,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         style: TextStyle(
           fontWeight: FontWeight.w900,
           fontSize: 11,
-          color: primaryBlue,
+          color: Theme.of(context).colorScheme.primary,
           letterSpacing: 1.2,
         ),
       ),
@@ -216,8 +215,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             : null,
         value: value,
         onChanged: onChanged,
-        activeThumbColor: primaryBlue,
-        activeTrackColor: primaryBlue.withValues(alpha: 0.2),
+        activeThumbColor: theme.colorScheme.primary,
+        activeTrackColor: theme.colorScheme.primary.withValues(alpha: 0.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
