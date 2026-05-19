@@ -36,10 +36,10 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
   @override
   void initState() {
     super.initState();
-    abwController = TextEditingController(text: widget.metrics.abw.toString());
-    adgController = TextEditingController(text: widget.metrics.adg.toString());
-    dfrController = TextEditingController(text: widget.metrics.dfr.toString());
-    fcrController = TextEditingController(text: widget.metrics.fcr.toString());
+    abwController = TextEditingController(text: widget.metrics.abw?.toString() ?? "");
+    adgController = TextEditingController(text: widget.metrics.adg?.toString() ?? "");
+    dfrController = TextEditingController(text: widget.metrics.dfr?.toString() ?? "");
+    fcrController = TextEditingController(text: widget.metrics.fcr?.toString() ?? "");
 
     abwController.addListener(_checkDirtyState);
     adgController.addListener(_checkDirtyState);
@@ -62,10 +62,10 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
   }
 
   void _checkDirtyState() {
-    final abwDirty = abwController.text != widget.metrics.abw.toString();
-    final adgDirty = adgController.text != widget.metrics.adg.toString();
-    final dfrDirty = dfrController.text != widget.metrics.dfr.toString();
-    final fcrDirty = fcrController.text != widget.metrics.fcr.toString();
+    final abwDirty = abwController.text != (widget.metrics.abw?.toString() ?? "");
+    final adgDirty = adgController.text != (widget.metrics.adg?.toString() ?? "");
+    final dfrDirty = dfrController.text != (widget.metrics.dfr?.toString() ?? "");
+    final fcrDirty = fcrController.text != (widget.metrics.fcr?.toString() ?? "");
 
     final isNowDirty = abwDirty || adgDirty || dfrDirty || fcrDirty;
     if (_isDirty != isNowDirty) {
@@ -106,7 +106,10 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
     final newDfr = double.tryParse(dfrController.text);
     final newFcr = double.tryParse(fcrController.text);
 
-    if (newAbw == null || newAdg == null || newDfr == null || newFcr == null) {
+    if ((widget.metrics.abwDocId != null && newAbw == null) ||
+        (widget.metrics.adgDocId != null && newAdg == null) ||
+        (widget.metrics.dfrDocId != null && newDfr == null) ||
+        (widget.metrics.fcrDocId != null && newFcr == null)) {
       SnackbarHelper.showInfo(context, "Please enter valid numbers");
       return;
     }

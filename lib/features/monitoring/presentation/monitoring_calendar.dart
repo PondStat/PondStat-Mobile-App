@@ -275,6 +275,11 @@ class MonitoringCalendar extends ConsumerWidget {
                   if (types.contains('biweekly')) {
                     activeDots.add(_buildStatusDot(primaryColor, isSelected));
                   }
+                  if (types.contains('growth')) {
+                    activeDots.add(
+                      _buildStatusDot(Colors.purple.shade400, isSelected),
+                    );
+                  }
 
                   return Positioned(
                     bottom: 8,
@@ -290,15 +295,20 @@ class MonitoringCalendar extends ConsumerWidget {
             // Legend
             Padding(
               padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildLegendItem(Colors.green.shade400, "Daily", textMuted),
-                  const SizedBox(width: 16),
-                  _buildLegendItem(Colors.amber.shade400, "Weekly", textMuted),
-                  const SizedBox(width: 16),
-                  _buildLegendItem(primaryColor, "Biweekly/Growth", textMuted),
-                ],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildLegendItem(Colors.green.shade400, "Daily", textMuted),
+                    const SizedBox(width: 12),
+                    _buildLegendItem(Colors.amber.shade400, "Weekly", textMuted),
+                    const SizedBox(width: 12),
+                    _buildLegendItem(primaryColor, "Biweekly", textMuted),
+                    const SizedBox(width: 12),
+                    _buildLegendItem(Colors.purple.shade400, "Growth", textMuted),
+                  ],
+                ),
               ),
             ),
           ],

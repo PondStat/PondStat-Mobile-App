@@ -201,6 +201,33 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
       timestampIndices[sortedTimestamps[i]] = i;
     }
 
+    double minY = double.infinity;
+    double maxY = -double.infinity;
+
+    for (var entry in widget.normalizedData.entries) {
+      final parameterName = entry.key;
+      final points = entry.value;
+
+      if (_visibleParameters[parameterName] != true) continue;
+
+      for (var p in points) {
+        if (p.actualValue < minY) minY = p.actualValue;
+        if (p.actualValue > maxY) maxY = p.actualValue;
+      }
+    }
+
+    if (minY == double.infinity || maxY == -double.infinity) {
+      minY = 0.0;
+      maxY = 100.0;
+    } else if (minY == maxY) {
+      minY = (minY - 1.0).clamp(0.0, double.infinity);
+      maxY = maxY + 1.0;
+    } else {
+      final padding = (maxY - minY) * 0.15;
+      minY = (minY - padding).clamp(0.0, double.infinity);
+      maxY = maxY + padding;
+    }
+
     for (var entry in widget.normalizedData.entries) {
       final parameterName = entry.key;
       final points = entry.value;
@@ -211,7 +238,7 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
 
       final spots = points.map((p) {
         final x = timestampIndices[p.timestamp]!.toDouble();
-        return FlSpot(x, p.normalizedValue);
+        return FlSpot(x, p.actualValue);
       }).toList();
 
       lineBars.add(
@@ -228,6 +255,8 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
     }
 
     return LineChartData(
+      minY: minY,
+      maxY: maxY,
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
@@ -281,7 +310,7 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
               return SideTitleWidget(
                 meta: meta,
                 child: Text(
-                  '${value.toInt()}%',
+                  value.toStringAsFixed(1),
                   style: TextStyle(
                     color: isDark ? Colors.white38 : Colors.grey.shade400,
                     fontWeight: FontWeight.w600,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
 class RecordFormFields extends StatefulWidget {
@@ -17,6 +16,14 @@ class RecordFormFields extends StatefulWidget {
   final TextEditingController gCfu1Controller;
   final TextEditingController gAvg2Controller;
   final TextEditingController gCfu2Controller;
+  final List<TextEditingController> y10Dil1Reps;
+  final List<FocusNode> y10Dil1Nodes;
+  final List<TextEditingController> y10Dil2Reps;
+  final List<FocusNode> y10Dil2Nodes;
+  final List<TextEditingController> g10Dil1Reps;
+  final List<FocusNode> g10Dil1Nodes;
+  final List<TextEditingController> g10Dil2Reps;
+  final List<FocusNode> g10Dil2Nodes;
   final double? Function(String) calculatePointAverage;
   final Function(String) onFieldSubmitted;
 
@@ -36,6 +43,14 @@ class RecordFormFields extends StatefulWidget {
     required this.gCfu1Controller,
     required this.gAvg2Controller,
     required this.gCfu2Controller,
+    required this.y10Dil1Reps,
+    required this.y10Dil1Nodes,
+    required this.y10Dil2Reps,
+    required this.y10Dil2Nodes,
+    required this.g10Dil1Reps,
+    required this.g10Dil1Nodes,
+    required this.g10Dil2Reps,
+    required this.g10Dil2Nodes,
     required this.calculatePointAverage,
     required this.onFieldSubmitted,
   });
@@ -317,85 +332,262 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
           ),
         ),
         const SizedBox(height: 16),
-        // Switch between Yellow and Green Tabs without TabBarView fixed height
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           child: _bacterialTabIndex == 0
-              ? _buildBacterialTabContent(context, [
-                  (
-                    widget.yAvg1Controller,
-                    "Test 10-1 (Average)",
-                    Icons.circle_rounded,
-                    "e.g., 100",
-                  ),
-                  (
-                    widget.yCfu1Controller,
-                    "Test 10-1 (CFU/ml)",
-                    Icons.science_rounded,
-                    "e.g., 10000",
-                  ),
-                  (
-                    widget.yAvg2Controller,
-                    "Test 10-2 (Average)",
-                    Icons.circle_rounded,
-                    "e.g., 100",
-                  ),
-                  (
-                    widget.yCfu2Controller,
-                    "Test 10-2 (CFU/ml)",
-                    Icons.science_rounded,
-                    "e.g., 10000",
-                  ),
-                ])
-              : _buildBacterialTabContent(context, [
-                  (
-                    widget.gAvg1Controller,
-                    "Test 10-1 (Average)",
-                    Icons.circle_rounded,
-                    "e.g., 100",
-                  ),
-                  (
-                    widget.gCfu1Controller,
-                    "Test 10-1 (CFU/ml)",
-                    Icons.science_rounded,
-                    "e.g., 10000",
-                  ),
-                  (
-                    widget.gAvg2Controller,
-                    "Test 10-2 (Average)",
-                    Icons.circle_rounded,
-                    "e.g., 100",
-                  ),
-                  (
-                    widget.gCfu2Controller,
-                    "Test 10-2 (CFU/ml)",
-                    Icons.science_rounded,
-                    "e.g., 10000",
-                  ),
-                ]),
+              ? Column(
+                  key: const ValueKey(0),
+                  children: [
+                    _buildTestSection(
+                      context,
+                      "Test 10-1",
+                      widget.y10Dil1Reps,
+                      widget.y10Dil1Nodes,
+                      widget.yAvg1Controller,
+                      widget.yCfu1Controller,
+                      themeColor,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTestSection(
+                      context,
+                      "Test 10-2",
+                      widget.y10Dil2Reps,
+                      widget.y10Dil2Nodes,
+                      widget.yAvg2Controller,
+                      widget.yCfu2Controller,
+                      themeColor,
+                    ),
+                  ],
+                )
+              : Column(
+                  key: const ValueKey(1),
+                  children: [
+                    _buildTestSection(
+                      context,
+                      "Test 10-1",
+                      widget.g10Dil1Reps,
+                      widget.g10Dil1Nodes,
+                      widget.gAvg1Controller,
+                      widget.gCfu1Controller,
+                      themeColor,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTestSection(
+                      context,
+                      "Test 10-2",
+                      widget.g10Dil2Reps,
+                      widget.g10Dil2Nodes,
+                      widget.gAvg2Controller,
+                      widget.gCfu2Controller,
+                      themeColor,
+                    ),
+                  ],
+                ),
         ),
       ],
     );
   }
 
-  Widget _buildBacterialTabContent(
+  Widget _buildTestSection(
     BuildContext context,
-    List<(TextEditingController, String, IconData, String)> fields,
+    String title,
+    List<TextEditingController> reps,
+    List<FocusNode> nodes,
+    TextEditingController avgController,
+    TextEditingController cfuController,
+    Color themeColor,
   ) {
-    return Column(
-      key: ValueKey(_bacterialTabIndex),
-      children: [
-        for (var field in fields) ...[
-          PondStatTextField(
-            controller: field.$1,
-            label: field.$2,
-            hint: field.$4,
-            prefixIcon: field.$3,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    Color textDark = Theme.of(context).colorScheme.onSurface;
+    Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.02)
+            : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              color: textDark,
+            ),
           ),
           const SizedBox(height: 12),
+          // 3 Replicate Input Fields Side-by-Side
+          Row(
+            children: [
+              for (int rIdx = 0; rIdx < 3; rIdx++)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: rIdx < 2 ? 8 : 0),
+                    child: _buildBacterialReplicateInput(
+                      context,
+                      reps[rIdx],
+                      nodes[rIdx],
+                      themeColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Outputs Box (Average & CFU/mL side by side)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: themeColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: themeColor.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Average",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: avgController,
+                        builder: (context, value, _) {
+                          return Text(
+                            value.text.isNotEmpty ? value.text : "—",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                              color: themeColor,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  height: 32,
+                  width: 1.5,
+                  color: themeColor.withValues(alpha: 0.2),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "CFU / mL",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: cfuController,
+                        builder: (context, value, _) {
+                          return Text(
+                            value.text.isNotEmpty ? value.text : "—",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                              color: themeColor,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ],
+      ),
+    );
+  }
+
+  Widget _buildBacterialReplicateInput(
+    BuildContext context,
+    TextEditingController controller,
+    FocusNode focusNode,
+    Color themeColor,
+  ) {
+    Color textDark = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return ListenableBuilder(
+      listenable: focusNode,
+      builder: (context, _) {
+        final bool isFocused = focusNode.hasFocus;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: isFocused
+                ? theme.colorScheme.surface
+                : (isDark
+                      ? theme.colorScheme.surfaceContainerHighest
+                      : const Color(0xFFF8FAFC)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isFocused ? themeColor : Colors.transparent,
+              width: isFocused ? 2 : 0,
+            ),
+            boxShadow: isFocused
+                ? [
+                    BoxShadow(
+                      color: themeColor.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [],
+          ),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+              color: textDark,
+            ),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              hintText: '0.0',
+              hintStyle: TextStyle(
+                color: Colors.grey.withValues(alpha: 0.4),
+                fontSize: 12,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

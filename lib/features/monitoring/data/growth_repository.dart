@@ -9,10 +9,10 @@ part 'growth_repository.g.dart';
 class GrowthMetrics {
   final DateTime date;
   final int weekNumber;
-  final double abw;
-  final double adg;
-  final double fcr;
-  final double dfr;
+  final double? abw;
+  final double? adg;
+  final double? fcr;
+  final double? dfr;
   final double totalWeight;
   final double sampleCount;
   final double feedingRate;
@@ -28,10 +28,10 @@ class GrowthMetrics {
   GrowthMetrics({
     required this.date,
     required this.weekNumber,
-    required this.abw,
-    this.adg = 0.0,
-    this.fcr = 0.0,
-    this.dfr = 0.0,
+    this.abw,
+    this.adg,
+    this.fcr,
+    this.dfr,
     this.totalWeight = 0.0,
     this.sampleCount = 0.0,
     this.feedingRate = 0.0,
@@ -206,17 +206,19 @@ class GrowthRepository {
       final double explicitDfr = bucket[ParameterNames.dfr];
       final double explicitFcr = bucket[ParameterNames.fcr];
 
-      final double currentAbw = explicitAbw > 0
+      final double? currentAbw = explicitAbw > 0
           ? explicitAbw
-          : (sampleCount > 0 ? totalWeight / sampleCount : 0.0);
+          : (sampleCount > 0 ? totalWeight / sampleCount : null);
 
-      double adg = explicitAdg > 0 ? explicitAdg : 0.0;
-      double dfr = explicitDfr > 0
+      double? adg = explicitAdg > 0 ? explicitAdg : null;
+      double? dfr = explicitDfr > 0
           ? explicitDfr
-          : (currentAbw * fishCount * feedingRate / 100.0);
-      double fcr = explicitFcr > 0
+          : (currentAbw != null && feedingRate > 0
+              ? (currentAbw * fishCount * feedingRate / 100.0)
+              : null);
+      double? fcr = explicitFcr > 0
           ? explicitFcr
-          : (weightGained > 0 ? feedConsumed / weightGained : 0.0);
+          : (weightGained > 0 && feedConsumed > 0 ? feedConsumed / weightGained : null);
 
       if (i > 0 && explicitAdg == 0.0) {
         final prevWeek = sortedWeeks[i - 1];
@@ -228,15 +230,15 @@ class GrowthRepository {
             prevBucket[ParameterNames.numFishSampled] as double;
         final prevExplicitAbw = prevBucket[ParameterNames.abw] as double;
 
-        final prevAbw = prevExplicitAbw > 0
+        final double? prevAbw = prevExplicitAbw > 0
             ? prevExplicitAbw
-            : (prevSampleCount > 0 ? prevTotalWeight / prevSampleCount : 0.0);
+            : (prevSampleCount > 0 ? prevTotalWeight / prevSampleCount : null);
 
         final DateTime currentDate = bucket['date'] as DateTime;
         final DateTime prevDate = prevBucket['date'] as DateTime;
         final int daysBetween = currentDate.difference(prevDate).inDays;
 
-        if (daysBetween > 0 && currentAbw > 0 && prevAbw > 0) {
+        if (daysBetween > 0 && currentAbw != null && prevAbw != null && currentAbw > 0 && prevAbw > 0) {
           adg = (currentAbw - prevAbw) / daysBetween;
         }
       }
@@ -268,7 +270,8 @@ class GrowthRepository {
     return metrics.reversed.toList();
   }
 
-  static double _round(double value, int places) {
+  static double? _round(double? value, int places) {
+    if (value == null) return null;
     return double.parse(value.toStringAsFixed(places));
   }
 

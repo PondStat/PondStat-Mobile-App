@@ -65,7 +65,28 @@ String? adgValidator(String? value) {
   return null;
 }
 
+double calculateBacterialAverage(List<double> values) {
+  if (values.isEmpty) return 0.0;
+  return values.reduce((a, b) => a + b) / values.length;
+}
+
+double calculateBacterialCfu(double average, double dilutionFactor) {
+  return average * dilutionFactor;
+}
+
 void main() {
+  group('Bacterial Replicates Calculations', () {
+    test('should compute correct average for list of replicates', () {
+      expect(calculateBacterialAverage([10.0, 20.0, 30.0]), 20.0);
+      expect(calculateBacterialAverage([5.5, 6.5]), 6.0);
+    });
+
+    test('should compute correct CFU using dilution factors', () {
+      expect(calculateBacterialCfu(100.0, 100.0), 10000.0);
+      expect(calculateBacterialCfu(50.0, 1000.0), 50000.0);
+    });
+  });
+
   group('RecordGrowthSheet Calculations', () {
     group('ABW Calculation', () {
       test('should calculate ABW correctly with positive parameters', () {

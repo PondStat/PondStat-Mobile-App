@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
@@ -69,11 +70,52 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   final TextEditingController _gAvg2Controller = TextEditingController();
   final TextEditingController _gCfu2Controller = TextEditingController();
 
+  // Bacterial Analysis Replicate Controllers (3 replicates per test, 4 tests total)
+  final List<TextEditingController> _y10Dil1Reps = List.generate(3, (_) => TextEditingController());
+  final List<FocusNode> _y10Dil1Nodes = List.generate(3, (_) => FocusNode());
+
+  final List<TextEditingController> _y10Dil2Reps = List.generate(3, (_) => TextEditingController());
+  final List<FocusNode> _y10Dil2Nodes = List.generate(3, (_) => FocusNode());
+
+  final List<TextEditingController> _g10Dil1Reps = List.generate(3, (_) => TextEditingController());
+  final List<FocusNode> _g10Dil1Nodes = List.generate(3, (_) => FocusNode());
+
+  final List<TextEditingController> _g10Dil2Reps = List.generate(3, (_) => TextEditingController());
+  final List<FocusNode> _g10Dil2Nodes = List.generate(3, (_) => FocusNode());
+
   bool _isSaving = false;
 
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
   Color get primaryColor => Theme.of(context).colorScheme.primary;
+
+  void _setupBacterialListeners(
+    List<TextEditingController> reps,
+    TextEditingController avgController,
+    TextEditingController cfuController,
+    double dilutionFactor,
+  ) {
+    for (var rep in reps) {
+      rep.addListener(() {
+        if (!mounted) return;
+        final values = reps
+            .map((c) => double.tryParse(c.text.trim()))
+            .whereType<double>()
+            .toList();
+
+        if (values.isEmpty) {
+          avgController.clear();
+          cfuController.clear();
+        } else {
+          final avg = values.reduce((a, b) => a + b) / values.length;
+          final cfu = avg * dilutionFactor;
+          avgController.text = avg.toStringAsFixed(1);
+          cfuController.text = NumberFormat('#,###').format(cfu);
+        }
+        setState(() {});
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -96,6 +138,12 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     for (var node in focusNodes.values) {
       node.addListener(() => setState(() {}));
     }
+
+    // Set up listeners to auto-calculate bacterial averages/CFU
+    _setupBacterialListeners(_y10Dil1Reps, _yAvg1Controller, _yCfu1Controller, 100.0);
+    _setupBacterialListeners(_y10Dil2Reps, _yAvg2Controller, _yCfu2Controller, 1000.0);
+    _setupBacterialListeners(_g10Dil1Reps, _gAvg1Controller, _gCfu1Controller, 100.0);
+    _setupBacterialListeners(_g10Dil2Reps, _gAvg2Controller, _gCfu2Controller, 1000.0);
   }
 
   @override
@@ -106,6 +154,31 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     for (var node in focusNodes.values) {
       node.dispose();
     }
+    for (var rep in _y10Dil1Reps) {
+      rep.dispose();
+    }
+    for (var node in _y10Dil1Nodes) {
+      node.dispose();
+    }
+    for (var rep in _y10Dil2Reps) {
+      rep.dispose();
+    }
+    for (var node in _y10Dil2Nodes) {
+      node.dispose();
+    }
+    for (var rep in _g10Dil1Reps) {
+      rep.dispose();
+    }
+    for (var node in _g10Dil1Nodes) {
+      node.dispose();
+    }
+    for (var rep in _g10Dil2Reps) {
+      rep.dispose();
+    }
+    for (var node in _g10Dil2Nodes) {
+      node.dispose();
+    }
+
     _yAvg1Controller.dispose();
     _yCfu1Controller.dispose();
     _yAvg2Controller.dispose();
@@ -123,6 +196,18 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     for (var controller in valueControllers.values) {
       if (controller.text.isNotEmpty) return true;
     }
+    for (var rep in _y10Dil1Reps) {
+      if (rep.text.isNotEmpty) return true;
+    }
+    for (var rep in _y10Dil2Reps) {
+      if (rep.text.isNotEmpty) return true;
+    }
+    for (var rep in _g10Dil1Reps) {
+      if (rep.text.isNotEmpty) return true;
+    }
+    for (var rep in _g10Dil2Reps) {
+      if (rep.text.isNotEmpty) return true;
+    }
     if (_yAvg1Controller.text.isNotEmpty ||
         _yCfu1Controller.text.isNotEmpty ||
         _yAvg2Controller.text.isNotEmpty ||
@@ -139,6 +224,18 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   void _clearInputs() {
     for (var controller in valueControllers.values) {
       controller.clear();
+    }
+    for (var rep in _y10Dil1Reps) {
+      rep.clear();
+    }
+    for (var rep in _y10Dil2Reps) {
+      rep.clear();
+    }
+    for (var rep in _g10Dil1Reps) {
+      rep.clear();
+    }
+    for (var rep in _g10Dil2Reps) {
+      rep.clear();
     }
     _notesController.clear();
     _yAvg1Controller.clear();
@@ -365,7 +462,8 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     for (var entry in mappings.entries) {
       final textVal = entry.value['val']!;
       if (textVal.isNotEmpty) {
-        final doubleVal = double.tryParse(textVal);
+        final cleanedVal = textVal.replaceAll(',', '');
+        final doubleVal = double.tryParse(cleanedVal);
         if (doubleVal == null) {
           SnackbarHelper.showError(
             context,
@@ -393,7 +491,8 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     try {
       for (var entry in mappings.entries) {
         if (entry.value['val']!.isNotEmpty) {
-          final doubleVal = double.tryParse(entry.value['val']!)!;
+          final cleanedVal = entry.value['val']!.replaceAll(',', '');
+          final doubleVal = double.tryParse(cleanedVal)!;
           await widget.onSave(
             label: entry.key,
             unit: entry.value['unit']!,
@@ -1073,6 +1172,14 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
           gCfu1Controller: _gCfu1Controller,
           gAvg2Controller: _gAvg2Controller,
           gCfu2Controller: _gCfu2Controller,
+          y10Dil1Reps: _y10Dil1Reps,
+          y10Dil1Nodes: _y10Dil1Nodes,
+          y10Dil2Reps: _y10Dil2Reps,
+          y10Dil2Nodes: _y10Dil2Nodes,
+          g10Dil1Reps: _g10Dil1Reps,
+          g10Dil1Nodes: _g10Dil1Nodes,
+          g10Dil2Reps: _g10Dil2Reps,
+          g10Dil2Nodes: _g10Dil2Nodes,
           calculatePointAverage: _calculatePointAverage,
           onFieldSubmitted: (key) {
             final keys = valueControllers.keys.toList();

@@ -152,8 +152,8 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
     bool isDark,
   ) {
     double? deltaAbw;
-    if (previous != null) {
-      deltaAbw = m.abw - previous.abw;
+    if (previous != null && m.abw != null && previous.abw != null) {
+      deltaAbw = m.abw! - previous.abw!;
     }
 
     return Container(
@@ -342,25 +342,25 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
               children: [
                 _buildMiniMetric(
                   "ABW",
-                  "${m.abw}g",
+                  m.abw != null ? "${m.abw}g" : "no input yet",
                   isDark ? Colors.green.shade300 : Colors.green.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "ADG",
-                  "${m.adg.toStringAsFixed(2)}g",
+                  m.adg != null ? "${m.adg!.toStringAsFixed(2)}g" : "no input yet",
                   isDark ? Colors.green.shade300 : Colors.green.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "FCR",
-                  m.fcr.toStringAsFixed(2),
+                  m.fcr != null ? m.fcr!.toStringAsFixed(2) : "no input yet",
                   isDark ? Colors.orange.shade300 : Colors.orange.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "DFR",
-                  m.dfr.toStringAsFixed(2),
+                  m.dfr != null ? m.dfr!.toStringAsFixed(2) : "no input yet",
                   isDark ? Colors.purple.shade300 : Colors.purple.shade700,
                   colorScheme,
                 ),
