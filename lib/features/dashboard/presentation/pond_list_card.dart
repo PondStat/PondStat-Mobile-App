@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:pondstat/features/monitoring/presentation/pond_monitoring_scaffold.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pondstat/core/router/route_names.dart';
 
 class PondListCard extends StatefulWidget {
   final String pondId;
@@ -34,18 +35,15 @@ class _PondListCardState extends State<PondListCard> {
       _isNavigating = true;
     });
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PondMonitoringScaffold(
-          pondId: widget.pondId,
-          pondName: widget.pondName,
-          userRole: widget.userRole,
-          species: widget.species,
-          createdAt: widget.createdAt,
-          targetCulturePeriodDays: widget.targetCulturePeriodDays,
-        ),
-      ),
+    await context.push(
+      AppRoutes.pondPath(widget.pondId),
+      extra: <String, dynamic>{
+        'pondName': widget.pondName,
+        'userRole': widget.userRole,
+        'species': widget.species,
+        'createdAt': widget.createdAt,
+        'targetCulturePeriodDays': widget.targetCulturePeriodDays,
+      },
     );
 
     if (mounted) {

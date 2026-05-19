@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pondstat/core/utils/string_extensions.dart';
-import 'package:pondstat/features/profile/presentation/edit_profile_page.dart';
-import 'package:pondstat/features/profile/presentation/manage_collaborators_page.dart';
-import 'package:pondstat/features/profile/presentation/settings_page.dart';
+import 'package:pondstat/core/router/route_names.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 
@@ -186,12 +185,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
                         text: 'Edit Profile',
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const EditProfilePage(),
-                            ),
-                          );
+                          context.push(AppRoutes.editProfile);
                         },
                       ),
 
@@ -202,14 +196,11 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
                           text: 'Manage Collaborators',
                           onTap: () {
                             Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ManageCollaboratorsPage(
-                                  pondId: widget.currentPondId!,
-                                  pondName: widget.currentPondName ?? 'Pond',
-                                ),
-                              ),
+                            context.push(
+                              AppRoutes.collaboratorsPath(widget.currentPondId!),
+                              extra: <String, dynamic>{
+                                'pondName': widget.currentPondName ?? 'Pond',
+                              },
                             );
                           },
                         ),
@@ -221,12 +212,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
                         text: 'App Settings',
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SettingsPage(),
-                            ),
-                          );
+                          context.push(AppRoutes.settings);
                         },
                       ),
 

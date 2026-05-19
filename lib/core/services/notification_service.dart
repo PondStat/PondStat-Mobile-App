@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pondstat/core/services/safety/app_notifier.dart';
@@ -42,6 +43,11 @@ class NotificationService implements AppNotifier {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
 
   bool _initialized = false;
+
+  /// GoRouter instance, injected after the router is created.
+  /// Used for notification tap deep linking.
+  GoRouter? _router;
+  set router(GoRouter router) => _router = router;
 
   // ─── Token Stream (SRP: expose, don't persist) ──────────────────────
 
@@ -137,11 +143,10 @@ class NotificationService implements AppNotifier {
     }
 
     if (actionId == NotificationAction.viewChart.id || actionId == null) {
-      // Deep-link to the pond's trends/chart page using payload if available
-      if (payload != null && payload.isNotEmpty) {
+      // Deep-link to the pond's page using the route payload
+      if (payload != null && payload.isNotEmpty && _router != null) {
         _logger.info('Deep linking to: $payload', tag: 'NOTIFICATION');
-        // Example: router.go(payload);
-        // Note: Actual routing implementation depends on go_router setup
+        _router!.push(payload);
       }
       return;
     }

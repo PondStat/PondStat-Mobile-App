@@ -8,7 +8,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/core/theme/app_theme.dart';
-import 'package:pondstat/features/auth/presentation/auth_wrapper.dart';
+import 'package:pondstat/core/router/app_router.dart';
 import 'package:pondstat/core/firebase/firebase_options.dart';
 import 'package:pondstat/core/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,7 +29,7 @@ void main() async {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
       ],
-      child: const MyApp(),
+      child: const StartupScreen(),
     ),
   );
 }
@@ -40,14 +40,15 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(settingsProvider.select((s) => s.themeMode));
+    final router = ref.watch(routerProvider);
 
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'PondStat',
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      home: const StartupScreen(),
+      routerConfig: router,
     );
   }
 }
@@ -140,10 +141,15 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
     }
 
     if (_isInitialized) {
-      return const AuthWrapper();
+      return const MyApp();
     }
 
-    return const LoadingOverlay();
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      home: const LoadingOverlay(),
+    );
   }
 }
 

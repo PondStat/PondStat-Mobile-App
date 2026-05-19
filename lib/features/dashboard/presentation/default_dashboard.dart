@@ -20,8 +20,9 @@ import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
-import 'package:pondstat/features/notifications/presentation/notifications_inbox_page.dart';
 import 'package:pondstat/core/widgets/error_boundary.dart';
+import 'package:pondstat/core/router/route_names.dart';
+import 'package:go_router/go_router.dart';
 
 class DefaultDashboardScreen extends ConsumerStatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -382,14 +383,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
             ),
             actions: [
               _NotificationBadge(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationsInboxPage(),
-                    ),
-                  );
-                },
+                onTap: () => context.push(AppRoutes.notifications),
                 isDark: isDark,
               ),
               Padding(

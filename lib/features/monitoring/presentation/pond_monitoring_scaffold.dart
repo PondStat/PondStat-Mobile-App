@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pondy_companion.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/monitoring_header.dart';
@@ -205,7 +206,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
                 MonitoringHeader(
                   pondId: widget.pondId,
                   pondName: widget.pondName,
-                  onBackTap: () => Navigator.pop(context),
+                  onBackTap: () => context.pop(),
                   onHistoryTap: _showEditHistory,
                   onProfileTap: _showProfileSheet,
                 ),
