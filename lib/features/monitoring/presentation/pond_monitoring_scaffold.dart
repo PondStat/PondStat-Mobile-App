@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/pondy_companion.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/monitoring_header.dart';
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_history_sheet.dart';
@@ -177,6 +178,12 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
       body: Stack(
         children: [
           const PondBackground(),
+          const Positioned.fill(
+            child: PondyCompanion(
+              isFullScreen: true,
+              statusMood: 'stable',
+            ),
+          ),
           SafeArea(
             child: Column(
               children: [

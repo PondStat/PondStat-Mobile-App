@@ -440,6 +440,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
           image: const Icon(Icons.receipt_long_rounded),
           title: "No group expenses records",
           description: "Tap 'Add Expenses' to log an expense.",
+          scrollable: false,
         ),
       ),
     );

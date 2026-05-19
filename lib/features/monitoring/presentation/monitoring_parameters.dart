@@ -78,6 +78,17 @@ class ParameterItem {
   });
 
   Color getColor(BuildContext context) => category.resolveColor(context);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ParameterItem &&
+          runtimeType == other.runtimeType &&
+          label == other.label &&
+          unit == other.unit;
+
+  @override
+  int get hashCode => Object.hash(label, unit);
 }
 
 class MonitoringParameters {

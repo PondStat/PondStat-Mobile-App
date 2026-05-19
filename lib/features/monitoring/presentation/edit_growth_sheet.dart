@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
 class EditGrowthSheet extends ConsumerStatefulWidget {
   final GrowthMetrics metrics;
@@ -116,71 +114,17 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
     setState(() => _isSaving = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = ref.read(firebaseAuthProvider).currentUser;
 
-      final docIds = [
-        if (newAbw != widget.metrics.abw) widget.metrics.abwDocId,
-        if (newAdg != widget.metrics.adg) widget.metrics.adgDocId,
-        if (newDfr != widget.metrics.dfr) widget.metrics.dfrDocId,
-        if (newFcr != widget.metrics.fcr) widget.metrics.fcrDocId,
-      ].whereType<String>().toList();
-
-      if (docIds.isEmpty) {
-        setState(() => _isSaving = false);
-        return;
-      }
-
-      // Fetch all docs in parallel
-      final snapshots = await Future.wait(
-        docIds.map(
-          (id) => ref.read(monitoringRepositoryProvider).measurementsCollection.doc(id).get(),
-        ),
+      await ref.read(growthRepositoryProvider).updateGrowthSampling(
+        pondId: widget.pondId,
+        user: user,
+        newAbw: newAbw,
+        newAdg: newAdg,
+        newDfr: newDfr,
+        newFcr: newFcr,
+        metrics: widget.metrics,
       );
-
-      final batch = FirebaseFirestore.instance.batch();
-
-      for (var i = 0; i < docIds.length; i++) {
-        final id = docIds[i];
-        final docSnap = snapshots[i];
-        if (!docSnap.exists) continue;
-
-        final data = docSnap.data() as Map<String, dynamic>;
-
-        double? newValue;
-        if (id == widget.metrics.abwDocId) {
-          newValue = newAbw;
-        } else if (id == widget.metrics.adgDocId) {
-          newValue = newAdg;
-        } else if (id == widget.metrics.dfrDocId) {
-          newValue = newDfr;
-        } else if (id == widget.metrics.fcrDocId) {
-          newValue = newFcr;
-        }
-
-        if (newValue == null) continue;
-
-        batch.update(docSnap.reference, {
-          'value': newValue,
-          'editedAt': FieldValue.serverTimestamp(),
-          'editedBy': user?.uid,
-          'editorName': user?.displayName,
-        });
-
-        final historyRef = ref.read(monitoringRepositoryProvider).measurementHistoryCollection.doc();
-        batch.set(historyRef, {
-          'pondId': widget.pondId,
-          'measurementId': id,
-          'parameter': data['parameter'],
-          'action': 'update',
-          'editedAt': FieldValue.serverTimestamp(),
-          'editedBy': user?.uid,
-          'editorName': user?.displayName ?? 'Unknown',
-          'before': {'value': data['value']},
-          'after': {'value': newValue},
-        });
-      }
-
-      await batch.commit();
 
       if (!mounted) return;
       widget.onSave();
@@ -193,11 +137,26 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
     }
   }
 
-  String? _numberValidator(String? value) {
+  String? _positiveNumberValidator(String? value) {
+    if (value == null || value.isEmpty) return "Required";
+    final number = double.tryParse(value);
+    if (number == null) return "Invalid number";
+    if (number <= 0) return "Must be greater than 0";
+    return null;
+  }
+
+  String? _nonNegativeNumberValidator(String? value) {
     if (value == null || value.isEmpty) return "Required";
     final number = double.tryParse(value);
     if (number == null) return "Invalid number";
     if (number < 0) return "Cannot be negative";
+    return null;
+  }
+
+  String? _adgValidator(String? value) {
+    if (value == null || value.isEmpty) return "Required";
+    final number = double.tryParse(value);
+    if (number == null) return "Invalid number";
     return null;
   }
 
@@ -300,7 +259,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    validator: _numberValidator,
+                    validator: _positiveNumberValidator,
                     textInputAction: TextInputAction.next,
                   ),
                 if (m.abwDocId != null) const SizedBox(height: 16),
@@ -313,7 +272,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    validator: _numberValidator,
+                    validator: _adgValidator,
                     textInputAction: TextInputAction.next,
                   ),
                 if (m.adgDocId != null) const SizedBox(height: 16),
@@ -326,7 +285,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    validator: _numberValidator,
+                    validator: _nonNegativeNumberValidator,
                     textInputAction: TextInputAction.next,
                   ),
                 if (m.dfrDocId != null) const SizedBox(height: 16),
@@ -339,7 +298,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    validator: _numberValidator,
+                    validator: _positiveNumberValidator,
                     textInputAction: TextInputAction.done,
                   ),
                 if (m.fcrDocId != null) const SizedBox(height: 24),

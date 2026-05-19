@@ -6,9 +6,10 @@ import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/features/profile/presentation/edit_profile_page.dart';
 import 'package:pondstat/features/profile/presentation/manage_collaborators_page.dart';
 import 'package:pondstat/features/profile/presentation/settings_page.dart';
-import 'package:pondstat/core/services/logger_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 
-class ProfileBottomSheet extends StatefulWidget {
+class ProfileBottomSheet extends ConsumerStatefulWidget {
   final String? currentPondId;
   final String? currentPondName;
   final String? currentUserRole;
@@ -21,10 +22,10 @@ class ProfileBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<ProfileBottomSheet> createState() => _ProfileBottomSheetState();
+  ConsumerState<ProfileBottomSheet> createState() => _ProfileBottomSheetState();
 }
 
-class _ProfileBottomSheetState extends State<ProfileBottomSheet>
+class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
     with SingleTickerProviderStateMixin {
   final Color primaryBlue = const Color(0xFF0A74DA);
 
@@ -546,7 +547,7 @@ class _ProfileBottomSheetState extends State<ProfileBottomSheet>
         await FirebaseAuth.instance.signOut();
         await GoogleSignIn().signOut();
       } catch (e, stackTrace) {
-        LoggerService.error("Sign out error", e, stackTrace);
+        ref.read(appLoggerProvider).error("Sign out error", error: e, stackTrace: stackTrace, tag: 'AUTH');
       }
     }
   }

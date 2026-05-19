@@ -4,7 +4,7 @@ import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/utils/string_extensions.dart';
-import 'package:pondstat/core/services/logger_service.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
@@ -91,7 +91,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           }
         }
       } catch (e, stackTrace) {
-        LoggerService.error("Error fetching user data", e, stackTrace);
+        ref.read(appLoggerProvider).error("Error fetching user data", error: e, stackTrace: stackTrace, tag: 'PROFILE');
       }
     }
 
@@ -127,10 +127,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               "Discard changes?",
               style: TextStyle(
-                color: Color(0xFF1E293B),
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w800,
                 fontSize: 18,
               ),
@@ -144,15 +144,18 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(
+            child: Text(
               "Keep Editing",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red.shade50,
-              foregroundColor: Colors.red,
+              foregroundColor: Colors.red.shade900,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

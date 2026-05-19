@@ -214,7 +214,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
           child: TabBar(
             isScrollable: false,
             labelColor: const Color(0xFF0A74DA),
-            unselectedLabelColor: Colors.grey.shade400,
+            unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
             indicatorColor: const Color(0xFF0A74DA),
             tabs: const [
               Tab(text: "Daily"),

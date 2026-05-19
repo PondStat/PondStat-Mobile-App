@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pondstat/core/services/logger_service.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 
 import 'settings_keys.dart';
 import 'settings_state.dart';
@@ -60,7 +60,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       final success = await _prefs.setInt(SettingsKeys.themeMode, mode.index);
       if (!success) throw Exception('Failed to write themeMode to storage.');
     } catch (e, stack) {
-      LoggerService.error('Settings Storage Error', e, stack);
+      ref.read(appLoggerProvider).error('Settings Storage Error', error: e, stackTrace: stack, tag: 'SETTINGS');
       // Rollback on failure
       state = previousState;
     }
@@ -74,7 +74,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       final success = await _prefs.setBool(SettingsKeys.pushNotifications, value);
       if (!success) throw Exception('Failed to write pushNotifications to storage.');
     } catch (e, stack) {
-      LoggerService.error('Settings Storage Error', e, stack);
+      ref.read(appLoggerProvider).error('Settings Storage Error', error: e, stackTrace: stack, tag: 'SETTINGS');
       state = previousState;
     }
   }
@@ -87,7 +87,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       final success = await _prefs.setBool(SettingsKeys.abnormalAlerts, value);
       if (!success) throw Exception('Failed to write abnormalAlerts to storage.');
     } catch (e, stack) {
-      LoggerService.error('Settings Storage Error', e, stack);
+      ref.read(appLoggerProvider).error('Settings Storage Error', error: e, stackTrace: stack, tag: 'SETTINGS');
       state = previousState;
     }
   }

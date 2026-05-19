@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/culture_progress_card.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_calendar.dart';
+import 'package:pondstat/features/monitoring/presentation/water_quality_page.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 
 class OverviewTab extends StatelessWidget {
   final String pondId;
@@ -44,27 +46,62 @@ class OverviewTab extends StatelessWidget {
               top: 16.0,
               bottom: 8.0,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  pondName,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                    color: theme.colorScheme.onSurface,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pondName,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Target Species: $species",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  "Target Species: $species",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurfaceVariant,
+                if (userRole == 'owner' || userRole == 'editor')
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (selectedDay == null) {
+                        SnackbarHelper.showInfo(context, 'Please select a day first.');
+                        return;
+                      }
+
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => WaterQualityPage(
+                            pondId: pondId,
+                            pondName: pondName,
+                            species: species,
+                            canEdit: userRole == 'owner' || userRole == 'editor',
+                            selectedDay: selectedDay!,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Record Daily'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
