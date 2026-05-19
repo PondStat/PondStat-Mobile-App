@@ -340,4 +340,87 @@ class MonitoringParameters {
       return null;
     }
   }
+
+  static Color getUniqueColor(String label) {
+    switch (label) {
+      // Physical
+      case 'Temperature':
+        return const Color(0xFFFF5722); // Deep Orange
+      case 'Salinity':
+        return const Color(0xFF03A9F4); // Light Blue
+      case 'Transparency':
+        return const Color(0xFFFFC107); // Amber/Yellow (formerly teal/orange, this is clearly distinct)
+
+      // Chemical
+      case 'pH Level':
+        return const Color(0xFFE91E63); // Pink
+      case 'Dissolved Oxygen':
+        return const Color(0xFF00BCD4); // Cyan
+      case 'Nitrate':
+        return const Color(0xFF9C27B0); // Purple
+      case 'Nitrite':
+        return const Color(0xFF673AB7); // Deep Purple
+      case 'Ammonia':
+        return const Color(0xFFF44336); // Red
+      case 'Carbon dioxide':
+        return const Color(0xFF795548); // Brown
+      case 'Magnesium':
+        return const Color(0xFF3F51B5); // Indigo
+      case 'Calcium':
+        return const Color(0xFF607D8B); // Blue Grey
+      case 'Total Alkalinity':
+        return const Color(0xFF009688); // Teal
+
+      // Biological
+      case 'Phytoplankton':
+        return const Color(0xFF4CAF50); // Green
+      case 'Test 10-1 (Average yellow colonies)':
+      case 'Test yellow 10-1 (CFU/ml)':
+        return const Color(0xFFFF9800); // Orange
+      case 'Test 10-2 (Average yellow colonies)':
+      case 'Test yellow 10-2 (CFU/ml)':
+        return const Color(0xFFFFC107); // Amber
+      case 'Test 10-1 (Average green colonies)':
+      case 'Test green 10-1 (CFU/ml)':
+        return const Color(0xFF8BC34A); // Lime Green
+      case 'Test 10-2 (Average green colonies)':
+      case 'Test green 10-2 (CFU/ml)':
+        return const Color(0xFF009688); // Teal
+
+      // Growth
+      case 'ABW':
+        return const Color(0xFF2196F3); // Blue
+      case 'ADG':
+        return const Color(0xFF4CAF50); // Green
+      case 'DFR':
+        return const Color(0xFFFF9800); // Orange
+      case 'FCR':
+        return const Color(0xFF9C27B0); // Purple
+
+      default:
+        // Hash the label to get a deterministic color for custom parameters
+        final int hash = label.hashCode;
+        final List<Color> palette = [
+          const Color(0xFFE91E63), // Pink
+          const Color(0xFF9C27B0), // Purple
+          const Color(0xFF673AB7), // Deep Purple
+          const Color(0xFF3F51B5), // Indigo
+          const Color(0xFF2196F3), // Blue
+          const Color(0xFF03A9F4), // Light Blue
+          const Color(0xFF00BCD4), // Cyan
+          const Color(0xFF009688), // Teal
+          const Color(0xFF4CAF50), // Green
+          const Color(0xFF8BC34A), // Lime Green
+          const Color(0xFFCDDC39), // Lime
+          const Color(0xFFFFEB3B), // Yellow
+          const Color(0xFFFFC107), // Amber
+          const Color(0xFFFF9800), // Orange
+          const Color(0xFFFF5722), // Deep Orange
+          const Color(0xFF795548), // Brown
+          const Color(0xFF9E9E9E), // Grey
+          const Color(0xFF607D8B), // Blue Grey
+        ];
+        return palette[hash.abs() % palette.length];
+    }
+  }
 }

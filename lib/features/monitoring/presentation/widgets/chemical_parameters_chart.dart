@@ -160,8 +160,12 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) => const SizedBox.shrink(),
+            ),
           ),
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
@@ -205,11 +209,7 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
 
       if (_visibleParameters[parameterName] != true) continue;
 
-      final paramItem = MonitoringParameters.getParameterByLabel(
-        parameterName,
-        widget.species,
-      );
-      final paramColor = paramItem?.getColor(context) ?? Colors.grey;
+      final paramColor = MonitoringParameters.getUniqueColor(parameterName);
 
       final spots = points.map((p) {
         final x = timestampIndices[p.timestamp]!.toDouble();
@@ -242,8 +242,12 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
       ),
       titlesData: FlTitlesData(
         show: true,
-        rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+        rightTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 40,
+            getTitlesWidget: (value, meta) => const SizedBox.shrink(),
+          ),
         ),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(
@@ -322,7 +326,7 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
                   widget.species,
                 );
                 final unit = paramItem?.unit ?? '';
-                final paramColor = paramItem?.getColor(context) ?? Colors.white;
+                final paramColor = MonitoringParameters.getUniqueColor(matchedParam);
 
                 final point = widget.normalizedData[matchedParam]!.firstWhere(
                   (p) => p.timestamp == timestamp,
@@ -356,11 +360,7 @@ class _ChemicalParametersChartState extends State<ChemicalParametersChart> {
       spacing: 12,
       runSpacing: 8,
       children: _visibleParameters.keys.map((param) {
-        final paramItem = MonitoringParameters.getParameterByLabel(
-          param,
-          widget.species,
-        );
-        final paramColor = paramItem?.getColor(context) ?? Colors.grey;
+        final paramColor = MonitoringParameters.getUniqueColor(param);
         final isVisible = _visibleParameters[param]!;
 
         return GestureDetector(

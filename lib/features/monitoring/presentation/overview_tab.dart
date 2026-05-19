@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/culture_progress_card.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_calendar.dart';
-import 'package:pondstat/features/monitoring/presentation/water_quality_page.dart';
+
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 
 class OverviewTab extends StatelessWidget {
@@ -15,6 +15,7 @@ class OverviewTab extends StatelessWidget {
   final DateTime? selectedDay;
   final Function(DateTime, DateTime) onDaySelected;
   final Function(DateTime) onPageChanged;
+  final VoidCallback onRecordParameters;
 
   const OverviewTab({
     super.key,
@@ -28,6 +29,7 @@ class OverviewTab extends StatelessWidget {
     required this.selectedDay,
     required this.onDaySelected,
     required this.onPageChanged,
+    required this.onRecordParameters,
   });
 
   @override
@@ -74,34 +76,7 @@ class OverviewTab extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (userRole == 'owner' || userRole == 'editor')
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      if (selectedDay == null) {
-                        SnackbarHelper.showInfo(context, 'Please select a day first.');
-                        return;
-                      }
 
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => WaterQualityPage(
-                            pondId: pondId,
-                            pondName: pondName,
-                            species: species,
-                            canEdit: userRole == 'owner' || userRole == 'editor',
-                            selectedDay: selectedDay!,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Record Daily'),
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -139,6 +114,30 @@ class OverviewTab extends StatelessWidget {
               ),
             ),
           ),
+          if (userRole == 'owner' || userRole == 'editor')
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (selectedDay == null) {
+                      SnackbarHelper.showInfo(context, 'Please select a day first on the calendar.');
+                      return;
+                    }
+                    onRecordParameters();
+                  },
+                  icon: const Icon(Icons.water_drop_rounded),
+                  label: const Text('Record Parameters'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: 40),
         ],
       ),

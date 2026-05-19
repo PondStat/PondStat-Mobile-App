@@ -648,88 +648,41 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                       ),
                     ),
                   ),
-                  // Search bar
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: TextField(
-                      onChanged: (value) => setState(() => _searchQuery = value),
-                      decoration: InputDecoration(
-                        hintText: 'Search ponds...',
-                        hintStyle: TextStyle(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                          fontWeight: FontWeight.w500,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
-                  ),
-                  // Filter chips
-                  SizedBox(
-                    height: 38,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: Text(
-                              'Roles:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
+                  // Search and Filter Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: TextField(
+                            onChanged: (value) => setState(() => _searchQuery = value),
+                            decoration: InputDecoration(
+                              hintText: 'Search ponds...',
+                              hintStyle: TextStyle(
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                fontWeight: FontWeight.w500,
                               ),
+                              prefixIcon: Icon(
+                                Icons.search_rounded,
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                           ),
                         ),
-                        _buildRoleFilterChip('All', null, colorScheme),
-                        const SizedBox(width: 8),
-                        _buildRoleFilterChip('Owner', 'owner', colorScheme),
-                        const SizedBox(width: 8),
-                        _buildRoleFilterChip('Editor', 'editor', colorScheme),
-                        const SizedBox(width: 8),
-                        _buildRoleFilterChip('Viewer', 'viewer', colorScheme),
-                      ],
-                    ),
-                  ),
-                  if (uniqueSpecies.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 38,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: Text(
-                                'Species:',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ),
-                          _buildSpeciesFilterChip('All', null, colorScheme),
-                          for (final species in uniqueSpecies) ...[
-                            const SizedBox(width: 8),
-                            _buildSpeciesFilterChip(species, species, colorScheme),
-                          ],
-                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: _buildFilterDropdown(uniqueSpecies, colorScheme),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                 ],
               );
@@ -863,55 +816,141 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     );
   }
 
-  Widget _buildRoleFilterChip(String label, String? role, ColorScheme colorScheme) {
-    final isActive = _filterRole == role;
-    return FilterChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-          color: isActive ? Colors.white : colorScheme.onSurfaceVariant,
-        ),
-      ),
-      selected: isActive,
-      onSelected: (_) => setState(() => _filterRole = role),
-      selectedColor: colorScheme.primary,
-      backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isActive ? colorScheme.primary : Colors.transparent,
-        ),
-      ),
-      showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-    );
-  }
+  Widget _buildFilterDropdown(List<String> uniqueSpecies, ColorScheme colorScheme) {
+    int activeFiltersCount = 0;
+    if (_filterRole != null) activeFiltersCount++;
+    if (_filterSpecies != null) activeFiltersCount++;
 
-  Widget _buildSpeciesFilterChip(String label, String? species, ColorScheme colorScheme) {
-    final isActive = _filterSpecies == species;
-    return FilterChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-          color: isActive ? Colors.white : colorScheme.onSurfaceVariant,
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 50),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      tooltip: 'Filter Ponds',
+      onSelected: (value) {
+        if (value.startsWith('role:')) {
+          final role = value.split(':')[1];
+          setState(() => _filterRole = role.isEmpty ? null : role);
+        } else if (value.startsWith('species:')) {
+          final species = value.split(':')[1];
+          setState(() => _filterSpecies = species.isEmpty ? null : species);
+        }
+      },
+      itemBuilder: (context) {
+        return [
+          PopupMenuItem(
+            enabled: false,
+            child: Text('Roles', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary)),
+          ),
+          PopupMenuItem(
+            value: 'role:',
+            child: Row(
+              children: [
+                Icon(Icons.check, color: _filterRole == null ? colorScheme.primary : Colors.transparent),
+                const SizedBox(width: 12),
+                const Text('All Roles'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'role:owner',
+            child: Row(
+              children: [
+                Icon(Icons.check, color: _filterRole == 'owner' ? colorScheme.primary : Colors.transparent),
+                const SizedBox(width: 12),
+                const Text('Owner'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'role:editor',
+            child: Row(
+              children: [
+                Icon(Icons.check, color: _filterRole == 'editor' ? colorScheme.primary : Colors.transparent),
+                const SizedBox(width: 12),
+                const Text('Editor'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'role:viewer',
+            child: Row(
+              children: [
+                Icon(Icons.check, color: _filterRole == 'viewer' ? colorScheme.primary : Colors.transparent),
+                const SizedBox(width: 12),
+                const Text('Viewer'),
+              ],
+            ),
+          ),
+          if (uniqueSpecies.isNotEmpty) ...[
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              enabled: false,
+              child: Text('Species', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary)),
+            ),
+            PopupMenuItem(
+              value: 'species:',
+              child: Row(
+                children: [
+                  Icon(Icons.check, color: _filterSpecies == null ? colorScheme.primary : Colors.transparent),
+                  const SizedBox(width: 12),
+                  const Text('All Species'),
+                ],
+              ),
+            ),
+            for (final species in uniqueSpecies)
+              PopupMenuItem(
+                value: 'species:$species',
+                child: Row(
+                  children: [
+                    Icon(Icons.check, color: _filterSpecies == species ? colorScheme.primary : Colors.transparent),
+                    const SizedBox(width: 12),
+                    Text(species),
+                  ],
+                ),
+              ),
+          ],
+        ];
+      },
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: activeFiltersCount > 0 
+              ? colorScheme.primary.withValues(alpha: 0.1) 
+              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: activeFiltersCount > 0 ? colorScheme.primary : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.filter_list_rounded, 
+              size: 20, 
+              color: activeFiltersCount > 0 ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            ),
+            if (activeFiltersCount > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$activeFiltersCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
-      selected: isActive,
-      onSelected: (_) => setState(() => _filterSpecies = species),
-      selectedColor: colorScheme.primary,
-      backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isActive ? colorScheme.primary : Colors.transparent,
-        ),
-      ),
-      showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
     );
   }
 
