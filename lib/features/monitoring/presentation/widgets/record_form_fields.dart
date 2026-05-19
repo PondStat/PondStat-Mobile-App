@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
 class RecordFormFields extends StatefulWidget {
@@ -8,22 +9,6 @@ class RecordFormFields extends StatefulWidget {
   final List<int> replicates;
   final Map<String, TextEditingController> valueControllers;
   final Map<String, FocusNode> focusNodes;
-  final TextEditingController yAvg1Controller;
-  final TextEditingController yCfu1Controller;
-  final TextEditingController yAvg2Controller;
-  final TextEditingController yCfu2Controller;
-  final TextEditingController gAvg1Controller;
-  final TextEditingController gCfu1Controller;
-  final TextEditingController gAvg2Controller;
-  final TextEditingController gCfu2Controller;
-  final List<TextEditingController> y10Dil1Reps;
-  final List<FocusNode> y10Dil1Nodes;
-  final List<TextEditingController> y10Dil2Reps;
-  final List<FocusNode> y10Dil2Nodes;
-  final List<TextEditingController> g10Dil1Reps;
-  final List<FocusNode> g10Dil1Nodes;
-  final List<TextEditingController> g10Dil2Reps;
-  final List<FocusNode> g10Dil2Nodes;
   final double? Function(String) calculatePointAverage;
   final Function(String) onFieldSubmitted;
 
@@ -35,22 +20,6 @@ class RecordFormFields extends StatefulWidget {
     required this.replicates,
     required this.valueControllers,
     required this.focusNodes,
-    required this.yAvg1Controller,
-    required this.yCfu1Controller,
-    required this.yAvg2Controller,
-    required this.yCfu2Controller,
-    required this.gAvg1Controller,
-    required this.gCfu1Controller,
-    required this.gAvg2Controller,
-    required this.gCfu2Controller,
-    required this.y10Dil1Reps,
-    required this.y10Dil1Nodes,
-    required this.y10Dil2Reps,
-    required this.y10Dil2Nodes,
-    required this.g10Dil1Reps,
-    required this.g10Dil1Nodes,
-    required this.g10Dil2Reps,
-    required this.g10Dil2Nodes,
     required this.calculatePointAverage,
     required this.onFieldSubmitted,
   });
@@ -60,17 +29,11 @@ class RecordFormFields extends StatefulWidget {
 }
 
 class _RecordFormFieldsState extends State<RecordFormFields> {
-  int _bacterialTabIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     final bool hasRange =
         widget.selectedParameter.absoluteMin != null &&
         widget.selectedParameter.absoluteMax != null;
-
-    if (widget.selectedParameter.label == 'Bacterial Analysis') {
-      return _buildBacterialAnalysisUI(context, widget.themeColor);
-    }
 
     return Column(
       children: [
@@ -183,7 +146,6 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
     Color textDark = Theme.of(context).colorScheme.onSurface;
 
     if (widget.selectedParameter.isSinglePoint) {
-      // For single point parameters, show 1 input value (treated as Point A, Replicate 1 behind the scenes)
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: _buildReplicateInput(
@@ -197,7 +159,6 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
       );
     }
 
-    // For multi-point parameters, show each point with its 3 replicates and average
     return Column(
       children: [
         for (int pIdx = 0; pIdx < widget.points.length; pIdx++)
@@ -220,7 +181,6 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Point header
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
@@ -232,7 +192,6 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                     ),
                   ),
                 ),
-                // Replicate inputs
                 Row(
                   children: [
                     for (int rIdx = 0; rIdx < widget.replicates.length; rIdx++)
@@ -255,339 +214,12 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                       ),
                   ],
                 ),
-                // Average display for this point
                 const SizedBox(height: 10),
                 _buildAverageDisplay(context, widget.points[pIdx], themeColor),
               ],
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildBacterialAnalysisUI(BuildContext context, Color themeColor) {
-    Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _bacterialTabIndex = 0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: _bacterialTabIndex == 0
-                          ? themeColor
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "Yellow Colonies",
-                        style: TextStyle(
-                          color: _bacterialTabIndex == 0
-                              ? Colors.white
-                              : textMuted,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _bacterialTabIndex = 1),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: _bacterialTabIndex == 1
-                          ? themeColor
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "Green Colonies",
-                        style: TextStyle(
-                          color: _bacterialTabIndex == 1
-                              ? Colors.white
-                              : textMuted,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _bacterialTabIndex == 0
-              ? Column(
-                  key: const ValueKey(0),
-                  children: [
-                    _buildTestSection(
-                      context,
-                      "Test 10-1",
-                      widget.y10Dil1Reps,
-                      widget.y10Dil1Nodes,
-                      widget.yAvg1Controller,
-                      widget.yCfu1Controller,
-                      themeColor,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildTestSection(
-                      context,
-                      "Test 10-2",
-                      widget.y10Dil2Reps,
-                      widget.y10Dil2Nodes,
-                      widget.yAvg2Controller,
-                      widget.yCfu2Controller,
-                      themeColor,
-                    ),
-                  ],
-                )
-              : Column(
-                  key: const ValueKey(1),
-                  children: [
-                    _buildTestSection(
-                      context,
-                      "Test 10-1",
-                      widget.g10Dil1Reps,
-                      widget.g10Dil1Nodes,
-                      widget.gAvg1Controller,
-                      widget.gCfu1Controller,
-                      themeColor,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildTestSection(
-                      context,
-                      "Test 10-2",
-                      widget.g10Dil2Reps,
-                      widget.g10Dil2Nodes,
-                      widget.gAvg2Controller,
-                      widget.gCfu2Controller,
-                      themeColor,
-                    ),
-                  ],
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTestSection(
-    BuildContext context,
-    String title,
-    List<TextEditingController> reps,
-    List<FocusNode> nodes,
-    TextEditingController avgController,
-    TextEditingController cfuController,
-    Color themeColor,
-  ) {
-    Color textDark = Theme.of(context).colorScheme.onSurface;
-    Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.02)
-            : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey.shade200,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 16,
-              color: textDark,
-            ),
-          ),
-          const SizedBox(height: 12),
-          // 3 Replicate Input Fields Side-by-Side
-          Row(
-            children: [
-              for (int rIdx = 0; rIdx < 3; rIdx++)
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(right: rIdx < 2 ? 8 : 0),
-                    child: _buildBacterialReplicateInput(
-                      context,
-                      reps[rIdx],
-                      nodes[rIdx],
-                      themeColor,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Outputs Box (Average & CFU/mL side by side)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: themeColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: themeColor.withValues(alpha: 0.3),
-                width: 1.5,
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Average",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                          color: textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: avgController,
-                        builder: (context, value, _) {
-                          return Text(
-                            value.text.isNotEmpty ? value.text : "—",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                              color: themeColor,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  height: 32,
-                  width: 1.5,
-                  color: themeColor.withValues(alpha: 0.2),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "CFU / mL",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                          color: textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: cfuController,
-                        builder: (context, value, _) {
-                          return Text(
-                            value.text.isNotEmpty ? value.text : "—",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                              color: themeColor,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBacterialReplicateInput(
-    BuildContext context,
-    TextEditingController controller,
-    FocusNode focusNode,
-    Color themeColor,
-  ) {
-    Color textDark = Theme.of(context).colorScheme.onSurface;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return ListenableBuilder(
-      listenable: focusNode,
-      builder: (context, _) {
-        final bool isFocused = focusNode.hasFocus;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: isFocused
-                ? theme.colorScheme.surface
-                : (isDark
-                      ? theme.colorScheme.surfaceContainerHighest
-                      : const Color(0xFFF8FAFC)),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isFocused ? themeColor : Colors.transparent,
-              width: isFocused ? 2 : 0,
-            ),
-            boxShadow: isFocused
-                ? [
-                    BoxShadow(
-                      color: themeColor.withValues(alpha: 0.2),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [],
-          ),
-          child: TextField(
-            controller: controller,
-            focusNode: focusNode,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textInputAction: TextInputAction.next,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 14,
-              color: textDark,
-            ),
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
-              hintText: '0.0',
-              hintStyle: TextStyle(
-                color: Colors.grey.withValues(alpha: 0.4),
-                fontSize: 12,
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -663,6 +295,9 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                     controller: controller,
                     focusNode: widget.focusNodes[key],
                     keyboardType: widget.selectedParameter.keyboardType,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]')),
+                    ],
                     textInputAction: isLast
                         ? TextInputAction.done
                         : TextInputAction.next,
@@ -682,7 +317,7 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                       ),
                       hintText: isCompact
                           ? '0.0'
-                          : widget.selectedParameter.hint,
+                          : (customLabel ?? widget.selectedParameter.hint),
                       hintStyle: TextStyle(
                         color: Colors.grey.withValues(alpha: 0.4),
                         fontSize: isCompact ? 12 : 14,

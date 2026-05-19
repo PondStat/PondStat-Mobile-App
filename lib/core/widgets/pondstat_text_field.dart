@@ -76,6 +76,21 @@ class _PondStatTextFieldState extends State<PondStatTextField> {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
+    final bool isNumeric = widget.keyboardType == TextInputType.number ||
+        widget.keyboardType == const TextInputType.numberWithOptions(decimal: true) ||
+        widget.keyboardType == const TextInputType.numberWithOptions(signed: true) ||
+        widget.keyboardType == const TextInputType.numberWithOptions(decimal: true, signed: true);
+
+    List<TextInputFormatter>? formatters = widget.inputFormatters;
+    if (isNumeric) {
+      final numericFormatter = FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]'));
+      if (formatters == null) {
+        formatters = [numericFormatter];
+      } else if (!formatters.any((f) => f is FilteringTextInputFormatter)) {
+        formatters = [...formatters, numericFormatter];
+      }
+    }
+
     return Opacity(
       opacity: widget.enabled ? 1.0 : 0.5,
       child: Column(
@@ -108,7 +123,7 @@ class _PondStatTextFieldState extends State<PondStatTextField> {
             maxLines: widget.maxLines,
             obscureText: widget.obscureText,
             textInputAction: widget.textInputAction,
-            inputFormatters: widget.inputFormatters,
+            inputFormatters: formatters,
             onFieldSubmitted: widget.onSubmitted,
             onChanged: widget.onChanged,
             validator: widget.validator,
