@@ -9,6 +9,8 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/services/safety_service.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+
 
 class WaterQualityPage extends ConsumerStatefulWidget {
   final String pondId;
@@ -108,7 +110,14 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
       }
 
       if (mounted) {
-        SnackbarHelper.showSuccess(context, "Data recorded");
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (mounted) {
+          if (connectivityResult.contains(ConnectivityResult.none)) {
+            SnackbarHelper.showSuccess(context, "Data saved locally (will sync when online)");
+          } else {
+            SnackbarHelper.showSuccess(context, "Data recorded");
+          }
+        }
       }
     } catch (e) {
       if (mounted) {

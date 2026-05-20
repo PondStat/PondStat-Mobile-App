@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
@@ -260,7 +261,14 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
       if (mounted) {
         widget.onSave();
         Navigator.pop(context);
-        SnackbarHelper.showSuccess(context, "Measurements updated");
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (mounted) {
+          if (connectivityResult.contains(ConnectivityResult.none)) {
+            SnackbarHelper.showSuccess(context, "Measurements saved locally (will sync when online)");
+          } else {
+            SnackbarHelper.showSuccess(context, "Measurements updated");
+          }
+        }
       }
     } catch (e) {
       if (mounted) {

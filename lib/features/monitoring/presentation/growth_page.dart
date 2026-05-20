@@ -10,6 +10,7 @@ import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.da
 import 'package:pondstat/features/monitoring/presentation/edit_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 
 class GrowthPage extends ConsumerStatefulWidget {
@@ -86,10 +87,19 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                 setState(() {
                   _refreshKey++;
                 });
-                SnackbarHelper.showSuccess(
-                  sheetContext,
-                  "Growth sampling recorded",
-                );
+                final connectivityResult = await Connectivity().checkConnectivity();
+                if (!sheetContext.mounted) return;
+                if (connectivityResult.contains(ConnectivityResult.none)) {
+                  SnackbarHelper.showSuccess(
+                    sheetContext,
+                    "Growth sampling saved locally (will sync when online)",
+                  );
+                } else {
+                  SnackbarHelper.showSuccess(
+                    sheetContext,
+                    "Growth sampling recorded",
+                  );
+                }
               } catch (e) {
                 if (!sheetContext.mounted) return;
                 SnackbarHelper.showError(
@@ -142,9 +152,16 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
       builder: (sheetContext) => EditGrowthSheet(
         metrics: m,
         pondId: widget.pondId,
-        onSave: () {
+        onSave: () async {
           setState(() => _refreshKey++);
-          SnackbarHelper.showSuccess(context, "Sampling updated");
+          final connectivityResult = await Connectivity().checkConnectivity();
+          if (mounted) {
+            if (connectivityResult.contains(ConnectivityResult.none)) {
+              SnackbarHelper.showSuccess(context, "Sampling saved locally (will sync when online)");
+            } else {
+              SnackbarHelper.showSuccess(context, "Sampling updated");
+            }
+          }
         },
       ),
     );

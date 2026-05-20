@@ -7,6 +7,7 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/schedule_header.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/schedule_list_item.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
@@ -195,7 +196,14 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
           _isSaving = false;
           _hasChanges = false;
         });
-        SnackbarHelper.showSuccess(context, "Schedule updated for ${user['name']}");
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (mounted) {
+          if (connectivityResult.contains(ConnectivityResult.none)) {
+            SnackbarHelper.showSuccess(context, "Schedule saved locally (will sync when online)");
+          } else {
+            SnackbarHelper.showSuccess(context, "Schedule updated for ${user['name']}");
+          }
+        }
       }
     } catch (e) {
       if (mounted) {

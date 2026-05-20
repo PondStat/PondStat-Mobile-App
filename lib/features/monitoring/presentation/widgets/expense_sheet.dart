@@ -6,6 +6,7 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class ExpenseSheet extends ConsumerStatefulWidget {
   final String pondId;
@@ -64,8 +65,15 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
       );
 
       if (mounted) {
-        Navigator.pop(context, true);
-        SnackbarHelper.showSuccess(context, "Expense recorded successfully");
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (mounted) {
+          Navigator.pop(context, true);
+          if (connectivityResult.contains(ConnectivityResult.none)) {
+            SnackbarHelper.showSuccess(context, "Expense saved locally (will sync when online)");
+          } else {
+            SnackbarHelper.showSuccess(context, "Expense recorded successfully");
+          }
+        }
       }
     } catch (e) {
       if (mounted) {

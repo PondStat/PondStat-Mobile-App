@@ -13,6 +13,7 @@ import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
 import 'package:pondstat/core/widgets/loading_placeholder.dart';
 import 'package:pondstat/core/widgets/error_state_card.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class SchedulesTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -720,7 +721,14 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
 
       if (mounted) {
         Navigator.pop(context); // close bottom sheet
-        SnackbarHelper.showSuccess(context, "Schedules updated successfully for $updatedCount members");
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (mounted) {
+          if (connectivityResult.contains(ConnectivityResult.none)) {
+            SnackbarHelper.showSuccess(context, "Schedules saved locally for $updatedCount members (will sync when online)");
+          } else {
+            SnackbarHelper.showSuccess(context, "Schedules updated successfully for $updatedCount members");
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
