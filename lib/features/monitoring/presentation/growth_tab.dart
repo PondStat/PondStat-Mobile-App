@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
 
 class GrowthTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -65,11 +67,14 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
       future: _growthMetricsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingPlaceholder(message: "Loading growth metrics...");
         }
 
         if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
+          return ErrorStateCard(
+            description: "Error: ${snapshot.error}",
+            onRetry: _refreshData,
+          );
         }
 
         final metrics = snapshot.data ?? [];
@@ -162,7 +167,7 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
-        border: isDark ? Border.all(color: Colors.white12) : null,
+        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -302,17 +307,13 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                               Icon(
                                 Icons.delete_outline_rounded,
                                 size: 18,
-                                color: isDark
-                                    ? Colors.red.shade400
-                                    : Colors.red,
+                                color: colorScheme.error,
                               ),
                               const SizedBox(width: 12),
                               Text(
                                 'Delete',
                                 style: TextStyle(
-                                  color: isDark
-                                      ? Colors.red.shade400
-                                      : Colors.red,
+                                  color: colorScheme.error,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -396,7 +397,7 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                       Text(
                         "•",
                         style: TextStyle(
-                          color: isDark ? Colors.white24 : Colors.grey.shade300,
+                          color: colorScheme.outlineVariant,
                           fontSize: 11,
                         ),
                       ),

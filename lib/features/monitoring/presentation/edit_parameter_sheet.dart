@@ -6,6 +6,7 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/core/widgets/destructive_dialog.dart';
 
 class EditParameterSheet extends StatefulWidget {
   final List<DocumentSnapshot> docs;
@@ -163,33 +164,14 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
   void _handleBatchDelete() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Clear All Fields?"),
-        content: const Text(
-          "Are you sure you want to clear all input fields in this sheet? You will need to click 'Save Changes' to apply this to the database.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              "Cancel",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _clearAllFields();
-            },
-            child: const Text(
-              "Clear All",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => DestructiveDialog(
+        title: "Clear All Fields?",
+        content: "Are you sure you want to clear all input fields in this sheet? You will need to click 'Save Changes' to apply this to the database.",
+        confirmText: "Clear All",
+        onConfirm: () async {
+          _clearAllFields();
+        },
       ),
     );
   }
@@ -577,11 +559,11 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                       ? null
                       : _handleBatchDelete,
                   icon: const Icon(
-                    Icons.delete_outline_rounded,
+                    Icons.clear_all_rounded,
                     color: Colors.red,
                   ),
                   label: const Text(
-                    "Delete All",
+                    "Clear All",
                     style: TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.bold,

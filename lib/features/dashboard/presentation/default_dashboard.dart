@@ -80,6 +80,18 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     });
   }
 
+  Future<void> _refreshData() async {
+    final user = ref.read(authRepositoryProvider).currentUser;
+    setState(() {
+      _userPondsStream = ref.read(pondRepositoryProvider).getUserPondsStream(
+        user?.uid ?? '',
+      );
+    });
+    try {
+      await _userPondsStream.first.timeout(const Duration(seconds: 2));
+    } catch (_) {}
+  }
+
   Future<void> _initConnectivity() async {
     late List<ConnectivityResult> result;
     try {
@@ -485,12 +497,12 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                             key: const ValueKey('offline'),
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 8),
-                            color: Colors.grey.shade600,
-                            child: const Text(
+                            color: colorScheme.errorContainer,
+                            child: Text(
                               "You have no internet connection",
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.white,
+                                color: colorScheme.onErrorContainer,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
                               ),
@@ -501,12 +513,12 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                             key: const ValueKey('online'),
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 8),
-                            color: Colors.green,
-                            child: const Text(
+                            color: colorScheme.primaryContainer,
+                            child: Text(
                               "Back online!",
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.white,
+                                color: colorScheme.onPrimaryContainer,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
                               ),
@@ -616,8 +628,12 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
       return true;
     }).toList();
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification notification) {
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: colorScheme.primary,
+      backgroundColor: colorScheme.surface,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification notification) {
         if (notification is ScrollStartNotification ||
             notification is ScrollUpdateNotification) {
           if (_isFabVisible) {
@@ -868,6 +884,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
             );
           },
         ),
+      ),
     );
   }
 
@@ -1106,8 +1123,19 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return NoPondAssignedWidget(
-      onCreatePond: () => _showCreatePondSheet(context),
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: Theme.of(context).colorScheme.primary,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height - 150,
+          child: NoPondAssignedWidget(
+            onCreatePond: () => _showCreatePondSheet(context),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1118,14 +1146,20 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
       friendlyMessage = "You don't have permission to view this data.";
     }
 
-    return EmptyStateCard(
-      image: const Icon(Icons.cloud_off_rounded),
-      title: "Unable to Load",
-      description: friendlyMessage,
-      action: SecondaryButton(
-        text: "Try Again",
-        icon: Icons.refresh_rounded,
-        onPressed: () => setState(() {}),
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: Theme.of(context).colorScheme.primary,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      child: EmptyStateCard(
+        image: const Icon(Icons.cloud_off_rounded),
+        title: "Unable to Load",
+        description: friendlyMessage,
+        scrollable: true,
+        action: SecondaryButton(
+          text: "Try Again",
+          icon: Icons.refresh_rounded,
+          onPressed: _refreshData,
+        ),
       ),
     );
   }

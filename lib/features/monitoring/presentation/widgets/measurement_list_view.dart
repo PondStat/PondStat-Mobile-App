@@ -7,6 +7,8 @@ import 'package:pondstat/features/monitoring/presentation/measurement_card.dart'
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
 
 class MeasurementListView extends ConsumerStatefulWidget {
   final String pondId;
@@ -59,23 +61,28 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
         .snapshots();
   }
 
+  Future<void> _refreshData() async {
+    setState(() {
+      _initStream();
+    });
+    try {
+      await _measurementsStream.first.timeout(const Duration(seconds: 2));
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: _measurementsStream,
       builder: (context, snapshot) {
-        // Only show loader if we have NO data yet AND we are waiting
-        if (!snapshot.hasData &&
-            snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const LoadingPlaceholder(message: "Loading measurements...");
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              "Error: ${snapshot.error}",
-              style: const TextStyle(color: Colors.red),
-            ),
+          return ErrorStateCard(
+            description: "Error: ${snapshot.error}",
+            onRetry: _refreshData,
           );
         }
 
@@ -154,8 +161,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
             Expanded(
               child: RefreshIndicator(
                 color: widget.primaryBlue,
-                onRefresh: () async =>
-                    await Future.delayed(const Duration(milliseconds: 800)),
+                onRefresh: _refreshData,
                 child: ListView.builder(
                   padding: const EdgeInsets.only(
                     top: 4,
@@ -194,7 +200,6 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
 
   Widget _buildFilterChip(String label, String? filterValue) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     // We know filterValue might be null (for 'All') or a string.
     final isSelected = _selectedFilter == filterValue;
@@ -225,11 +230,11 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
           }
         },
         selectedColor: widget.primaryBlue,
-        backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
+        backgroundColor: theme.colorScheme.surfaceContainer,
         side: BorderSide(
           color: isSelected
               ? widget.primaryBlue
-              : (isDark ? Colors.white24 : Colors.grey.shade300),
+              : theme.colorScheme.outlineVariant,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
@@ -237,10 +242,15 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
   }
 
   Widget _buildEmptyState() {
-    return EmptyStateCard(
-      image: const Icon(Icons.assignment_outlined),
-      title: "No ${widget.type} records",
-      description: "Tap 'Record Data' to log a measurement.",
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: widget.primaryBlue,
+      child: EmptyStateCard(
+        image: const Icon(Icons.assignment_outlined),
+        title: "No ${widget.type} records",
+        description: "Tap 'Record Data' to log a measurement.",
+        scrollable: true,
+      ),
     );
   }
 }

@@ -10,6 +10,8 @@ import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
 
 class ManageCollaboratorsPage extends ConsumerStatefulWidget {
   final String pondId;
@@ -444,16 +446,14 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Unable to load team members.',
-                          style: TextStyle(color: Colors.red.shade400),
-                        ),
+                      return ErrorStateCard(
+                        description: "Unable to load team members: ${snapshot.error}",
+                        onRetry: () => setState(() {}),
                       );
                     }
 
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
+                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                      return const LoadingPlaceholder(message: "Loading team members...");
                     }
 
                     final pond = snapshot.data!.data();

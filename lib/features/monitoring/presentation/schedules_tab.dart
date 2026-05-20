@@ -11,6 +11,8 @@ import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
 
 class SchedulesTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -41,6 +43,37 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     'Sunday',
   ];
 
+  late Stream<QuerySnapshot> _schedulesStream;
+
+  void _initStream() {
+    _schedulesStream = ref.read(monitoringRepositoryProvider).schedulesCollection
+        .where('pondId', isEqualTo: widget.pondId)
+        .snapshots();
+  }
+
+  Future<void> _refreshData() async {
+    setState(() {
+      _initStream();
+    });
+    try {
+      await _schedulesStream.first.timeout(const Duration(seconds: 2));
+    } catch (_) {}
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initStream();
+  }
+
+  @override
+  void didUpdateWidget(covariant SchedulesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pondId != widget.pondId) {
+      _initStream();
+    }
+  }
+
   @override
   bool get wantKeepAlive => true;
 
@@ -69,15 +102,16 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StreamBuilder<QuerySnapshot>(
-        stream: ref.read(monitoringRepositoryProvider).schedulesCollection
-            .where('pondId', isEqualTo: widget.pondId)
-            .snapshots(),
+        stream: _schedulesStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text("Error loading schedules"));
+            return ErrorStateCard(
+              description: "Error loading schedules: ${snapshot.error}",
+              onRetry: _refreshData,
+            );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingPlaceholder(message: "Loading schedules...");
           }
 
           final docs = snapshot.data?.docs ?? [];
@@ -124,44 +158,49 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
             }
           }
 
-          if (isCompletelyEmpty && !widget.canEdit) {
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: EmptyStateCard(
-                image: const Icon(Icons.event_busy_rounded),
-                title: 'No Schedules Assigned',
-                description:
-                    'There are currently no shifts scheduled for this pond.',
-              ),
-            );
-          }
+          return RefreshIndicator(
+            onRefresh: _refreshData,
+            color: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            child: isCompletelyEmpty && !widget.canEdit
+                ? Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: EmptyStateCard(
+                      image: const Icon(Icons.event_busy_rounded),
+                      title: 'No Schedules Assigned',
+                      description:
+                          'There are currently no shifts scheduled for this pond.',
+                      scrollable: true,
+                    ),
+                  )
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(
+                      top: 12,
+                      left: 20,
+                      right: 20,
+                      bottom: 100, // padding for FAB
+                    ),
+                    itemCount: _daysOfWeek.length,
+                    itemBuilder: (context, index) {
+                      final day = _daysOfWeek[index];
+                      final morningUsers = groupedSchedules[day]!['morning']!;
+                      final afternoonUsers = groupedSchedules[day]!['afternoon']!;
 
-          return ListView.builder(
-            padding: const EdgeInsets.only(
-              top: 12,
-              left: 20,
-              right: 20,
-              bottom: 100, // padding for FAB
-            ),
-            itemCount: _daysOfWeek.length,
-            itemBuilder: (context, index) {
-              final day = _daysOfWeek[index];
-              final morningUsers = groupedSchedules[day]!['morning']!;
-              final afternoonUsers = groupedSchedules[day]!['afternoon']!;
+                      // Only show days that have at least one assignment, unless we are in edit mode
+                      // If edit mode, show all days so they can see nothing is assigned.
+                      if (morningUsers.isEmpty &&
+                          afternoonUsers.isEmpty &&
+                          !widget.canEdit) {
+                        return const SizedBox.shrink();
+                      }
 
-              // Only show days that have at least one assignment, unless we are in edit mode
-              // If edit mode, show all days so they can see nothing is assigned.
-              if (morningUsers.isEmpty &&
-                  afternoonUsers.isEmpty &&
-                  !widget.canEdit) {
-                return const SizedBox.shrink();
-              }
-
-              return StaggeredListItem(
-                index: index,
-                child: _buildDayCard(day, morningUsers, afternoonUsers),
-              );
-            },
+                      return StaggeredListItem(
+                        index: index,
+                        child: _buildDayCard(day, morningUsers, afternoonUsers),
+                      );
+                    },
+                  ),
           );
         },
       ),
@@ -188,13 +227,13 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     List<Map<String, dynamic>> morningUsers,
     List<Map<String, dynamic>> afternoonUsers,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurface = colorScheme.onSurface;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -204,7 +243,7 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
           ),
         ],
         border: Border.all(
-          color: isDark ? Colors.white12 : Colors.grey.shade200,
+          color: colorScheme.outlineVariant,
         ),
       ),
       child: Column(
@@ -214,15 +253,13 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.grey.shade50,
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
               ),
               border: Border(
                 bottom: BorderSide(
-                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  color: colorScheme.outlineVariant,
                 ),
               ),
             ),
@@ -244,7 +281,7 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
           ),
           Divider(
             height: 1,
-            color: Colors.grey.shade200,
+            color: colorScheme.outlineVariant,
             indent: 16,
             endIndent: 16,
           ),
@@ -293,8 +330,8 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurface = colorScheme.onSurface;
 
     return InkWell(
       onTap: widget.assignedUsers.isNotEmpty ? _toggleExpanded : null,
@@ -323,9 +360,7 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
-                          color: isDark
-                              ? onSurface.withValues(alpha: 0.9)
-                              : const Color(0xFF334155),
+                          color: onSurface,
                         ),
                       ),
                       Text(
@@ -335,10 +370,8 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                         style: TextStyle(
                           fontSize: 12,
                           color: widget.assignedUsers.isEmpty
-                              ? Colors.red.shade400
-                              : (isDark
-                                    ? Colors.white38
-                                    : Colors.grey.shade600),
+                              ? colorScheme.error
+                              : colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -352,7 +385,7 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                     _isExpanded
                         ? Icons.expand_less_rounded
                         : Icons.expand_more_rounded,
-                    color: isDark ? Colors.white24 : Colors.grey.shade400,
+                    color: colorScheme.onSurfaceVariant,
                     size: 20,
                   ),
                 ],

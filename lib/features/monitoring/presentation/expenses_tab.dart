@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
@@ -25,23 +27,33 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
   late Stream<DocumentSnapshot<Pond>> _pondStream;
   late Stream<QuerySnapshot<Map<String, dynamic>>> _expensesStream;
 
-  @override
-  void initState() {
-    super.initState();
+  void _initStreams() {
     _pondStream = ref.read(pondRepositoryProvider).pondsCollection
         .doc(widget.pondId)
         .snapshots();
     _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
   }
 
+  Future<void> _refreshData() async {
+    setState(() {
+      _initStreams();
+    });
+    try {
+      await _expensesStream.first.timeout(const Duration(seconds: 2));
+    } catch (_) {}
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initStreams();
+  }
+
   @override
   void didUpdateWidget(covariant ExpensesTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pondId != widget.pondId) {
-      _pondStream = ref.read(pondRepositoryProvider).pondsCollection
-          .doc(widget.pondId)
-          .snapshots();
-      _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
+      _initStreams();
     }
   }
 
@@ -50,10 +62,17 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
     return StreamBuilder<DocumentSnapshot<Pond>>(
       stream: _pondStream,
       builder: (context, pondSnapshot) {
+        if (pondSnapshot.hasError) {
+          return ErrorStateCard(
+            description: "Error loading pond data: ${pondSnapshot.error}",
+            onRetry: _refreshData,
+          );
+        }
+
         // Only show loader if we have NO data yet
         if (!pondSnapshot.hasData &&
             pondSnapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingPlaceholder(message: "Loading pond details...");
         }
 
         final pond = pondSnapshot.data?.data();
@@ -73,21 +92,13 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
             // Only show loader if we have NO data yet
             if (!expenseSnapshot.hasData &&
                 expenseSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const LoadingPlaceholder(message: "Loading expenses...");
             }
 
             if (expenseSnapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Text(
-                    "Error loading expenses:\n${expenseSnapshot.error}",
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+              return ErrorStateCard(
+                description: "Error loading expenses: ${expenseSnapshot.error}",
+                onRetry: _refreshData,
               );
             }
 
@@ -107,7 +118,11 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
 
             final splitShare = totalGroupSpend / memberCount;
 
-            return CustomScrollView(
+            return RefreshIndicator(
+              onRefresh: _refreshData,
+              color: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              child: CustomScrollView(
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.all(20),
@@ -140,8 +155,9 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                   ),
                 const SliverToBoxAdapter(child: SizedBox(height: 120)),
               ],
-            );
-          },
+            ),
+          );
+        },
         );
       },
     );
