@@ -30,6 +30,7 @@ class _FinancesTabState extends State<FinancesTab>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ExpenseSheet(pondId: widget.pondId),
     );
@@ -102,16 +103,20 @@ class _FinancesTabState extends State<FinancesTab>
         ],
       ),
       floatingActionButton: (widget.canEdit && _selectedFilterIndex == 0)
-          ? FloatingActionButton.extended(
-              heroTag: 'finances_fab',
-              onPressed: _handleFabPressed,
-              backgroundColor: Colors.teal,
-              icon: const Icon(Icons.receipt_long_rounded, color: Colors.white),
-              label: const Text(
-                "Add Expenses",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          ? Semantics(
+              label: "Add expenses receipt data",
+              button: true,
+              child: FloatingActionButton.extended(
+                heroTag: 'finances_fab',
+                onPressed: _handleFabPressed,
+                backgroundColor: Colors.teal,
+                icon: const Icon(Icons.receipt_long_rounded, color: Colors.white),
+                label: const Text(
+                  "Add Expenses",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             )

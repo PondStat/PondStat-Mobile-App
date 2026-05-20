@@ -32,7 +32,7 @@ class SchedulesTab extends ConsumerStatefulWidget {
 
 class _SchedulesTabState extends ConsumerState<SchedulesTab>
     with AutomaticKeepAliveClientMixin {
-  final Color primaryBlue = const Color(0xFF0A74DA);
+  Color get primaryBlue => Theme.of(context).colorScheme.primary;
   final List<String> _daysOfWeek = [
     'Monday',
     'Tuesday',
@@ -205,16 +205,20 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
         },
       ),
       floatingActionButton: widget.canEdit
-          ? FloatingActionButton.extended(
-              heroTag: 'schedules_fab',
-              onPressed: _showAssignSheet,
-              backgroundColor: primaryBlue,
-              icon: const Icon(Icons.group_add_rounded, color: Colors.white),
-              label: const Text(
-                "Assign Shifts",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          ? Semantics(
+              label: "Assign schedules or shifts to pond collaborators",
+              button: true,
+              child: FloatingActionButton.extended(
+                heroTag: 'schedules_fab',
+                onPressed: _showAssignSheet,
+                backgroundColor: primaryBlue,
+                icon: const Icon(Icons.group_add_rounded, color: Colors.white),
+                label: const Text(
+                  "Assign Shifts",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             )
@@ -465,6 +469,7 @@ class _OverlapAvatarGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final maxToShow = 3;
     final int toShow = users.length > maxToShow ? maxToShow : users.length;
     final int remaining = users.length > maxToShow
@@ -480,13 +485,13 @@ class _OverlapAvatarGroup extends StatelessWidget {
             widthFactor: 0.6,
             child: CircleAvatar(
               radius: 14,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: colorScheme.surfaceContainerHigh,
               child: Text(
                 "+$remaining",
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
-                  color: Colors.grey.shade700,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -510,7 +515,7 @@ class _OverlapAvatarGroup extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+              border: Border.all(color: colorScheme.surfaceContainer, width: 2),
             ),
             child: CircleAvatar(
               radius: 14,
@@ -552,7 +557,7 @@ class AssignShiftSheet extends ConsumerStatefulWidget {
 }
 
 class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
-  final Color primaryBlue = const Color(0xFF0A74DA);
+  Color get primaryBlue => Theme.of(context).colorScheme.primary;
   bool _isLoading = true;
   bool _isSaving = false;
 

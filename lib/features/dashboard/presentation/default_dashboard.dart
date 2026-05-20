@@ -146,6 +146,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) => const ProfileBottomSheet(),
     );
@@ -155,6 +156,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const CreatePondSheet(),
     );
@@ -168,6 +170,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) =>
           EditPondSheet(pondId: pondId, initialData: pondData),
@@ -279,10 +282,10 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text(
+                  child: Text(
                     "Cancel",
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

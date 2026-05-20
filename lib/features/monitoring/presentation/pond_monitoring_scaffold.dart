@@ -71,6 +71,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ProfileBottomSheet(
         currentPondId: widget.pondId,
@@ -84,6 +85,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.6,
@@ -265,22 +267,27 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
             BottomNavigationBarItem(
               icon: Icon(Icons.receipt_long_rounded),
               label: "Operations",
+              tooltip: "Operations",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.analytics_rounded),
               label: "Trends",
+              tooltip: "Trends",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_rounded),
               label: "Overview",
+              tooltip: "Overview",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.trending_up_rounded),
               label: "Growth",
+              tooltip: "Growth",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.water_drop_rounded),
               label: "Parameter",
+              tooltip: "Parameter",
             ),
           ],
         ),

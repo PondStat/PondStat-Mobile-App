@@ -26,8 +26,6 @@ class GrowthTab extends ConsumerStatefulWidget {
 }
 
 class _GrowthTabState extends ConsumerState<GrowthTab> {
-  final Color primaryIndigo = Colors.indigo;
-
   late Future<List<GrowthMetrics>> _growthMetricsFuture;
 
   @override
@@ -263,64 +261,68 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                     ),
                   if (widget.canEdit) ...[
                     const SizedBox(width: 8),
-                    PopupMenuButton<String>(
-                      padding: EdgeInsets.zero,
-                      icon: Icon(
-                        Icons.more_horiz_rounded,
-                        color: colorScheme.onSurfaceVariant.withValues(
-                          alpha: 0.5,
-                        ),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      color: colorScheme.surfaceContainerHigh,
-                      onSelected: (value) {
-                        if (value == 'edit') widget.onEdit(m);
-                        if (value == 'delete') widget.onDelete(m);
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.edit_rounded,
-                                size: 18,
-                                color: colorScheme.primary,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.onSurface,
-                                ),
-                              ),
-                            ],
+                    Semantics(
+                      label: "Growth sampling actions menu",
+                      button: true,
+                      child: PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        icon: Icon(
+                          Icons.more_horiz_rounded,
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.5,
                           ),
                         ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.delete_outline_rounded,
-                                size: 18,
-                                color: colorScheme.error,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Delete',
-                                style: TextStyle(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        color: colorScheme.surfaceContainerHigh,
+                        onSelected: (value) {
+                          if (value == 'edit') widget.onEdit(m);
+                          if (value == 'delete') widget.onDelete(m);
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit_rounded,
+                                  size: 18,
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Edit',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 18,
                                   color: colorScheme.error,
-                                  fontWeight: FontWeight.w600,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(
+                                    color: colorScheme.error,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ],

@@ -152,60 +152,64 @@ class MeasurementCard extends ConsumerWidget {
                   ),
                 ),
                 if (canEdit)
-                  PopupMenuButton<String>(
-                    padding: EdgeInsets.zero,
-                    icon: Icon(
-                      Icons.more_horiz_rounded,
-                      color: Colors.grey.shade400,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    onOpened: () => HapticFeedback.lightImpact(),
-                    onSelected: (value) {
-                      HapticFeedback.selectionClick();
-                      if (value == 'edit') onEdit();
-                      if (value == 'clear') _confirmGroupClear(context, monitoringRepo);
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.edit_rounded,
-                              size: 18,
-                              color: primaryColor,
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Edit',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
+                  Semantics(
+                    label: "Measurement actions menu",
+                    button: true,
+                    child: PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      icon: Icon(
+                        Icons.more_horiz_rounded,
+                        color: Colors.grey.shade400,
                       ),
-                      PopupMenuItem(
-                        value: 'clear',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.remove_circle_outline_rounded,
-                              size: 18,
-                              color: colorScheme.error,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Clear Inputs',
-                              style: TextStyle(
-                                color: colorScheme.error,
-                                fontWeight: FontWeight.w600,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      onOpened: () => HapticFeedback.lightImpact(),
+                      onSelected: (value) {
+                        HapticFeedback.selectionClick();
+                        if (value == 'edit') onEdit();
+                        if (value == 'clear') _confirmGroupClear(context, monitoringRepo);
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit_rounded,
+                                size: 18,
+                                color: primaryColor,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Edit',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        PopupMenuItem(
+                          value: 'clear',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.remove_circle_outline_rounded,
+                                size: 18,
+                                color: colorScheme.error,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Clear Inputs',
+                                style: TextStyle(
+                                  color: colorScheme.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),

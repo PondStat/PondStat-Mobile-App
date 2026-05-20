@@ -606,6 +606,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => SafeArea(
         child: Container(

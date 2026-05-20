@@ -34,8 +34,6 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final Color primaryBlue = const Color(0xFF0A74DA);
-
   @override
   void initState() {
     super.initState();
@@ -222,13 +220,17 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
         ],
       ),
       floatingActionButton: widget.canEdit
-          ? FloatingActionButton.extended(
-              heroTag: 'water_quality_fab',
-              onPressed: _showAddDataOverlay,
-              icon: const Icon(Icons.add),
-              label: Text(fabLabel),
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
+          ? Semantics(
+              label: "Record water quality data",
+              button: true,
+              child: FloatingActionButton.extended(
+                heroTag: 'water_quality_fab',
+                onPressed: _showAddDataOverlay,
+                icon: const Icon(Icons.add),
+                label: Text(fabLabel),
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+              ),
             )
           : null,
     );

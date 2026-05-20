@@ -205,38 +205,43 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
     final isSelected = _selectedFilter == filterValue;
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
-      child: ChoiceChip(
-        label: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: isSelected
-                ? Colors.white
-                : theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
+      child: Semantics(
+        label: "Filter measurements by $label",
         selected: isSelected,
-        onSelected: (selected) {
-          HapticFeedback.selectionClick();
-          if (selected) {
-            setState(() => _selectedFilter = filterValue);
-          } else if (_selectedFilter == filterValue) {
-            // Prevent unselecting the current chip if it's the only one selected
-            // (always keep something selected, usually 'All')
-            if (filterValue != null) {
-              setState(() => _selectedFilter = null);
+        button: true,
+        child: ChoiceChip(
+          label: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: isSelected
+                  ? Colors.white
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          selected: isSelected,
+          onSelected: (selected) {
+            HapticFeedback.selectionClick();
+            if (selected) {
+              setState(() => _selectedFilter = filterValue);
+            } else if (_selectedFilter == filterValue) {
+              // Prevent unselecting the current chip if it's the only one selected
+              // (always keep something selected, usually 'All')
+              if (filterValue != null) {
+                setState(() => _selectedFilter = null);
+              }
             }
-          }
-        },
-        selectedColor: widget.primaryBlue,
-        backgroundColor: theme.colorScheme.surfaceContainer,
-        side: BorderSide(
-          color: isSelected
-              ? widget.primaryBlue
-              : theme.colorScheme.outlineVariant,
+          },
+          selectedColor: widget.primaryBlue,
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          side: BorderSide(
+            color: isSelected
+                ? widget.primaryBlue
+                : theme.colorScheme.outlineVariant,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
     );
   }

@@ -164,14 +164,18 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
         onDelete: _confirmDeleteGrowth,
       ),
       floatingActionButton: widget.canEdit
-          ? FloatingActionButton.extended(
-              heroTag: 'growth_fab',
-              onPressed: () => _showRecordGrowth(),
-              backgroundColor: colorScheme.primary,
-              icon: Icon(Icons.add_rounded, color: colorScheme.onPrimary),
-              label: Text(
-                "Record Sampling",
-                style: TextStyle(color: colorScheme.onPrimary),
+          ? Semantics(
+              label: "Record growth sampling data",
+              button: true,
+              child: FloatingActionButton.extended(
+                heroTag: 'growth_fab',
+                onPressed: () => _showRecordGrowth(),
+                backgroundColor: colorScheme.primary,
+                icon: Icon(Icons.add_rounded, color: colorScheme.onPrimary),
+                label: Text(
+                  "Record Sampling",
+                  style: TextStyle(color: colorScheme.onPrimary),
+                ),
               ),
             )
           : null,
