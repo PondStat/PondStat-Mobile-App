@@ -298,9 +298,8 @@ class GrowthRepository {
     for (var i = 0; i < docIds.length; i++) {
       final id = docIds[i];
       final docSnap = snapshots[i];
-      if (!docSnap.exists) continue;
-
-      final data = docSnap.data() as Map<String, dynamic>;
+      final data = docSnap.data();
+      if (data == null) continue;
       final historyRef = measurementHistoryCollection.doc();
 
       batch.set(historyRef, {
@@ -349,9 +348,8 @@ class GrowthRepository {
     for (var i = 0; i < docIds.length; i++) {
       final id = docIds[i];
       final docSnap = snapshots[i];
-      if (!docSnap.exists) continue;
-
-      final data = docSnap.data() as Map<String, dynamic>;
+      final data = docSnap.data();
+      if (data == null) continue;
 
       double? newValue;
       if (id == metrics.abwDocId) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -41,7 +42,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
     notesControllers = {};
 
     for (var doc in widget.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
       final replicateValuesMap =
           data['replicateValues'] as Map<String, dynamic>? ?? {};
       groupControllers[doc.id] = {};
@@ -89,7 +90,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
   void _checkDirtyState() {
     bool isNowDirty = false;
     for (var doc in widget.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
       final replicateValuesMap =
           data['replicateValues'] as Map<String, dynamic>? ?? {};
       final initialNote = data['notes'] as String? ?? '';
@@ -199,7 +200,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
     // Validate that all entered values are valid numbers (typo safety)
     for (var doc in widget.docs) {
       final controllersMap = groupControllers[doc.id]!;
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
       final paramName = data['parameter'] ?? 'Parameter';
 
       for (var p in points) {
@@ -316,7 +317,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
     ColorScheme colorScheme, {
     bool isSinglePoint = false,
   }) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Column(
@@ -379,6 +380,11 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
                                     ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'[0-9.,\-]'),
+                                  ),
+                                ],
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
@@ -547,7 +553,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
               child: SingleChildScrollView(
                 child: Column(
                   children: widget.docs.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
+                    final data = doc.data() as Map<String, dynamic>? ?? {};
                     final paramItem = MonitoringParameters.getParameterByLabel(
                       data['parameter'],
                       widget.species,

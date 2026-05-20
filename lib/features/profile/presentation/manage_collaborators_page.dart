@@ -666,13 +666,13 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
-                            color: Colors.blueGrey.shade900,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           userData?['fullName'] ?? 'User',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -768,7 +768,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: isDestructive ? color : Colors.blueGrey.shade900,
+                      color: isDestructive ? color : Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                     ),
                   ),
@@ -776,7 +776,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                   Text(
                     description,
                     style: TextStyle(
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),

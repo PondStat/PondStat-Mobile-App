@@ -84,7 +84,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
             .map((p) => p.label)
             .toSet();
         final docs = rawDocs.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
+          final data = doc.data() as Map<String, dynamic>? ?? {};
           final param = data['parameter'] as String?;
           return param != null && !excludedParams.contains(param);
         }).toList();
@@ -93,8 +93,8 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
 
         final sortedDocs = docs.toList()
           ..sort((a, b) {
-            final dataA = a.data() as Map<String, dynamic>;
-            final dataB = b.data() as Map<String, dynamic>;
+            final dataA = a.data() as Map<String, dynamic>? ?? {};
+            final dataB = b.data() as Map<String, dynamic>? ?? {};
             final tA = dataA['timestamp'] as Timestamp?;
             final tB = dataB['timestamp'] as Timestamp?;
             if (tA == null || tB == null) return 0;
@@ -104,7 +104,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
         // 1. Extract Unique Parameters
         final Set<String> uniqueParams = {};
         for (var doc in sortedDocs) {
-          final data = doc.data() as Map<String, dynamic>;
+          final data = doc.data() as Map<String, dynamic>? ?? {};
           final param = data['parameter'] as String?;
           if (param != null) uniqueParams.add(param);
         }
@@ -127,7 +127,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
         final filteredDocs = activeFilter == null
             ? sortedDocs
             : sortedDocs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
+                final data = doc.data() as Map<String, dynamic>? ?? {};
                 return data['parameter'] == activeFilter;
               }).toList();
 
@@ -166,7 +166,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
                   itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
                     final data =
-                        filteredDocs[index].data() as Map<String, dynamic>;
+                        filteredDocs[index].data() as Map<String, dynamic>? ?? {};
                     return StaggeredListItem(
                       index: index,
                       child: MeasurementCard(

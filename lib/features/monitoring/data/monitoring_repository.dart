@@ -191,7 +191,8 @@ class MonitoringRepository {
     final batch = _firestore.batch();
 
     for (var doc in docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
+      if (data is! Map<String, dynamic>) continue;
 
       batch.delete(doc.reference);
 
@@ -222,8 +223,8 @@ class MonitoringRepository {
     final batch = _firestore.batch();
 
     for (var doc in docs) {
-      if (!doc.exists) continue;
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
+      if (data is! Map<String, dynamic>) continue;
 
       final updateData = {
         'pointValues': <String, double>{},
@@ -271,7 +272,8 @@ class MonitoringRepository {
     final batch = _firestore.batch();
 
     for (var doc in docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
+      if (data is! Map<String, dynamic>) continue;
       final newPoints = updatedValues[doc.id];
       if (newPoints == null) continue;
 
@@ -309,9 +311,8 @@ class MonitoringRepository {
     final batch = _firestore.batch();
 
     for (var doc in docs) {
-      if (!doc.exists) continue;
-
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
+      if (data is! Map<String, dynamic>) continue;
       final newPointValues = updatedPointValues[doc.id];
       final newReplicateValues = updatedReplicateValues[doc.id];
       final newNote = updatedNotes?[doc.id];

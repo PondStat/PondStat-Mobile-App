@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:pondstat/core/services/safety/app_notifier.dart';
 import 'package:pondstat/core/services/logger_service.dart';
 import 'package:pondstat/core/services/logging/app_logger.dart';
@@ -21,7 +23,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService(ref.watch(appLoggerProvider));
+  return NotificationService(ref.watch(appLoggerProvider), ref);
 });
 
 /// Notification service responsible for local + FCM push notification display.
@@ -35,8 +37,9 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 ///   from [notification_types.dart] — no raw strings.
 class NotificationService implements AppNotifier {
   final AppLogger _logger;
+  final Ref _ref;
 
-  NotificationService(this._logger);
+  NotificationService(this._logger, this._ref);
 
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
@@ -138,7 +141,9 @@ class NotificationService implements AppNotifier {
     final payload = response.payload;
 
     if (actionId == NotificationAction.acknowledge.id) {
-      // TODO: Mark the alert as acknowledged in Firestore
+      if (payload != null && payload.isNotEmpty) {
+        _acknowledgeAlert(payload);
+      }
       return;
     }
 
@@ -354,5 +359,60 @@ class NotificationService implements AppNotifier {
       '',
       details,
     );
+  }
+
+  Future<void> _acknowledgeAlert(String payload) async {
+    try {
+      final uri = Uri.tryParse(payload);
+      if (uri == null) return;
+      final pondId = uri.queryParameters['pondId'];
+      final parameter = uri.queryParameters['parameter'];
+      if (pondId == null || parameter == null) return;
+
+      final baseRef = _ref.read(appBaseRefProvider);
+      final measurementsCollection = baseRef.collection('measurements');
+
+      // Find the latest measurement with this pondId and parameter
+      final querySnapshot = await measurementsCollection
+          .where('pondId', isEqualTo: pondId)
+          .where('parameter', isEqualTo: parameter)
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        _logger.warning(
+          'No measurement found to acknowledge alert for pond $pondId, parameter $parameter',
+          tag: 'NOTIFICATION',
+        );
+        return;
+      }
+
+      final doc = querySnapshot.docs.first;
+      final data = doc.data();
+      if (data['alert'] != null) {
+        await doc.reference.update({
+          'alert.isAcknowledged': true,
+          'alert.acknowledgedAt': FieldValue.serverTimestamp(),
+          'alert.acknowledgedBy': _ref.read(firebaseAuthProvider).currentUser?.uid,
+        });
+        _logger.info(
+          'Successfully acknowledged alert for doc ${doc.id}',
+          tag: 'NOTIFICATION',
+        );
+      } else {
+        _logger.warning(
+          'Measurement ${doc.id} does not have an alert field',
+          tag: 'NOTIFICATION',
+        );
+      }
+    } catch (e, stackTrace) {
+      _logger.error(
+        'Error acknowledging alert in Firestore',
+        error: e,
+        stackTrace: stackTrace,
+        tag: 'NOTIFICATION',
+      );
+    }
   }
 }
