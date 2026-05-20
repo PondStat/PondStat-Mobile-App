@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
+import 'package:pondstat/core/widgets/destructive_dialog.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_growth_sheet.dart';
@@ -105,105 +106,23 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        bool isDeleting = false;
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return PopScope(
-              canPop: !isDeleting,
-              child: AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                title: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.red,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        "Delete Sampling?",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                content: const Text(
-                  "Are you sure you want to delete this sampling data? This action cannot be undone.",
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: isDeleting ? null : () => Navigator.pop(context),
-                    child: const Text(
-                      "Cancel",
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade50,
-                      foregroundColor: Colors.red,
-                      elevation: 0,
-                    ),
-                    onPressed: isDeleting
-                        ? null
-                        : () async {
-                            setStateDialog(() => isDeleting = true);
-                            final user = FirebaseAuth.instance.currentUser;
-
-                            try {
-                              await ref.read(growthRepositoryProvider).deleteGrowthSampling(
-                                m,
-                                user,
-                                widget.pondId,
-                              );
-                              HapticFeedback.heavyImpact();
-                              if (!context.mounted) return;
-                              Navigator.pop(context);
-                              setState(() => _refreshKey++);
-                              SnackbarHelper.showInfo(context, "Sampling deleted");
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              setStateDialog(() => isDeleting = false);
-                              SnackbarHelper.showError(context, "Error deleting: $e");
-                            }
-                          },
-                    child: isDeleting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.red,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            "Delete",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (context) => DestructiveDialog(
+        title: "Delete Sampling?",
+        content: "Are you sure you want to delete this sampling data? This action cannot be undone.",
+        onConfirm: () async {
+          final user = FirebaseAuth.instance.currentUser;
+          await ref.read(growthRepositoryProvider).deleteGrowthSampling(
+            m,
+            user,
+            widget.pondId,
+          );
+          HapticFeedback.heavyImpact();
+          if (context.mounted) {
+            setState(() => _refreshKey++);
+            SnackbarHelper.showInfo(context, "Sampling deleted");
+          }
+        },
+      ),
     );
   }
 

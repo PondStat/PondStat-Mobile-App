@@ -7,6 +7,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/core/widgets/primary_button.dart';
 
 class OnboardingStep {
   final String title;
@@ -430,50 +431,20 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
             ),
           ),
           const SizedBox(height: 48.0),
-          ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: double.infinity,
-              minHeight: 56.0,
-            ),
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _signInWithGoogle,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: primaryColor,
-                disabledBackgroundColor: Colors.white.withValues(alpha: 0.8),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28.0),
-                ),
+          PrimaryButton(
+            text: 'Continue with Google',
+            icon: FontAwesomeIcons.google,
+            isLoading: _isLoading,
+            onPressed: _signInWithGoogle,
+            backgroundColor: Colors.white,
+            foregroundColor: primaryColor,
+            customShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-              child: _isLoading
-                  ? SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        color: primaryColor,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        FaIcon(
-                          FontAwesomeIcons.google,
-                          size: 22,
-                          color: primaryColor,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Continue with Google',
-                          style: TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
+            ],
           ),
         ],
       ),

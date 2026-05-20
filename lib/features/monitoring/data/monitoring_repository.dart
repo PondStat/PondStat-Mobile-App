@@ -212,6 +212,54 @@ class MonitoringRepository {
     await batch.commit();
   }
 
+  /// Clears all input values (pointValues, replicateValues, value, notes) for a group of measurements.
+  Future<void> clearMeasurementsGroupInputs({
+    required String pondId,
+    required List<DocumentSnapshot> docs,
+  }) async {
+    if (currentUser == null) throw Exception('User not authenticated');
+
+    final batch = _firestore.batch();
+
+    for (var doc in docs) {
+      if (!doc.exists) continue;
+      final data = doc.data() as Map<String, dynamic>;
+
+      final updateData = {
+        'pointValues': <String, double>{},
+        'replicateValues': <String, List<double>>{},
+        'value': null,
+        'notes': null,
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': currentUser?.uid,
+        'editorName': currentUser?.displayName ?? 'Unknown',
+      };
+
+      batch.update(doc.reference, updateData);
+
+      // Log to history
+      final historyRef = measurementHistoryCollection.doc();
+      batch.set(historyRef, {
+        'pondId': pondId,
+        'measurementId': doc.id,
+        'parameter': data['parameter'],
+        'action': 'clear_inputs',
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': currentUser?.uid,
+        'editorName': currentUser?.displayName ?? 'Unknown',
+        'before': {
+          'value': data['value'],
+          'pointValues': data['pointValues'],
+          'replicateValues': data['replicateValues'],
+          'notes': data['notes'],
+        },
+        'after': updateData,
+      });
+    }
+
+    await batch.commit();
+  }
+
   /// Updates multiple measurements in a single batch and logs them to history.
   Future<void> updateMeasurements({
     required String pondId,
@@ -270,23 +318,23 @@ class MonitoringRepository {
 
       if (newPointValues == null || newReplicateValues == null) continue;
 
-      final double avg = double.parse(
-        (newPointValues.values.reduce((a, b) => a + b) / newPointValues.length)
-            .toStringAsFixed(2),
-      );
+      final double? avg = newPointValues.isNotEmpty
+          ? double.parse(
+              (newPointValues.values.reduce((a, b) => a + b) /
+                      newPointValues.length)
+                  .toStringAsFixed(2),
+            )
+          : null;
 
       final updateData = {
         'pointValues': newPointValues,
         'replicateValues': newReplicateValues,
         'value': avg,
+        'notes': newNote,
         'editedAt': FieldValue.serverTimestamp(),
         'editedBy': currentUser?.uid,
         'editorName': currentUser?.displayName ?? 'Unknown',
       };
-
-      if (newNote != null) {
-        updateData['notes'] = newNote;
-      }
 
       batch.update(doc.reference, updateData);
 

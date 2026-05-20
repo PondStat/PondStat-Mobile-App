@@ -32,7 +32,6 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
   late final Map<String, Map<String, TextEditingController>> groupControllers;
   late final Map<String, TextEditingController> notesControllers;
   bool _isSaving = false;
-  bool _isDeleting = false;
   bool _isDirty = false;
 
   @override
@@ -146,18 +145,32 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
     );
   }
 
-  Future<void> _handleBatchDelete() async {
-    final confirm = await showDialog<bool>(
+  void _clearAllFields() {
+    setState(() {
+      for (var controllersMap in groupControllers.values) {
+        for (var controller in controllersMap.values) {
+          controller.clear();
+        }
+      }
+      for (var controller in notesControllers.values) {
+        controller.clear();
+      }
+      _isDirty = true;
+    });
+  }
+
+  void _handleBatchDelete() {
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Confirm Delete"),
+        title: const Text("Clear All Fields?"),
         content: const Text(
-          "Are you sure you want to delete these measurements?",
+          "Are you sure you want to clear all input fields in this sheet? You will need to click 'Save Changes' to apply this to the database.",
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context),
             child: Text(
               "Cancel",
               style: TextStyle(
@@ -166,40 +179,18 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              Navigator.pop(context);
+              _clearAllFields();
+            },
             child: const Text(
-              "Delete",
+              "Clear All",
               style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
           ),
         ],
       ),
     );
-
-    if (confirm != true) return;
-
-    setState(() => _isDeleting = true);
-
-    try {
-      for (var doc in widget.docs) {
-        await widget.repository.deleteMeasurement(
-          pondId: widget.pondId,
-          measurementId: doc.id,
-          currentData: doc.data() as Map<String, dynamic>,
-        );
-      }
-      if (mounted) {
-        widget.onSave();
-        Navigator.pop(context); // close the edit sheet
-        SnackbarHelper.showInfo(context, "Measurements deleted");
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, "Error: $e");
-      }
-    } finally {
-      if (mounted) setState(() => _isDeleting = false);
-    }
   }
 
   Future<void> _handleBatchUpdateWithReplicates() async {
@@ -271,10 +262,8 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
         }
       }
 
-      if (newPointValues.isNotEmpty) {
-        updatedPointValues[doc.id] = newPointValues;
-        updatedReplicateValues[doc.id] = newReplicateValues;
-      }
+      updatedPointValues[doc.id] = newPointValues;
+      updatedReplicateValues[doc.id] = newReplicateValues;
     }
 
     try {
@@ -578,22 +567,13 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
             Row(
               children: [
                 TextButton.icon(
-                  onPressed: _isSaving || _isDeleting
+                  onPressed: _isSaving
                       ? null
                       : _handleBatchDelete,
-                  icon: _isDeleting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.red,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.delete_outline_rounded,
-                          color: Colors.red,
-                        ),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red,
+                  ),
                   label: const Text(
                     "Delete All",
                     style: TextStyle(
@@ -607,7 +587,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                   child: PrimaryButton(
                     text: "Save Changes",
                     isLoading: _isSaving,
-                    onPressed: _isDeleting || !_isDirty
+                    onPressed: !_isDirty
                         ? null
                         : _handleBatchUpdateWithReplicates,
                   ),

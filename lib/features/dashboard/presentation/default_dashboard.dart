@@ -46,6 +46,9 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   String? _filterRole;
   String? _filterSpecies;
 
+  final FocusNode _searchFocusNode = FocusNode();
+  final TextEditingController _searchController = TextEditingController();
+
   late Stream<List<Pond>> _userPondsStream;
 
   @override
@@ -69,6 +72,12 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
       _updateConnectionStatus,
     );
+    _searchFocusNode.addListener(() => setState(() {}));
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
   }
 
   Future<void> _initConnectivity() async {
@@ -116,6 +125,8 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   void dispose() {
     _connectivitySubscription?.cancel();
     _shimmerController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -624,7 +635,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
           padding: const EdgeInsets.all(
             16,
           ).copyWith(bottom: 100),
-          itemCount: filteredPonds.length + 2,
+          itemCount: filteredPonds.isEmpty ? 3 : filteredPonds.length + 2,
           itemBuilder: (context, index) {
             if (index == 0) {
               return const PondyAquariumCard();
@@ -652,14 +663,22 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                   Row(
                     children: [
                       Expanded(
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
                             color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _searchFocusNode.hasFocus
+                                  ? colorScheme.primary
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
                           ),
                           child: TextField(
-                            onChanged: (value) => setState(() => _searchQuery = value),
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
                             decoration: InputDecoration(
                               hintText: 'Search ponds...',
                               hintStyle: TextStyle(
@@ -668,10 +687,23 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                               ),
                               prefixIcon: Icon(
                                 Icons.search_rounded,
-                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                color: _searchFocusNode.hasFocus
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                               ),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: Icon(
+                                        Icons.clear_rounded,
+                                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                      },
+                                    )
+                                  : null,
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
                         ),
@@ -685,6 +717,29 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                   ),
                   const SizedBox(height: 12),
                 ],
+              );
+            }
+
+            if (filteredPonds.isEmpty && index == 2) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 24.0, bottom: 24.0),
+                child: EmptyStateCard(
+                  image: const Icon(Icons.search_off_rounded, size: 48),
+                  title: "No Ponds Found",
+                  description: "Try adjusting your search keywords or filters to find what you're looking for.",
+                  action: SecondaryButton(
+                    text: "Clear Search",
+                    onPressed: () {
+                      _searchFocusNode.unfocus();
+                      _searchController.clear();
+                      setState(() {
+                        _filterRole = null;
+                        _filterSpecies = null;
+                      });
+                    },
+                    width: 180,
+                  ),
+                ),
               );
             }
 

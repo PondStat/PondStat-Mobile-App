@@ -9,6 +9,7 @@ import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
+import 'package:pondstat/core/widgets/destructive_dialog.dart';
 
 class ExpensesTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -457,33 +458,17 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          "Delete Expense?",
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        content: Text("Are you sure you want to remove '$item'?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              await ref.read(monitoringRepositoryProvider).deleteExpense(id);
-              if (context.mounted) {
-                HapticFeedback.mediumImpact();
-                SnackbarHelper.showSuccess(context, "Expense deleted");
-                Navigator.pop(context);
-              }
-            },
-            child: const Text(
-              "Delete",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => DestructiveDialog(
+        title: "Delete Expense?",
+        content: "Are you sure you want to remove '$item'? This action cannot be undone.",
+        onConfirm: () async {
+          await ref.read(monitoringRepositoryProvider).deleteExpense(id);
+          HapticFeedback.mediumImpact();
+          if (context.mounted) {
+            SnackbarHelper.showSuccess(context, "Expense deleted");
+          }
+        },
       ),
     );
   }

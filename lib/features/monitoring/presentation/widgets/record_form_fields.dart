@@ -276,7 +276,7 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                   color: isFocused || hasError
                       ? activeColor
                       : Colors.transparent,
-                  width: isFocused || hasError ? 2 : 0,
+                  width: 2,
                 ),
                 boxShadow: isFocused
                     ? [

@@ -122,11 +122,13 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
           // Show all items from this date range (in chronological order for the chart)
           final limitedDocs = sortedDocs.reversed.toList();
 
-          return limitedDocs.map((doc) {
+          return limitedDocs
+              .where((doc) => doc.data()['value'] != null)
+              .map((doc) {
             final data = doc.data();
             final ts =
                 (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-            final avg = (data['value'] as num?)?.toDouble() ?? 0.0;
+            final avg = (data['value'] as num).toDouble();
             final rawPoints =
                 (data['pointValues'] as Map<String, dynamic>?) ?? {};
             final points = rawPoints.map(

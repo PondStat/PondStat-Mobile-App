@@ -173,8 +173,9 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
                         key: ValueKey(filteredDocs[index].id),
                         time: data['timeString'] ?? 'Unknown Time',
                         title: data['parameter'] ?? 'Unknown Parameter',
-                        content:
-                            "${data['value'] ?? '0'} ${data['unit'] ?? ''}\n(Avg across recorded points)",
+                        content: data['value'] != null
+                            ? "${data['value']} ${data['unit'] ?? ''}\n(Avg across recorded points)"
+                            : "no input yet\n(Avg across recorded points)",
                         canEdit: widget.canEdit,
                         groupDocs: [filteredDocs[index]],
                         onEdit: () => widget.onEdit([filteredDocs[index]]),

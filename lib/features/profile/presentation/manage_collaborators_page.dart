@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -243,7 +244,6 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
   @override
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    final isFocused = _emailFocus.hasFocus;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -339,80 +339,38 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
                     ),
                     const SizedBox(height: 16),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Expanded(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              color: isFocused
-                                  ? Theme.of(context).colorScheme.surface
-                                  : backgroundLight,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isFocused
-                                    ? primaryBlue
-                                    : Colors.grey.shade200,
-                                width: isFocused ? 2 : 1,
-                              ),
-                              boxShadow: isFocused
-                                  ? [
-                                      BoxShadow(
-                                        color: primaryBlue.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 6),
+                          child: PondStatTextField(
+                            controller: _emailController,
+                            focusNode: _emailFocus,
+                            label: 'Collaborator Email',
+                            hint: 'user@email.com',
+                            prefixIcon: Icons.email_rounded,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => _inviteCollaborator(),
+                            suffixIcon: _emailController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade300,
+                                        shape: BoxShape.circle,
                                       ),
-                                    ]
-                                  : [],
-                            ),
-                            child: TextField(
-                              controller: _emailController,
-                              focusNode: _emailFocus,
-                              keyboardType: TextInputType.emailAddress,
-                              autocorrect: false,
-                              textInputAction: TextInputAction.done,
-                              onSubmitted: (_) => _inviteCollaborator(),
-                              style: TextStyle(
-                                color: textDark,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: 'user@email.com',
-                                hintStyle: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                border: InputBorder.none,
-                                prefixIcon: Icon(
-                                  Icons.email_rounded,
-                                  color: isFocused
-                                      ? primaryBlue
-                                      : Colors.grey.shade400,
-                                  size: 20,
-                                ),
-                                suffixIcon: _emailController.text.isNotEmpty
-                                    ? IconButton(
-                                        icon: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey.shade300,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.close_rounded,
-                                            size: 14,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        onPressed: () {
-                                          HapticFeedback.selectionClick();
-                                          _emailController.clear();
-                                        },
-                                      )
-                                    : null,
-                              ),
-                            ),
+                                      child: const Icon(
+                                        Icons.close_rounded,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      HapticFeedback.selectionClick();
+                                      _emailController.clear();
+                                    },
+                                  )
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -422,7 +380,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
                             backgroundColor: primaryBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                              vertical: 16,
+                              vertical: 18,
                               horizontal: 20,
                             ),
                             shape: RoundedRectangleBorder(
