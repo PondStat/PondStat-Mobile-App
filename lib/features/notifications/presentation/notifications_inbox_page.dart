@@ -96,12 +96,18 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
                   : Icons.filter_list_rounded,
             ),
             tooltip: _showUnreadOnly ? 'Show all' : 'Show unread',
-            onPressed: () => setState(() => _showUnreadOnly = !_showUnreadOnly),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              setState(() => _showUnreadOnly = !_showUnreadOnly);
+            },
           ),
           IconButton(
             icon: const Icon(Icons.done_all_rounded),
             tooltip: 'Mark all as read',
-            onPressed: () => ref.read(notificationsRepositoryProvider).markAllAsRead(),
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              ref.read(notificationsRepositoryProvider).markAllAsRead();
+            },
           ),
         ],
       ),
@@ -453,6 +459,7 @@ class _NotificationTileState extends State<_NotificationTile> {
       },
       onDismissed: (direction) {
         if (direction == DismissDirection.endToStart) {
+          HapticFeedback.mediumImpact();
           widget.onDelete();
         }
       },

@@ -1059,8 +1059,8 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
             ],
           ),
           padding: const EdgeInsets.all(16),
-          child: AnimatedBuilder(
-            animation: _shimmerController,
+          child: ListenableBuilder(
+            listenable: _shimmerController,
             builder: (context, child) {
               return ShaderMask(
                 blendMode: BlendMode.srcATop,

@@ -231,8 +231,10 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     List<Map<String, dynamic>> morningUsers,
     List<Map<String, dynamic>> afternoonUsers,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final onSurface = colorScheme.onSurface;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -279,8 +281,8 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
           _ShiftExpansionTile(
             shiftName: "Morning",
             icon: Icons.wb_sunny_rounded,
-            iconColor: Colors.amber.shade700,
-            bgColor: Colors.amber.shade50,
+            iconColor: isDark ? Colors.amber.shade300 : Colors.amber.shade700,
+            bgColor: isDark ? Colors.amber.withValues(alpha: 0.15) : Colors.amber.shade50,
             assignedUsers: morningUsers,
           ),
           Divider(
@@ -292,8 +294,8 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
           _ShiftExpansionTile(
             shiftName: "Afternoon",
             icon: Icons.wb_twilight_rounded,
-            iconColor: Colors.indigo.shade600,
-            bgColor: Colors.indigo.shade50,
+            iconColor: isDark ? Colors.indigo.shade300 : Colors.indigo.shade600,
+            bgColor: isDark ? Colors.indigo.withValues(alpha: 0.2) : Colors.indigo.shade50,
             assignedUsers: afternoonUsers,
           ),
         ],
@@ -301,6 +303,17 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     );
   }
 }
+
+const List<Color> _avatarPastelColors = [
+  Color(0xFFFDA4AF),
+  Color(0xFFFCD34D),
+  Color(0xFF6EE7B7),
+  Color(0xFF93C5FD),
+  Color(0xFFC4B5FD),
+  Color(0xFFF9A8D4),
+  Color(0xFFFDBA74),
+  Color(0xFF5EEAD4),
+];
 
 class _ShiftExpansionTile extends StatefulWidget {
   final String shiftName;
@@ -448,18 +461,8 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
   }
 
   Color _getAvatarColor(String name) {
-    final pastelColors = [
-      const Color(0xFFFDA4AF),
-      const Color(0xFFFCD34D),
-      const Color(0xFF6EE7B7),
-      const Color(0xFF93C5FD),
-      const Color(0xFFC4B5FD),
-      const Color(0xFFF9A8D4),
-      const Color(0xFFFDBA74),
-      const Color(0xFF5EEAD4),
-    ];
     final hash = name.hashCode.abs();
-    return pastelColors[hash % pastelColors.length];
+    return _avatarPastelColors[hash % _avatarPastelColors.length];
   }
 }
 
@@ -500,15 +503,8 @@ class _OverlapAvatarGroup extends StatelessWidget {
 
         final user = users[index];
         final name = user['name'] as String;
-        final pastelColors = [
-          const Color(0xFFFDA4AF),
-          const Color(0xFFFCD34D),
-          const Color(0xFF6EE7B7),
-          const Color(0xFF93C5FD),
-          const Color(0xFFC4B5FD),
-        ];
         final hash = name.hashCode.abs();
-        final color = pastelColors[hash % pastelColors.length];
+        final color = _avatarPastelColors[hash % _avatarPastelColors.length];
 
         return Align(
           widthFactor: 0.6,
@@ -939,7 +935,7 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
                               Icon(
                                 Icons.wb_sunny_rounded,
                                 size: 14,
-                                color: Colors.amber.shade700,
+                                color: isDark ? Colors.amber.shade300 : Colors.amber.shade700,
                               ),
                               const SizedBox(width: 6),
                               const Text(
@@ -956,7 +952,7 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
                               Icon(
                                 Icons.wb_twilight_rounded,
                                 size: 14,
-                                color: Colors.indigo.shade700,
+                                color: isDark ? Colors.indigo.shade300 : Colors.indigo.shade700,
                               ),
                               const SizedBox(width: 6),
                               const Text(
