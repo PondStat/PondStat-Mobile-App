@@ -721,7 +721,10 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
 
       if (mounted) {
         Navigator.pop(context); // close bottom sheet
-        final connectivityResult = await Connectivity().checkConnectivity();
+        final connectivityResult = await Connectivity().checkConnectivity().timeout(
+          const Duration(seconds: 1),
+          onTimeout: () => [ConnectivityResult.none],
+        );
         if (mounted) {
           if (connectivityResult.contains(ConnectivityResult.none)) {
             SnackbarHelper.showSuccess(context, "Schedules saved locally for $updatedCount members (will sync when online)");

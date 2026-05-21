@@ -196,7 +196,10 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
           _isSaving = false;
           _hasChanges = false;
         });
-        final connectivityResult = await Connectivity().checkConnectivity();
+        final connectivityResult = await Connectivity().checkConnectivity().timeout(
+          const Duration(seconds: 1),
+          onTimeout: () => [ConnectivityResult.none],
+        );
         if (mounted) {
           if (connectivityResult.contains(ConnectivityResult.none)) {
             SnackbarHelper.showSuccess(context, "Schedule saved locally (will sync when online)");

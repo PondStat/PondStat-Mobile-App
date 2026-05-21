@@ -95,7 +95,10 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   Future<void> _initConnectivity() async {
     late List<ConnectivityResult> result;
     try {
-      result = await Connectivity().checkConnectivity();
+      result = await Connectivity().checkConnectivity().timeout(
+        const Duration(seconds: 1),
+        onTimeout: () => [ConnectivityResult.none],
+      );
     } catch (e, stackTrace) {
       ref.read(appLoggerProvider).error("Couldn't check connectivity status", error: e, stackTrace: stackTrace, tag: 'NETWORK');
       return;

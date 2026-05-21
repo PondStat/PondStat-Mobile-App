@@ -344,49 +344,66 @@ class GrowthRepository {
     required double? newAdg,
     required double? newDfr,
     required double? newFcr,
+    required String? newNotes,
     required GrowthMetrics metrics,
   }) async {
-    final docIds = [
-      if (newAbw != null && newAbw != metrics.abw) metrics.abwDocId,
-      if (newAdg != null && newAdg != metrics.adg) metrics.adgDocId,
-      if (newDfr != null && newDfr != metrics.dfr) metrics.dfrDocId,
-      if (newFcr != null && newFcr != metrics.fcr) metrics.fcrDocId,
-    ].whereType<String>().toList();
+    final allDocIds = [
+      metrics.abwDocId,
+      metrics.adgDocId,
+      metrics.dfrDocId,
+      metrics.fcrDocId,
+    ].whereType<String>().toSet().toList();
 
-    if (docIds.isEmpty) return;
+    if (allDocIds.isEmpty) return;
 
     // Fetch all docs in parallel
     final snapshots = await Future.wait(
-      docIds.map((id) => measurementsCollection.doc(id).get()),
+      allDocIds.map((id) => measurementsCollection.doc(id).get()),
     );
 
     final batch = _baseRef.firestore.batch();
 
-    for (var i = 0; i < docIds.length; i++) {
-      final id = docIds[i];
+    for (var i = 0; i < allDocIds.length; i++) {
+      final id = allDocIds[i];
       final docSnap = snapshots[i];
       final data = docSnap.data();
       if (data == null) continue;
 
+      final Map<String, dynamic> updates = {};
+      final Map<String, dynamic> historyBefore = {};
+      final Map<String, dynamic> historyAfter = {};
+
       double? newValue;
-      if (id == metrics.abwDocId) {
+      if (id == metrics.abwDocId && newAbw != null && newAbw != metrics.abw) {
         newValue = newAbw;
-      } else if (id == metrics.adgDocId) {
+      } else if (id == metrics.adgDocId && newAdg != null && newAdg != metrics.adg) {
         newValue = newAdg;
-      } else if (id == metrics.dfrDocId) {
+      } else if (id == metrics.dfrDocId && newDfr != null && newDfr != metrics.dfr) {
         newValue = newDfr;
-      } else if (id == metrics.fcrDocId) {
+      } else if (id == metrics.fcrDocId && newFcr != null && newFcr != metrics.fcr) {
         newValue = newFcr;
       }
 
-      if (newValue == null) continue;
+      if (newValue != null) {
+        updates['value'] = newValue;
+        historyBefore['value'] = data['value'];
+        historyAfter['value'] = newValue;
+      }
 
-      batch.update(docSnap.reference, {
-        'value': newValue,
-        'editedAt': FieldValue.serverTimestamp(),
-        'editedBy': user?.uid,
-        'editorName': user?.displayName,
-      });
+      if (newNotes != metrics.notes) {
+        final cleanNotes = (newNotes?.trim().isNotEmpty == true) ? newNotes!.trim() : null;
+        updates['notes'] = cleanNotes;
+        historyBefore['notes'] = data['notes'];
+        historyAfter['notes'] = cleanNotes;
+      }
+
+      if (updates.isEmpty) continue;
+
+      updates['editedAt'] = FieldValue.serverTimestamp();
+      updates['editedBy'] = user?.uid;
+      updates['editorName'] = user?.displayName;
+
+      batch.update(docSnap.reference, updates);
 
       final historyRef = measurementHistoryCollection.doc();
       batch.set(historyRef, {
@@ -397,8 +414,8 @@ class GrowthRepository {
         'editedAt': FieldValue.serverTimestamp(),
         'editedBy': user?.uid,
         'editorName': user?.displayName ?? 'Unknown',
-        'before': {'value': data['value']},
-        'after': {'value': newValue},
+        'before': historyBefore,
+        'after': historyAfter,
       });
     }
 

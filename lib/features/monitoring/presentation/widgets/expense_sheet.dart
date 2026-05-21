@@ -65,7 +65,10 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
       );
 
       if (mounted) {
-        final connectivityResult = await Connectivity().checkConnectivity();
+        final connectivityResult = await Connectivity().checkConnectivity().timeout(
+          const Duration(seconds: 1),
+          onTimeout: () => [ConnectivityResult.none],
+        );
         if (mounted) {
           Navigator.pop(context, true);
           if (connectivityResult.contains(ConnectivityResult.none)) {

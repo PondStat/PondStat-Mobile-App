@@ -87,7 +87,10 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                 setState(() {
                   _refreshKey++;
                 });
-                final connectivityResult = await Connectivity().checkConnectivity();
+                final connectivityResult = await Connectivity().checkConnectivity().timeout(
+                  const Duration(seconds: 1),
+                  onTimeout: () => [ConnectivityResult.none],
+                );
                 if (!sheetContext.mounted) return;
                 if (connectivityResult.contains(ConnectivityResult.none)) {
                   SnackbarHelper.showSuccess(
@@ -154,7 +157,10 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
         pondId: widget.pondId,
         onSave: () async {
           setState(() => _refreshKey++);
-          final connectivityResult = await Connectivity().checkConnectivity();
+          final connectivityResult = await Connectivity().checkConnectivity().timeout(
+            const Duration(seconds: 1),
+            onTimeout: () => [ConnectivityResult.none],
+          );
           if (mounted) {
             if (connectivityResult.contains(ConnectivityResult.none)) {
               SnackbarHelper.showSuccess(context, "Sampling saved locally (will sync when online)");

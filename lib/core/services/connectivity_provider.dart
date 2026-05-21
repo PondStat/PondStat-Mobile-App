@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 final connectivityStreamProvider = StreamProvider<List<ConnectivityResult>>((ref) async* {
   // Yield initial connectivity status first
   try {
-    final initial = await Connectivity().checkConnectivity();
+    final initial = await Connectivity().checkConnectivity().timeout(
+      const Duration(seconds: 1),
+      onTimeout: () => [ConnectivityResult.none],
+    );
     yield initial;
   } catch (_) {
     yield [ConnectivityResult.none];

@@ -181,7 +181,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
                         title: data['parameter'] ?? 'Unknown Parameter',
                         content: data['value'] != null
                             ? "${data['value']} ${data['unit'] ?? ''}\n(Avg across recorded points)"
-                            : "no input yet\n(Avg across recorded points)",
+                            : "n/a",
                         canEdit: widget.canEdit,
                         groupDocs: [filteredDocs[index]],
                         onEdit: () => widget.onEdit([filteredDocs[index]]),

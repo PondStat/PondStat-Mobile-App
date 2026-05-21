@@ -85,12 +85,13 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
+      useSafeArea: false,
       backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
         maxChildSize: 0.95,
+        snap: true,
         builder: (context, scrollController) => EditHistorySheet(
           pondId: widget.pondId,
           scrollController: scrollController,

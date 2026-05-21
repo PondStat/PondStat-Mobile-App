@@ -28,6 +28,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
   late final TextEditingController adgController;
   late final TextEditingController dfrController;
   late final TextEditingController fcrController;
+  late final TextEditingController notesController;
 
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
@@ -40,11 +41,13 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
     adgController = TextEditingController(text: widget.metrics.adg?.toString() ?? "");
     dfrController = TextEditingController(text: widget.metrics.dfr?.toString() ?? "");
     fcrController = TextEditingController(text: widget.metrics.fcr?.toString() ?? "");
+    notesController = TextEditingController(text: widget.metrics.notes ?? "");
 
     abwController.addListener(_checkDirtyState);
     adgController.addListener(_checkDirtyState);
     dfrController.addListener(_checkDirtyState);
     fcrController.addListener(_checkDirtyState);
+    notesController.addListener(_checkDirtyState);
   }
 
   @override
@@ -53,11 +56,13 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
     adgController.removeListener(_checkDirtyState);
     dfrController.removeListener(_checkDirtyState);
     fcrController.removeListener(_checkDirtyState);
+    notesController.removeListener(_checkDirtyState);
 
     abwController.dispose();
     adgController.dispose();
     dfrController.dispose();
     fcrController.dispose();
+    notesController.dispose();
     super.dispose();
   }
 
@@ -66,8 +71,9 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
     final adgDirty = adgController.text != (widget.metrics.adg?.toString() ?? "");
     final dfrDirty = dfrController.text != (widget.metrics.dfr?.toString() ?? "");
     final fcrDirty = fcrController.text != (widget.metrics.fcr?.toString() ?? "");
+    final notesDirty = notesController.text != (widget.metrics.notes ?? "");
 
-    final isNowDirty = abwDirty || adgDirty || dfrDirty || fcrDirty;
+    final isNowDirty = abwDirty || adgDirty || dfrDirty || fcrDirty || notesDirty;
     if (_isDirty != isNowDirty) {
       setState(() {
         _isDirty = isNowDirty;
@@ -126,6 +132,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
         newAdg: newAdg,
         newDfr: newDfr,
         newFcr: newFcr,
+        newNotes: notesController.text,
         metrics: widget.metrics,
       );
 
@@ -304,7 +311,16 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
                     validator: _positiveNumberValidator,
                     textInputAction: TextInputAction.done,
                   ),
-                if (m.fcrDocId != null) const SizedBox(height: 24),
+                if (m.fcrDocId != null) const SizedBox(height: 16),
+
+                PondStatTextField(
+                  controller: notesController,
+                  label: "Notes (Optional)",
+                  hint: "Add notes...",
+                  maxLines: 3,
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 24),
 
                 SizedBox(
                   width: double.infinity,

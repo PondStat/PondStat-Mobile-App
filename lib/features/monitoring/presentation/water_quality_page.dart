@@ -110,7 +110,10 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
       }
 
       if (mounted) {
-        final connectivityResult = await Connectivity().checkConnectivity();
+        final connectivityResult = await Connectivity().checkConnectivity().timeout(
+          const Duration(seconds: 1),
+          onTimeout: () => [ConnectivityResult.none],
+        );
         if (mounted) {
           if (connectivityResult.contains(ConnectivityResult.none)) {
             SnackbarHelper.showSuccess(context, "Data saved locally (will sync when online)");
@@ -143,6 +146,8 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
         tabIndex: _tabController.index,
         onSave: _handleSaveData,
         species: widget.species,
+        pondId: widget.pondId,
+        selectedDay: widget.selectedDay,
       ),
     );
   }
