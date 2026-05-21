@@ -320,13 +320,13 @@ class _PondListCardState extends State<PondListCard>
         break;
       case 'editor':
         bgColor = isDark
-            ? colorScheme.primary.withValues(alpha: 0.15)
+            ? Colors.blue.withValues(alpha: 0.15)
             : Colors.blue.shade50;
         borderColor = isDark
-            ? colorScheme.primary.withValues(alpha: 0.3)
+            ? Colors.blue.withValues(alpha: 0.3)
             : Colors.blue.shade200;
         textColor = isDark
-            ? colorScheme.primaryContainer
+            ? Colors.blue.shade300
             : Colors.blue.shade700;
         break;
       case 'viewer':

@@ -313,12 +313,16 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "${data['parameter']} (${data['unit'] ?? ''})",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.primary,
-              fontSize: 16,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Text(
+              "${data['parameter']}${data['unit'] != null && (data['unit'] as String).trim().isNotEmpty ? ' (${data['unit']})' : ''}",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.primary,
+                fontSize: 16,
+              ),
             ),
           ),
           const SizedBox(height: 16),

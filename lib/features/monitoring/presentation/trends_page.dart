@@ -210,12 +210,13 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
+          preferredSize: const Size.fromHeight(60.0),
           child: TabBar(
             isScrollable: false,
             labelColor: const Color(0xFF0A74DA),
             unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
             indicatorColor: const Color(0xFF0A74DA),
+            labelPadding: const EdgeInsets.symmetric(vertical: 8.0),
             tabs: const [
               Tab(text: "Daily"),
               Tab(text: "Weekly"),
@@ -231,6 +232,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
               child: Stack(
                 children: [
                   TabBarView(
+                    physics: const NeverScrollableScrollPhysics(),
                     children: [
                       SingleChildScrollView(
                         child: Padding(

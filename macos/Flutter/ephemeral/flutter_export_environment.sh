@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=C:\Users\Chak\Documents\Programming_Languages\flutter"
-export "FLUTTER_APPLICATION_PATH=C:\Users\Chak\Documents\SUBJECTS\Komsai - Third Year\First Semester\CMSC 128 (LEC) - Software Engineering\PondStat-Mobile-App"
+export "FLUTTER_ROOT=C:\flutter"
+export "FLUTTER_APPLICATION_PATH=C:\Users\ASUS TUF\OneDrive\Documents\GitHub\PondStat-Mobile-App"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_BUILD_DIR=build"
 export "FLUTTER_BUILD_NAME=1.0.0"

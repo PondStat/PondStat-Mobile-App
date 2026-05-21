@@ -865,15 +865,18 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
                             letterSpacing: 1.2,
                           ),
                         ),
-                        Text(
-                          selectedParameter!.label,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 24,
-                            color: textDark,
-                            letterSpacing: -0.5,
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Text(
+                            selectedParameter!.label,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 24,
+                              color: textDark,
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

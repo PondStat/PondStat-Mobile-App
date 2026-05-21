@@ -91,8 +91,10 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon/pondstat_icon.png"
+  image_path: "assets/PondStat_Logo.png"
   min_sdk_android: 21
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/PondStat_Logo.png"
 
 # The following section is specific to Flutter packages.
 flutter:

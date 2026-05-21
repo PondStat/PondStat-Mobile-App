@@ -244,14 +244,17 @@ class _EditHistorySheetState extends ConsumerState<EditHistorySheet> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
-                                          child: Text(
-                                            data['parameter'] ?? 'Unknown',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w900,
-                                              fontSize: 16,
-                                              color: onSurface,
+                                          child: SingleChildScrollView(
+                                            scrollDirection: Axis.horizontal,
+                                            physics: const BouncingScrollPhysics(),
+                                            child: Text(
+                                              data['parameter'] ?? 'Unknown',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 16,
+                                                color: onSurface,
+                                              ),
                                             ),
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                         Container(
