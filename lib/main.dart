@@ -16,6 +16,7 @@ import 'package:pondstat/core/services/settings/settings_provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:pondstat/core/widgets/loading_overlay.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pondstat/core/widgets/global_offline_banner.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +52,12 @@ class MyApp extends ConsumerWidget {
       routerConfig: router,
       builder: (context, child) => GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: child!,
+        child: Column(
+          children: [
+            const GlobalOfflineBanner(),
+            Expanded(child: child!),
+          ],
+        ),
       ),
     );
   }

@@ -345,31 +345,68 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
               children: [
                 _buildMiniMetric(
                   "ABW",
-                  m.abw != null ? "${m.abw}g" : "no input yet",
+                  m.abw != null ? "${m.abw}g" : "n/a",
                   isDark ? Colors.green.shade300 : Colors.green.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "ADG",
-                  m.adg != null ? "${m.adg!.toStringAsFixed(2)}g" : "no input yet",
+                  m.adg != null ? "${m.adg!.toStringAsFixed(2)}g" : "n/a",
                   isDark ? Colors.green.shade300 : Colors.green.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "FCR",
-                  m.fcr != null ? m.fcr!.toStringAsFixed(2) : "no input yet",
+                  m.fcr != null ? m.fcr!.toStringAsFixed(2) : "n/a",
                   isDark ? Colors.orange.shade300 : Colors.orange.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "DFR",
-                  m.dfr != null ? m.dfr!.toStringAsFixed(2) : "no input yet",
+                  m.dfr != null ? m.dfr!.toStringAsFixed(2) : "n/a",
                   isDark ? Colors.purple.shade300 : Colors.purple.shade700,
                   colorScheme,
                 ),
               ],
             ),
           ),
+          if (m.notes != null && m.notes!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.tertiaryContainer,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: colorScheme.tertiary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.sticky_note_2_rounded,
+                    size: 16,
+                    color: colorScheme.onTertiaryContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      m.notes!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onTertiaryContainer,
+                        fontWeight: FontWeight.w500,
+                        fontStyle: FontStyle.italic,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
 
           // FOOTER: Editors

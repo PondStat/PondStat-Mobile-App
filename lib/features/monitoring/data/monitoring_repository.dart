@@ -151,7 +151,7 @@ class MonitoringRepository {
       },
     );
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
     return measurementRef.id;
   }
 
@@ -178,7 +178,7 @@ class MonitoringRepository {
       after: null,
     );
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Deletes a list/group of measurements from Firestore in a batch and logs to history.
@@ -210,7 +210,7 @@ class MonitoringRepository {
       );
     }
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Clears all input values (pointValues, replicateValues, value, notes) for a group of measurements.
@@ -258,7 +258,7 @@ class MonitoringRepository {
       });
     }
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Updates multiple measurements in a single batch and logs them to history.
@@ -295,7 +295,7 @@ class MonitoringRepository {
       );
     }
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Updates measurements with replicate values and calculates point averages.
@@ -359,7 +359,7 @@ class MonitoringRepository {
       });
     }
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Adds a new custom parameter to Firestore.
@@ -473,5 +473,12 @@ class MonitoringRepository {
       'before': before,
       'after': after,
     });
+  }
+
+  Future<void> _commitBatchWithTimeout(WriteBatch batch) async {
+    await batch.commit().timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => null,
+    );
   }
 }

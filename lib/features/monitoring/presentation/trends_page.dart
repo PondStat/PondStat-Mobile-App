@@ -210,19 +210,22 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(60.0),
-          child: TabBar(
-            isScrollable: false,
-            labelColor: const Color(0xFF0A74DA),
-            unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
-            indicatorColor: const Color(0xFF0A74DA),
-            labelPadding: const EdgeInsets.symmetric(vertical: 8.0),
-            tabs: const [
-              Tab(text: "Daily"),
-              Tab(text: "Weekly"),
-              Tab(text: "Biweekly"),
-              Tab(text: "Final"),
-            ],
+          preferredSize: const Size.fromHeight(72.0),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12.0),
+            child: TabBar(
+              isScrollable: false,
+              labelColor: const Color(0xFF0A74DA),
+              unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+              indicatorColor: const Color(0xFF0A74DA),
+              labelPadding: const EdgeInsets.symmetric(vertical: 8.0),
+              tabs: const [
+                Tab(text: "Daily"),
+                Tab(text: "Weekly"),
+                Tab(text: "Biweekly"),
+                Tab(text: "Final"),
+              ],
+            ),
           ),
         ),
         body: Column(

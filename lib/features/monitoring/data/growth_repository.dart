@@ -24,6 +24,7 @@ class GrowthMetrics {
   final String? fcrDocId;
   final String? recorderName;
   final String? editorName;
+  final String? notes;
 
   GrowthMetrics({
     required this.date,
@@ -43,6 +44,7 @@ class GrowthMetrics {
     this.fcrDocId,
     this.recorderName,
     this.editorName,
+    this.notes,
   });
 }
 
@@ -143,6 +145,7 @@ class GrowthRepository {
         displayWeek,
         () => {
           'date': date,
+          'notes': <String>[],
           ParameterNames.totalWeightSampled: 0.0,
           ParameterNames.numFishSampled: 0.0,
           ParameterNames.feedingRate: 0.0,
@@ -158,6 +161,16 @@ class GrowthRepository {
       weeklyBuckets[displayWeek]!['date'] = date;
       weeklyBuckets[displayWeek]![param] =
           (weeklyBuckets[displayWeek]![param] as double) + val;
+
+      final note = data['notes'] as String?;
+      if (note != null && note.trim().isNotEmpty) {
+        final list = weeklyBuckets[displayWeek]!['notes'] as List<String>? ?? <String>[];
+        final trimmed = note.trim();
+        if (!list.contains(trimmed)) {
+          list.add(trimmed);
+        }
+        weeklyBuckets[displayWeek]!['notes'] = list;
+      }
 
       if (param == ParameterNames.totalWeightSampled) {
         weeklyBuckets[displayWeek]!['weightDocId'] = doc.id;
@@ -243,6 +256,9 @@ class GrowthRepository {
         }
       }
 
+      final notesList = bucket['notes'] as List<String>? ?? const <String>[];
+      final String? combinedNotes = notesList.isNotEmpty ? notesList.join('\n') : null;
+
       metrics.add(
         GrowthMetrics(
           date: bucket['date'] as DateTime,
@@ -263,6 +279,7 @@ class GrowthRepository {
           fcrDocId: bucket['fcrDocId'] as String?,
           recorderName: bucket['recorderName'] as String?,
           editorName: bucket['editorName'] as String?,
+          notes: combinedNotes,
         ),
       );
     }
@@ -316,7 +333,7 @@ class GrowthRepository {
 
       batch.delete(docSnap.reference);
     }
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Updates growth sampling metrics in a single batch and logs them to history.
@@ -385,6 +402,13 @@ class GrowthRepository {
       });
     }
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
+  }
+
+  Future<void> _commitBatchWithTimeout(WriteBatch batch) async {
+    await batch.commit().timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => null,
+    );
   }
 }

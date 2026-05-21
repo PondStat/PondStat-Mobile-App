@@ -495,23 +495,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                   curve: Curves.easeInOut,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
-                    child: !_hasConnection
-                        ? Container(
-                            key: const ValueKey('offline'),
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            color: colorScheme.errorContainer,
-                            child: Text(
-                              "You have no internet connection",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: colorScheme.onErrorContainer,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          )
-                        : _showOnlineMessage
+                    child: _showOnlineMessage
                         ? Container(
                             key: const ValueKey('online'),
                             width: double.infinity,
