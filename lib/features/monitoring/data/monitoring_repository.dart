@@ -113,6 +113,19 @@ class MonitoringRepository {
 
     final String dateKey =
         "${selectedDay.year}-${selectedDay.month}-${selectedDay.day}";
+
+    // Validate that the parameter has not already been recorded for this day
+    final existing = await measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .where('type', isEqualTo: type)
+        .where('dateKey', isEqualTo: dateKey)
+        .where('parameter', isEqualTo: label)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      throw Exception("Parameter '$label' has already been recorded for this day.");
+    }
+
     final batch = _firestore.batch();
     final measurementRef = measurementsCollection.doc();
 
