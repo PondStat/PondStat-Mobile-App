@@ -26,39 +26,27 @@ class MeasurementCard extends ConsumerWidget {
     this.notes,
   });
 
-  void _confirmGroupClear(BuildContext context, MonitoringRepository monitoringRepo) {
+  void _confirmGroupDelete(BuildContext context, MonitoringRepository monitoringRepo) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => DestructiveDialog(
-        title: "Clear $title Inputs?",
-        content: "Are you sure you want to clear all input values for this $title measurement? The entry will be kept but all inputs will be removed.",
+        title: "Delete $title?",
+        content: "Are you sure you want to delete this $title measurement? This action cannot be undone.",
+        confirmText: "Delete",
         onConfirm: () async {
           final firstDocData = groupDocs.first.data() as Map<String, dynamic>;
           final pondId = firstDocData['pondId'] as String;
 
-          final Map<String, Map<String, double>> updatedPointValues = {};
-          final Map<String, Map<String, List<double>>> updatedReplicateValues = {};
-          final Map<String, String?> updatedNotes = {};
-
-          for (var doc in groupDocs) {
-            updatedPointValues[doc.id] = {};
-            updatedReplicateValues[doc.id] = {};
-            updatedNotes[doc.id] = null;
-          }
-
-          await monitoringRepo.updateMeasurementsWithReplicates(
+          await monitoringRepo.deleteMeasurementsGroup(
             pondId: pondId,
             docs: groupDocs,
-            updatedPointValues: updatedPointValues,
-            updatedReplicateValues: updatedReplicateValues,
-            updatedNotes: updatedNotes,
           );
 
           HapticFeedback.heavyImpact();
 
           if (context.mounted) {
-            SnackbarHelper.showInfo(context, "$title inputs cleared");
+            SnackbarHelper.showInfo(context, "$title deleted");
           }
         },
       ),
@@ -170,7 +158,7 @@ class MeasurementCard extends ConsumerWidget {
                       onSelected: (value) {
                         HapticFeedback.selectionClick();
                         if (value == 'edit') onEdit();
-                        if (value == 'clear') _confirmGroupClear(context, monitoringRepo);
+                        if (value == 'delete') _confirmGroupDelete(context, monitoringRepo);
                       },
                       itemBuilder: (context) => [
                         PopupMenuItem(
@@ -191,17 +179,17 @@ class MeasurementCard extends ConsumerWidget {
                           ),
                         ),
                         PopupMenuItem(
-                          value: 'clear',
+                          value: 'delete',
                           child: Row(
                             children: [
                               Icon(
-                                Icons.remove_circle_outline_rounded,
+                                Icons.delete_outline_rounded,
                                 size: 18,
                                 color: colorScheme.error,
                               ),
                               const SizedBox(width: 12),
                               Text(
-                                'Clear Inputs',
+                                'Delete',
                                 style: TextStyle(
                                   color: colorScheme.error,
                                   fontWeight: FontWeight.w600,

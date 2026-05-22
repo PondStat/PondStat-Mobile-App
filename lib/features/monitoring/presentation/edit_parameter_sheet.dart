@@ -155,9 +155,6 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
           controller.clear();
         }
       }
-      for (var controller in notesControllers.values) {
-        controller.clear();
-      }
       _isDirty = true;
     });
   }
@@ -167,9 +164,9 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
       context: context,
       barrierDismissible: false,
       builder: (context) => DestructiveDialog(
-        title: "Clear All Fields?",
-        content: "Are you sure you want to clear all input fields in this sheet? You will need to click 'Save Changes' to apply this to the database.",
-        confirmText: "Clear All",
+        title: "Clear All Inputs?",
+        content: "Are you sure you want to clear all input values in this sheet? Notes will be preserved. You will need to click 'Save Changes' to apply this to the database.",
+        confirmText: "Clear Inputs",
         onConfirm: () async {
           _clearAllFields();
         },

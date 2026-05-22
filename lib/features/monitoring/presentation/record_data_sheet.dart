@@ -406,6 +406,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
                       unit: unitController.text.trim(),
                       type: type,
                       category: selectedCategory!,
+                      pondId: widget.pondId,
                     );
                     if (context.mounted) Navigator.pop(context);
                   } else {
@@ -777,6 +778,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     return StreamBuilder<QuerySnapshot>(
       stream: ref.read(monitoringRepositoryProvider).customParametersCollection
           .where('type', isEqualTo: type)
+          .where('pondId', isEqualTo: widget.pondId)
           .snapshots(),
       builder: (context, customSnapshot) {
         List<ParameterItem> allParams = List.from(hardcodedParams);

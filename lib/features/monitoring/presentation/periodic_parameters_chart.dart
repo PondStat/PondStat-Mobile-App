@@ -152,6 +152,7 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
     return StreamBuilder<QuerySnapshot>(
       stream: ref.read(monitoringRepositoryProvider).customParametersCollection
           .where('type', isEqualTo: widget.type)
+          .where('pondId', isEqualTo: widget.pondId)
           .snapshots(),
       builder: (context, snapshot) {
         List<ParameterItem> allParams = List.from(_baseParams);

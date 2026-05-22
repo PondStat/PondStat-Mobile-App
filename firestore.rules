@@ -100,7 +100,8 @@ service cloud.firestore {
       match /custom_parameters/{paramId} {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated()
-          && request.resource.data.createdBy == uid();
+          && request.resource.data.createdBy == uid()
+          && isPondMember(request.resource.data.pondId);
         allow delete: if isAuthenticated()
           && resource.data.createdBy == uid();
       }
