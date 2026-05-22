@@ -52,9 +52,9 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
     super.initState();
     List<ParameterItem> paramsToUse;
     if (widget.type == 'weekly') {
-      paramsToUse = MonitoringParameters.weeklyParameters;
+      paramsToUse = MonitoringParameters.getWeeklyParameters(widget.species);
     } else if (widget.type == 'biweekly') {
-      paramsToUse = MonitoringParameters.biweeklyParameters;
+      paramsToUse = MonitoringParameters.getBiweeklyParameters(widget.species);
     } else {
       paramsToUse = MonitoringParameters.getDailyParameters(widget.species);
     }

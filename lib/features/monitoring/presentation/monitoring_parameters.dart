@@ -219,165 +219,269 @@ class MonitoringParameters {
     ),
   ];
 
-  static final List<ParameterItem> weeklyParameters = [
-    const ParameterItem(
-      label: 'Phytoplankton',
-      unit: 'cells/mL',
-      icon: Icons.biotech_rounded,
-      category: ParameterCategory.biological,
-      hint: 'e.g., 10000',
-      absoluteMin: 0.0,
-    ),
-    const ParameterItem(
-      label: 'Test 10-1 (Average yellow colonies)',
-      unit: '',
-      icon: Icons.biotech_rounded,
-      category: ParameterCategory.biological,
-      hint: 'e.g., 100',
-      absoluteMin: 0.0,
-    ),
-    const ParameterItem(
-      label: 'Test yellow 10-1 (CFU/ml)',
-      unit: 'CFU/mL',
-      icon: Icons.science_rounded,
-      category: ParameterCategory.biological,
-      hint: 'e.g., 10000',
-      absoluteMin: 0.0,
-    ),
-    const ParameterItem(
-      label: 'Test 10-2 (Average yellow colonies)',
-      unit: '',
-      icon: Icons.biotech_rounded,
-      category: ParameterCategory.biological,
-      hint: 'e.g., 100',
-      absoluteMin: 0.0,
-    ),
-    const ParameterItem(
-      label: 'Test yellow 10-2 (CFU/ml)',
-      unit: 'CFU/mL',
-      icon: Icons.science_rounded,
-      category: ParameterCategory.biological,
-      hint: 'e.g., 10000',
-      absoluteMin: 0.0,
-    ),
-    const ParameterItem(
-      label: 'Test 10-1 (Average green colonies)',
-      unit: '',
-      icon: Icons.biotech_rounded,
-      category: ParameterCategory.biological,
-      hint: 'e.g., 100',
-      absoluteMin: 0.0,
-    ),
-    const ParameterItem(
-      label: 'Test green 10-1 (CFU/ml)',
-      unit: 'CFU/mL',
-      icon: Icons.science_rounded,
-      category: ParameterCategory.biological,
-      hint: 'e.g., 10000',
-      absoluteMin: 0.0,
-    ),
-    const ParameterItem(
-      label: 'Test 10-2 (Average green colonies)',
-      unit: '',
-      icon: Icons.biotech_rounded,
-      category: ParameterCategory.biological,
-      hint: 'e.g., 100',
-      absoluteMin: 0.0,
-    ),
-    const ParameterItem(
-      label: 'Test green 10-2 (CFU/ml)',
-      unit: 'CFU/mL',
-      icon: Icons.science_rounded,
-      category: ParameterCategory.biological,
-      hint: 'e.g., 10000',
-      absoluteMin: 0.0,
-    ),
-  ];
+  static List<ParameterItem> getWeeklyParameters(String species) {
+    double? phytoOptMin, phytoOptMax, phytoAbsMax;
 
-  static final List<ParameterItem> biweeklyParameters = [
-    const ParameterItem(
-      label: 'Dissolved Oxygen',
-      unit: 'mg/L',
-      icon: Icons.air_rounded,
-      category: ParameterCategory.chemical,
-      absoluteMin: 0.0,
-      absoluteMax: 20.0,
-      optimalMin: 5.0,
-      hint: 'e.g., 6.0',
-      warningMessage: 'Low DO is highly lethal.',
-    ),
-    const ParameterItem(
-      label: 'Ammonia',
-      unit: 'mg/L',
-      icon: Icons.science_rounded,
-      category: ParameterCategory.chemical,
-      absoluteMin: 0.0,
-      optimalMax: 0.05,
-      hint: 'e.g., 0.02',
-      warningMessage: 'High ammonia levels are toxic.',
-    ),
-    const ParameterItem(
-      label: 'Nitrite',
-      unit: 'mg/L',
-      icon: Icons.science_outlined,
-      category: ParameterCategory.chemical,
-      absoluteMin: 0.0,
-      optimalMax: 0.1,
-      hint: 'e.g., 0.05',
-      warningMessage: 'Nitrite toxicity affects oxygen transport.',
-    ),
-    const ParameterItem(
-      label: 'Nitrate',
-      unit: 'mg/L',
-      icon: Icons.biotech_rounded,
-      category: ParameterCategory.chemical,
-      absoluteMin: 0.0,
-      hint: 'e.g., 10',
-    ),
-    const ParameterItem(
-      label: 'Calcium',
-      unit: 'mg/L',
-      icon: Icons.apps_rounded,
-      category: ParameterCategory.chemical,
-      absoluteMin: 0.0,
-      hint: 'e.g., 40',
-    ),
-    const ParameterItem(
-      label: 'Magnesium',
-      unit: 'mg/L',
-      icon: Icons.apps_outage_rounded,
-      category: ParameterCategory.chemical,
-      absoluteMin: 0.0,
-      hint: 'e.g., 120',
-    ),
-    const ParameterItem(
-      label: 'Total Alkalinity',
-      unit: 'mg/L',
-      icon: Icons.waves_rounded,
-      category: ParameterCategory.chemical,
-      absoluteMin: 0.0,
-      optimalMin: 100.0,
-      hint: 'e.g., 120',
-      warningMessage: 'Low alkalinity causes pH swings.',
-    ),
-    const ParameterItem(
-      label: 'Carbon dioxide',
-      unit: 'mg/L',
-      icon: Icons.co2_rounded,
-      category: ParameterCategory.chemical,
-      absoluteMin: 0.0,
-      hint: 'e.g., 15',
-    ),
-  ];
+    switch (species.toLowerCase()) {
+      case 'shrimp':
+        phytoOptMin = 20000.0;
+        phytoOptMax = 100000.0;
+        phytoAbsMax = 500000.0;
+        break;
+      case 'tilapia':
+      default:
+        phytoOptMin = 10000.0;
+        phytoOptMax = 80000.0;
+        phytoAbsMax = 300000.0;
+        break;
+    }
+
+    return [
+      ParameterItem(
+        label: 'Phytoplankton',
+        unit: 'cells/mL',
+        icon: Icons.biotech_rounded,
+        category: ParameterCategory.biological,
+        hint: 'e.g., 10000',
+        absoluteMin: 0.0,
+        absoluteMax: phytoAbsMax,
+        optimalMin: phytoOptMin,
+        optimalMax: phytoOptMax,
+        warningMessage: 'Phytoplankton levels outside the optimal range can affect oxygen levels and water clarity.',
+      ),
+      const ParameterItem(
+        label: 'Test 10-1 (Average yellow colonies)',
+        unit: '',
+        icon: Icons.biotech_rounded,
+        category: ParameterCategory.biological,
+        hint: 'e.g., 100',
+        absoluteMin: 0.0,
+      ),
+      const ParameterItem(
+        label: 'Test yellow 10-1 (CFU/ml)',
+        unit: 'CFU/mL',
+        icon: Icons.science_rounded,
+        category: ParameterCategory.biological,
+        hint: 'e.g., 10000',
+        absoluteMin: 0.0,
+      ),
+      const ParameterItem(
+        label: 'Test 10-2 (Average yellow colonies)',
+        unit: '',
+        icon: Icons.biotech_rounded,
+        category: ParameterCategory.biological,
+        hint: 'e.g., 100',
+        absoluteMin: 0.0,
+      ),
+      const ParameterItem(
+        label: 'Test yellow 10-2 (CFU/ml)',
+        unit: 'CFU/mL',
+        icon: Icons.science_rounded,
+        category: ParameterCategory.biological,
+        hint: 'e.g., 10000',
+        absoluteMin: 0.0,
+      ),
+      const ParameterItem(
+        label: 'Test 10-1 (Average green colonies)',
+        unit: '',
+        icon: Icons.biotech_rounded,
+        category: ParameterCategory.biological,
+        hint: 'e.g., 100',
+        absoluteMin: 0.0,
+      ),
+      const ParameterItem(
+        label: 'Test green 10-1 (CFU/ml)',
+        unit: 'CFU/mL',
+        icon: Icons.science_rounded,
+        category: ParameterCategory.biological,
+        hint: 'e.g., 10000',
+        absoluteMin: 0.0,
+      ),
+      const ParameterItem(
+        label: 'Test 10-2 (Average green colonies)',
+        unit: '',
+        icon: Icons.biotech_rounded,
+        category: ParameterCategory.biological,
+        hint: 'e.g., 100',
+        absoluteMin: 0.0,
+      ),
+      const ParameterItem(
+        label: 'Test green 10-2 (CFU/ml)',
+        unit: 'CFU/mL',
+        icon: Icons.science_rounded,
+        category: ParameterCategory.biological,
+        hint: 'e.g., 10000',
+        absoluteMin: 0.0,
+      ),
+    ];
+  }
+
+  static List<ParameterItem> getBiweeklyParameters(String species) {
+    double? doOptMin, doOptMax, doAbsMax;
+    double? amOptMax, amAbsMax;
+    double? no2OptMax, no2AbsMax;
+    double? no3OptMax, no3AbsMax;
+    double? caOptMin, caOptMax, caAbsMax;
+    double? mgOptMin, mgOptMax, mgAbsMax;
+    double? alkOptMin, alkOptMax, alkAbsMax;
+    double? co2OptMax, co2AbsMax;
+
+    switch (species.toLowerCase()) {
+      case 'shrimp':
+        doOptMin = 5.0;
+        doOptMax = 15.0;
+        doAbsMax = 20.0;
+        amOptMax = 0.03;
+        amAbsMax = 0.5;
+        no2OptMax = 0.1;
+        no2AbsMax = 0.5;
+        no3OptMax = 30.0;
+        no3AbsMax = 100.0;
+        caOptMin = 120.0;
+        caOptMax = 300.0;
+        caAbsMax = 500.0;
+        mgOptMin = 300.0;
+        mgOptMax = 900.0;
+        mgAbsMax = 1200.0;
+        alkOptMin = 120.0;
+        alkOptMax = 200.0;
+        alkAbsMax = 400.0;
+        co2OptMax = 10.0;
+        co2AbsMax = 30.0;
+        break;
+      case 'tilapia':
+      default:
+        doOptMin = 4.0;
+        doOptMax = 15.0;
+        doAbsMax = 20.0;
+        amOptMax = 0.05;
+        amAbsMax = 1.0;
+        no2OptMax = 0.3;
+        no2AbsMax = 1.0;
+        no3OptMax = 50.0;
+        no3AbsMax = 250.0;
+        caOptMin = 40.0;
+        caOptMax = 120.0;
+        caAbsMax = 200.0;
+        mgOptMin = 15.0;
+        mgOptMax = 50.0;
+        mgAbsMax = 100.0;
+        alkOptMin = 80.0;
+        alkOptMax = 150.0;
+        alkAbsMax = 300.0;
+        co2OptMax = 15.0;
+        co2AbsMax = 50.0;
+        break;
+    }
+
+    return [
+      ParameterItem(
+        label: 'Dissolved Oxygen',
+        unit: 'mg/L',
+        icon: Icons.air_rounded,
+        category: ParameterCategory.chemical,
+        absoluteMin: 0.0,
+        absoluteMax: doAbsMax,
+        optimalMin: doOptMin,
+        optimalMax: doOptMax,
+        hint: 'e.g., 6.0',
+        warningMessage: 'Low Dissolved Oxygen is highly lethal to $species.',
+      ),
+      ParameterItem(
+        label: 'Ammonia',
+        unit: 'mg/L',
+        icon: Icons.science_rounded,
+        category: ParameterCategory.chemical,
+        absoluteMin: 0.0,
+        absoluteMax: amAbsMax,
+        optimalMin: 0.0,
+        optimalMax: amOptMax,
+        hint: 'e.g., 0.02',
+        warningMessage: 'High ammonia levels are toxic to $species.',
+      ),
+      ParameterItem(
+        label: 'Nitrite',
+        unit: 'mg/L',
+        icon: Icons.science_outlined,
+        category: ParameterCategory.chemical,
+        absoluteMin: 0.0,
+        absoluteMax: no2AbsMax,
+        optimalMin: 0.0,
+        optimalMax: no2OptMax,
+        hint: 'e.g., 0.05',
+        warningMessage: 'Nitrite toxicity affects oxygen transport in $species.',
+      ),
+      ParameterItem(
+        label: 'Nitrate',
+        unit: 'mg/L',
+        icon: Icons.biotech_rounded,
+        category: ParameterCategory.chemical,
+        absoluteMin: 0.0,
+        absoluteMax: no3AbsMax,
+        optimalMin: 0.0,
+        optimalMax: no3OptMax,
+        hint: 'e.g., 10',
+        warningMessage: 'High nitrate levels can promote excessive algal growth.',
+      ),
+      ParameterItem(
+        label: 'Calcium',
+        unit: 'mg/L',
+        icon: Icons.apps_rounded,
+        category: ParameterCategory.chemical,
+        absoluteMin: 0.0,
+        absoluteMax: caAbsMax,
+        optimalMin: caOptMin,
+        optimalMax: caOptMax,
+        hint: 'e.g., 40',
+        warningMessage: 'Calcium levels outside the optimal range affect shell stability and osmoregulation in $species.',
+      ),
+      ParameterItem(
+        label: 'Magnesium',
+        unit: 'mg/L',
+        icon: Icons.apps_outage_rounded,
+        category: ParameterCategory.chemical,
+        absoluteMin: 0.0,
+        absoluteMax: mgAbsMax,
+        optimalMin: mgOptMin,
+        optimalMax: mgOptMax,
+        hint: 'e.g., 120',
+        warningMessage: 'Magnesium is critical for enzyme activity and ionic balance in $species.',
+      ),
+      ParameterItem(
+        label: 'Total Alkalinity',
+        unit: 'mg/L',
+        icon: Icons.waves_rounded,
+        category: ParameterCategory.chemical,
+        absoluteMin: 0.0,
+        absoluteMax: alkAbsMax,
+        optimalMin: alkOptMin,
+        optimalMax: alkOptMax,
+        hint: 'e.g., 120',
+        warningMessage: 'Low alkalinity causes critical pH swings in $species ponds.',
+      ),
+      ParameterItem(
+        label: 'Carbon dioxide',
+        unit: 'mg/L',
+        icon: Icons.co2_rounded,
+        category: ParameterCategory.chemical,
+        absoluteMin: 0.0,
+        absoluteMax: co2AbsMax,
+        optimalMin: 0.0,
+        optimalMax: co2OptMax,
+        hint: 'e.g., 15',
+        warningMessage: 'High CO2 stresses respiration and gill function in $species.',
+      ),
+    ];
+  }
 
   static List<ParameterItem> getParametersByIndex(int index, String species) {
     switch (index) {
       case 0:
         return getDailyParameters(species);
       case 1:
-        return weeklyParameters;
+        return getWeeklyParameters(species);
       case 2:
-        return biweeklyParameters;
+        return getBiweeklyParameters(species);
       default:
         return getDailyParameters(species);
     }
@@ -386,8 +490,8 @@ class MonitoringParameters {
   static ParameterItem? getParameterByLabel(String label, String species) {
     final allParams = [
       ...getDailyParameters(species),
-      ...weeklyParameters,
-      ...biweeklyParameters,
+      ...getWeeklyParameters(species),
+      ...getBiweeklyParameters(species),
       ...samplingParameters,
     ];
     try {
