@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/monitoring_header.dart';
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_history_sheet.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 import 'operations_page.dart';
 import 'overview_tab.dart';
@@ -12,7 +15,7 @@ import 'water_quality_page.dart';
 import 'growth_page.dart';
 import 'trends_page.dart';
 
-class PondMonitoringScaffold extends StatefulWidget {
+class PondMonitoringScaffold extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final String userRole;
@@ -31,10 +34,10 @@ class PondMonitoringScaffold extends StatefulWidget {
   });
 
   @override
-  State<PondMonitoringScaffold> createState() => _PondMonitoringScaffoldState();
+  ConsumerState<PondMonitoringScaffold> createState() => _PondMonitoringScaffoldState();
 }
 
-class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
+class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold> {
   int _currentIndex = 2;
   final Set<int> _visitedTabs = {2};
   late DateTime _focusedDay;
@@ -45,6 +48,7 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
   @override
   void initState() {
     super.initState();
+    ShowcaseView.register();
     final now = DateTime.now();
 
     final firstDay = widget.createdAt;
@@ -65,6 +69,12 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
       initialFocus.month,
       initialFocus.day,
     );
+  }
+
+  @override
+  void dispose() {
+    ShowcaseView.get().unregister();
+    super.dispose();
   }
 
   void _showProfileSheet() {
@@ -212,6 +222,12 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
                   onBackTap: () => context.pop(),
                   onHistoryTap: _showEditHistory,
                   onProfileTap: _showProfileSheet,
+                  onHelpTap: () {
+                    ref.read(tourTriggerProvider.notifier).state = null;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      ref.read(tourTriggerProvider.notifier).state = _currentIndex;
+                    });
+                  },
                 ),
                 Expanded(
                   child: FadeIndexedStack(
@@ -241,58 +257,58 @@ class _PondMonitoringScaffoldState extends State<PondMonitoringScaffold> {
                   ),
                 ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-              _visitedTabs.add(index);
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: colorScheme.surface,
-          selectedItemColor: colorScheme.primary,
-          unselectedItemColor: colorScheme.onSurfaceVariant.withValues(
-            alpha: 0.6,
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+                _visitedTabs.add(index);
+              });
+            },
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: colorScheme.surface,
+            selectedItemColor: colorScheme.primary,
+            unselectedItemColor: colorScheme.onSurfaceVariant.withValues(
+              alpha: 0.6,
+            ),
+            selectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+            ),
+            elevation: 0,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.receipt_long_rounded),
+                label: "Operations",
+                tooltip: "Operations",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.analytics_rounded),
+                label: "Trends",
+                tooltip: "Trends",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.dashboard_rounded),
+                label: "Overview",
+                tooltip: "Overview",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.trending_up_rounded),
+                label: "Growth",
+                tooltip: "Growth",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.water_drop_rounded),
+                label: "Parameter",
+                tooltip: "Parameter",
+              ),
+            ],
           ),
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 10,
-          ),
-          elevation: 0,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_rounded),
-              label: "Operations",
-              tooltip: "Operations",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.analytics_rounded),
-              label: "Trends",
-              tooltip: "Trends",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_rounded),
-              label: "Overview",
-              tooltip: "Overview",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.trending_up_rounded),
-              label: "Growth",
-              tooltip: "Growth",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.water_drop_rounded),
-              label: "Parameter",
-              tooltip: "Parameter",
-            ),
-          ],
         ),
-      ),
     );
   }
 }

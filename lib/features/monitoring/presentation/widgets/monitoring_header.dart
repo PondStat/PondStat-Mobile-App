@@ -10,6 +10,7 @@ class MonitoringHeader extends StatelessWidget {
   final VoidCallback onBackTap;
   final VoidCallback onHistoryTap;
   final VoidCallback onProfileTap;
+  final VoidCallback? onHelpTap;
 
   const MonitoringHeader({
     super.key,
@@ -19,6 +20,7 @@ class MonitoringHeader extends StatelessWidget {
     required this.onBackTap,
     required this.onHistoryTap,
     required this.onProfileTap,
+    this.onHelpTap,
   });
 
   @override
@@ -100,6 +102,19 @@ class MonitoringHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (onHelpTap != null) ...[
+            _buildCircleIconButton(
+              context: context,
+              icon: Icons.help_outline_rounded,
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onHelpTap!();
+              },
+              tooltip: 'Help & Tour',
+              surfaceContainer: surfaceContainer,
+            ),
+            const SizedBox(width: 8),
+          ],
           _buildCircleIconButton(
             context: context,
             icon: Icons.receipt_long_rounded,

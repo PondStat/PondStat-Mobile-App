@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/core/utils/string_extensions.dart';
@@ -14,6 +15,8 @@ import 'package:pondstat/core/widgets/staggered_list_item.dart';
 import 'package:pondstat/core/widgets/loading_placeholder.dart';
 import 'package:pondstat/core/widgets/error_state_card.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 class SchedulesTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -46,6 +49,17 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
 
   late Stream<QuerySnapshot> _schedulesStream;
 
+  final GlobalKey _shiftsListKey = GlobalKey();
+  final GlobalKey _assignShiftsKey = GlobalKey();
+
+  void _startTour() {
+    final keys = [_shiftsListKey];
+    if (widget.canEdit) {
+      keys.add(_assignShiftsKey);
+    }
+    ShowcaseView.get().startShowCase(keys);
+  }
+
   void _initStream() {
     _schedulesStream = ref.read(monitoringRepositoryProvider).schedulesCollection
         .where('pondId', isEqualTo: widget.pondId)
@@ -65,6 +79,15 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
   void initState() {
     super.initState();
     _initStream();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final hasSeen = ref.read(onboardingTourProvider).hasSeenOperations;
+      if (!hasSeen) {
+        _startTour();
+        ref.read(onboardingTourProvider.notifier).markOperationsAsSeen();
+      }
+    });
   }
 
   @override
@@ -159,6 +182,17 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
             }
           }
 
+          ref.listen<int?>(tourTriggerProvider, (previous, next) {
+            if (next == 0) {
+              final tabController = DefaultTabController.of(context);
+              if (tabController.index == 0) {
+                _startTour();
+              }
+            }
+          });
+
+          bool didShowcaseShiftCard = false;
+
           return RefreshIndicator(
             onRefresh: _refreshData,
             color: Theme.of(context).colorScheme.primary,
@@ -166,12 +200,17 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
             child: isCompletelyEmpty && !widget.canEdit
                 ? Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: EmptyStateCard(
-                      image: const Icon(Icons.event_busy_rounded),
-                      title: 'No Schedules Assigned',
-                      description:
-                          'There are currently no shifts scheduled for this pond.',
-                      scrollable: true,
+                    child: CustomShowcase(
+                      showcaseKey: _shiftsListKey,
+                      title: 'Shift Schedules',
+                      description: 'View the assigned morning and afternoon shifts for each day of the week.',
+                      child: EmptyStateCard(
+                        image: const Icon(Icons.event_busy_rounded),
+                        title: 'No Schedules Assigned',
+                        description:
+                            'There are currently no shifts scheduled for this pond.',
+                        scrollable: true,
+                      ),
                     ),
                   )
                 : ListView.builder(
@@ -196,9 +235,20 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
                         return const SizedBox.shrink();
                       }
 
+                      Widget dayCard = _buildDayCard(day, morningUsers, afternoonUsers);
+                      if (!didShowcaseShiftCard) {
+                        didShowcaseShiftCard = true;
+                        dayCard = CustomShowcase(
+                          showcaseKey: _shiftsListKey,
+                          title: 'Shift Schedules',
+                          description: 'View the assigned morning and afternoon shifts for each day of the week.',
+                          child: dayCard,
+                        );
+                      }
+
                       return StaggeredListItem(
                         index: index,
-                        child: _buildDayCard(day, morningUsers, afternoonUsers),
+                        child: dayCard,
                       );
                     },
                   ),
@@ -206,19 +256,24 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
         },
       ),
       floatingActionButton: widget.canEdit
-          ? Semantics(
-              label: "Assign schedules or shifts to pond collaborators",
-              button: true,
-              child: FloatingActionButton.extended(
-                heroTag: 'schedules_fab',
-                onPressed: _showAssignSheet,
-                backgroundColor: primaryBlue,
-                icon: const Icon(Icons.group_add_rounded, color: Colors.white),
-                label: const Text(
-                  "Assign Shifts",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+          ? CustomShowcase(
+              showcaseKey: _assignShiftsKey,
+              title: 'Assign Shifts',
+              description: 'Assign or modify shifts for team members and coordinators.',
+              child: Semantics(
+                label: "Assign schedules or shifts to pond collaborators",
+                button: true,
+                child: FloatingActionButton.extended(
+                  heroTag: 'schedules_fab',
+                  onPressed: _showAssignSheet,
+                  backgroundColor: primaryBlue,
+                  icon: const Icon(Icons.group_add_rounded, color: Colors.white),
+                  label: const Text(
+                    "Assign Shifts",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

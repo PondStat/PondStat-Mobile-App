@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/culture_progress_card.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_calendar.dart';
-
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 
-class OverviewTab extends StatelessWidget {
+class OverviewTab extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final String userRole;
@@ -33,7 +36,48 @@ class OverviewTab extends StatelessWidget {
   });
 
   @override
+  ConsumerState<OverviewTab> createState() => _OverviewTabState();
+}
+
+class _OverviewTabState extends ConsumerState<OverviewTab> {
+  final GlobalKey _overviewHeaderKey = GlobalKey();
+  final GlobalKey _progressCardKey = GlobalKey();
+  final GlobalKey _calendarKey = GlobalKey();
+  final GlobalKey _recordButtonKey = GlobalKey();
+
+  void _startTour() {
+    final keys = [
+      _overviewHeaderKey,
+      _progressCardKey,
+      _calendarKey,
+    ];
+    if (widget.userRole == 'owner' || widget.userRole == 'editor') {
+      keys.add(_recordButtonKey);
+    }
+    ShowcaseView.get().startShowCase(keys);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final hasSeen = ref.read(onboardingTourProvider).hasSeenOverview;
+      if (!hasSeen) {
+        _startTour();
+        ref.read(onboardingTourProvider.notifier).markOverviewAsSeen();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.listen<int?>(tourTriggerProvider, (previous, next) {
+      if (next == 2) { // Overview is index 2
+        _startTour();
+      }
+    });
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -52,87 +96,106 @@ class OverviewTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        pondName,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
-                          color: theme.colorScheme.onSurface,
+                  child: CustomShowcase(
+                    showcaseKey: _overviewHeaderKey,
+                    title: 'Pond Details',
+                    description: 'View the active pond name and the target species currently being cultured.',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.pondName,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                            color: theme.colorScheme.onSurface,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "Target Species: $species",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurfaceVariant,
+                        const SizedBox(height: 4),
+                        Text(
+                          "Target Species: ${widget.species}",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-
               ],
             ),
           ),
-          CultureProgressCard(
-            createdAt: createdAt,
-            targetCulturePeriodDays: targetCulturePeriodDays,
+          CustomShowcase(
+            showcaseKey: _progressCardKey,
+            title: 'Culture Progress',
+            description: 'Track the current day of culture, target period, and overall progress metrics of this culture cycle.',
+            child: CultureProgressCard(
+              createdAt: widget.createdAt,
+              targetCulturePeriodDays: widget.targetCulturePeriodDays,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(20.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? theme.colorScheme.surfaceContainer
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: isDark
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-              ),
-              padding: const EdgeInsets.all(8.0),
-              child: MonitoringCalendar(
-                pondId: pondId,
-                focusedDay: focusedDay,
-                selectedDay: selectedDay,
-                firstDay: createdAt,
-                lastDay: createdAt.add(Duration(days: targetCulturePeriodDays)),
-                onDaySelected: onDaySelected,
-                onPageChanged: onPageChanged,
+            child: CustomShowcase(
+              showcaseKey: _calendarKey,
+              title: 'Monitoring Calendar',
+              description: 'Select a day to view historical records, trends, or log daily parameters.',
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? theme.colorScheme.surfaceContainer
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: isDark
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                ),
+                padding: const EdgeInsets.all(8.0),
+                child: MonitoringCalendar(
+                  pondId: widget.pondId,
+                  focusedDay: widget.focusedDay,
+                  selectedDay: widget.selectedDay,
+                  firstDay: widget.createdAt,
+                  lastDay: widget.createdAt.add(Duration(days: widget.targetCulturePeriodDays)),
+                  onDaySelected: widget.onDaySelected,
+                  onPageChanged: widget.onPageChanged,
+                ),
               ),
             ),
           ),
-          if (userRole == 'owner' || userRole == 'editor')
+          if (widget.userRole == 'owner' || widget.userRole == 'editor')
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    if (selectedDay == null) {
-                      SnackbarHelper.showInfo(context, 'Please select a day first on the calendar.');
-                      return;
-                    }
-                    onRecordParameters();
-                  },
-                  icon: const Icon(Icons.water_drop_rounded),
-                  label: const Text('Record Parameters'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                child: CustomShowcase(
+                  showcaseKey: _recordButtonKey,
+                  title: 'Record Parameters',
+                  description: 'Tap here to enter daily water quality data such as temperature, pH, and dissolved oxygen.',
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      if (widget.selectedDay == null) {
+                        SnackbarHelper.showInfo(context, 'Please select a day first on the calendar.');
+                        return;
+                      }
+                      widget.onRecordParameters();
+                    },
+                    icon: const Icon(Icons.water_drop_rounded),
+                    label: const Text('Record Parameters'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
                 ),

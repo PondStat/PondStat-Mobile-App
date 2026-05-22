@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
 import 'package:pondstat/core/widgets/destructive_dialog.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
@@ -11,6 +12,8 @@ import 'package:pondstat/features/monitoring/presentation/edit_growth_sheet.dart
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 
 class GrowthPage extends ConsumerStatefulWidget {
@@ -33,6 +36,30 @@ class GrowthPage extends ConsumerStatefulWidget {
 
 class _GrowthPageState extends ConsumerState<GrowthPage> {
   int _refreshKey = 0;
+
+  final GlobalKey _growthListKey = GlobalKey();
+  final GlobalKey _recordGrowthKey = GlobalKey();
+
+  void _startTour() {
+    final keys = [_growthListKey];
+    if (widget.canEdit) {
+      keys.add(_recordGrowthKey);
+    }
+    ShowcaseView.get().startShowCase(keys);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final hasSeen = ref.read(onboardingTourProvider).hasSeenGrowth;
+      if (!hasSeen) {
+        _startTour();
+        ref.read(onboardingTourProvider.notifier).markGrowthAsSeen();
+      }
+    });
+  }
 
   void _showRecordGrowth() {
     showModalBottomSheet(
@@ -57,13 +84,13 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                 final now = DateTime.now();
                 final sixDaysAgo = now.subtract(const Duration(days: 6));
                 final snapshot = await ref.read(monitoringRepositoryProvider).measurementsCollection
-                    .where('pondId', isEqualTo: widget.pondId)
-                    .where('parameter', isEqualTo: label)
-                    .where(
-                      'timestamp',
-                      isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
-                    )
-                    .get();
+                     .where('pondId', isEqualTo: widget.pondId)
+                     .where('parameter', isEqualTo: label)
+                     .where(
+                       'timestamp',
+                       isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
+                     )
+                     .get();
 
                 if (snapshot.docs.isNotEmpty) {
                   throw Exception(
@@ -177,27 +204,43 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    ref.listen<int?>(tourTriggerProvider, (previous, next) {
+      if (next == 3) {
+        _startTour();
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: GrowthTab(
-        key: ValueKey(_refreshKey),
-        pondId: widget.pondId,
-        canEdit: widget.canEdit,
-        onEdit: _showEditGrowthSheet,
-        onDelete: _confirmDeleteGrowth,
+      body: CustomShowcase(
+        showcaseKey: _growthListKey,
+        title: 'Growth Performance & Records',
+        description: 'Track growth sampling indices like Average Body Weight (ABW), Average Daily Growth (ADG), Feed Conversion Ratio (FCR), and more over time.',
+        child: GrowthTab(
+          key: ValueKey(_refreshKey),
+          pondId: widget.pondId,
+          canEdit: widget.canEdit,
+          onEdit: _showEditGrowthSheet,
+          onDelete: _confirmDeleteGrowth,
+        ),
       ),
       floatingActionButton: widget.canEdit
-          ? Semantics(
-              label: "Record growth sampling data",
-              button: true,
-              child: FloatingActionButton.extended(
-                heroTag: 'growth_fab',
-                onPressed: () => _showRecordGrowth(),
-                backgroundColor: colorScheme.primary,
-                icon: Icon(Icons.add_rounded, color: colorScheme.onPrimary),
-                label: Text(
-                  "Record Sampling",
-                  style: TextStyle(color: colorScheme.onPrimary),
+          ? CustomShowcase(
+              showcaseKey: _recordGrowthKey,
+              title: 'Record Sampling',
+              description: 'Tap here to log a new periodic fish growth sampling session (ABW, replicates, etc.).',
+              child: Semantics(
+                label: "Record growth sampling data",
+                button: true,
+                child: FloatingActionButton.extended(
+                  heroTag: 'growth_fab',
+                  onPressed: () => _showRecordGrowth(),
+                  backgroundColor: colorScheme.primary,
+                  icon: Icon(Icons.add_rounded, color: colorScheme.onPrimary),
+                  label: Text(
+                    "Record Sampling",
+                    style: TextStyle(color: colorScheme.onPrimary),
+                  ),
                 ),
               ),
             )

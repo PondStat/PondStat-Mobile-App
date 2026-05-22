@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/measurement_list_view.dart';
 import 'package:pondstat/features/monitoring/presentation/record_data_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_parameter_sheet.dart';
@@ -10,6 +11,8 @@ import 'package:pondstat/core/services/safety_service.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 
 class WaterQualityPage extends ConsumerStatefulWidget {
@@ -36,6 +39,18 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  final GlobalKey _qualityTabsKey = GlobalKey();
+  final GlobalKey _measurementsListKey = GlobalKey();
+  final GlobalKey _recordParamsKey = GlobalKey();
+
+  void _startTour() {
+    final keys = [_qualityTabsKey, _measurementsListKey];
+    if (widget.canEdit) {
+      keys.add(_recordParamsKey);
+    }
+    ShowcaseView.get().startShowCase(keys);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +58,15 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
     _tabController.addListener(() {
       if (mounted) {
         setState(() {});
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final hasSeen = ref.read(onboardingTourProvider).hasSeenParameter;
+      if (!hasSeen) {
+        _startTour();
+        ref.read(onboardingTourProvider.notifier).markParameterAsSeen();
       }
     });
   }
@@ -202,48 +226,69 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
       fabLabel = "Record Biweekly";
     }
 
+    ref.listen<int?>(tourTriggerProvider, (previous, next) {
+      if (next == 4) {
+        _startTour();
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
         children: [
-          PreferredSize(
-            preferredSize: const Size.fromHeight(kToolbarHeight),
-            child: TabBar(
-              isScrollable: false,
-              controller: _tabController,
-              labelColor: primaryColor,
-              unselectedLabelColor: Colors.grey.shade400,
-              indicatorColor: primaryColor,
-              tabs: const [
-                Tab(text: "Daily"),
-                Tab(text: "Weekly"),
-                Tab(text: "Biweekly"),
-              ],
+          CustomShowcase(
+            showcaseKey: _qualityTabsKey,
+            title: 'Parameter Schedules',
+            description: 'Switch between parameters grouped by sampling frequency: Daily (pH, Temp, DO), Weekly (Alkalinity, Salinity), or Biweekly.',
+            child: PreferredSize(
+              preferredSize: const Size.fromHeight(kToolbarHeight),
+              child: TabBar(
+                isScrollable: false,
+                controller: _tabController,
+                labelColor: primaryColor,
+                unselectedLabelColor: Colors.grey.shade400,
+                indicatorColor: primaryColor,
+                tabs: const [
+                  Tab(text: "Daily"),
+                  Tab(text: "Weekly"),
+                  Tab(text: "Biweekly"),
+                ],
+              ),
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildTabContent('daily', dateKey, primaryColor),
-                _buildTabContent('weekly', dateKey, primaryColor),
-                _buildTabContent('biweekly', dateKey, primaryColor),
-              ],
+            child: CustomShowcase(
+              showcaseKey: _measurementsListKey,
+              title: 'Water Quality Records',
+              description: 'View recorded measurements for the selected day. Tap any card to edit details if permissions allow.',
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTabContent('daily', dateKey, primaryColor),
+                  _buildTabContent('weekly', dateKey, primaryColor),
+                  _buildTabContent('biweekly', dateKey, primaryColor),
+                ],
+              ),
             ),
           ),
         ],
       ),
       floatingActionButton: widget.canEdit
-          ? Semantics(
-              label: "Record water quality data",
-              button: true,
-              child: FloatingActionButton.extended(
-                heroTag: 'water_quality_fab',
-                onPressed: _showAddDataOverlay,
-                icon: const Icon(Icons.add),
-                label: Text(fabLabel),
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
+          ? CustomShowcase(
+              showcaseKey: _recordParamsKey,
+              title: 'Record Parameter Data',
+              description: 'Tap here to log a new water quality parameter reading for the selected date.',
+              child: Semantics(
+                label: "Record water quality data",
+                button: true,
+                child: FloatingActionButton.extended(
+                  heroTag: 'water_quality_fab',
+                  onPressed: _showAddDataOverlay,
+                  icon: const Icon(Icons.add),
+                  label: Text(fabLabel),
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                ),
               ),
             )
           : null,

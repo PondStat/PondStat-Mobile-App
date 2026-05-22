@@ -10,11 +10,14 @@ import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/periodic_parameters_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/trends_tab.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 class TrendsPage extends ConsumerStatefulWidget {
   final String pondId;
@@ -38,12 +41,33 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
   late DateTime _endDate;
   bool _isExporting = false;
 
+  final GlobalKey _dateRangeKey = GlobalKey();
+  final GlobalKey _trendsTabsKey = GlobalKey();
+  final GlobalKey _exportReportKey = GlobalKey();
+
+  void _startTour() {
+    ShowcaseView.get().startShowCase([
+      _trendsTabsKey,
+      _dateRangeKey,
+      _exportReportKey,
+    ]);
+  }
+
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     _endDate = now;
     _startDate = now.subtract(const Duration(days: 7));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final hasSeen = ref.read(onboardingTourProvider).hasSeenTrends;
+      if (!hasSeen) {
+        _startTour();
+        ref.read(onboardingTourProvider.notifier).markTrendsAsSeen();
+      }
+    });
   }
 
   Future<void> _selectDateRange(BuildContext context) async {
@@ -631,26 +655,37 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int?>(tourTriggerProvider, (previous, next) {
+      if (next == 1) { // Trends is index 1
+        _startTour();
+      }
+    });
+
     return DefaultTabController(
       length: 4,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(80.0),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 12.0, bottom: 4.0),
-            child: TabBar(
-              isScrollable: false,
-              labelColor: const Color(0xFF0A74DA),
-              unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
-              indicatorColor: const Color(0xFF0A74DA),
-              labelPadding: const EdgeInsets.symmetric(vertical: 14.0),
-              tabs: const [
-                Tab(text: "Daily"),
-                Tab(text: "Weekly"),
-                Tab(text: "Biweekly"),
-                Tab(text: "Final"),
-              ],
+          child: CustomShowcase(
+            showcaseKey: _trendsTabsKey,
+            title: 'Periodic Filters',
+            description: 'Switch between Daily, Weekly, Biweekly, and Final analysis views of your pond parameters.',
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12.0, bottom: 4.0),
+              child: TabBar(
+                isScrollable: false,
+                labelColor: const Color(0xFF0A74DA),
+                unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                indicatorColor: const Color(0xFF0A74DA),
+                labelPadding: const EdgeInsets.symmetric(vertical: 14.0),
+                tabs: const [
+                  Tab(text: "Daily"),
+                  Tab(text: "Weekly"),
+                  Tab(text: "Biweekly"),
+                  Tab(text: "Final"),
+                ],
+              ),
             ),
           ),
         ),
@@ -658,7 +693,12 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
           key: _boundaryKey,
           child: Column(
             children: [
-              _buildDateRangeSelector(context),
+              CustomShowcase(
+                showcaseKey: _dateRangeKey,
+                title: 'Date Range Selector',
+                description: 'Filter parameters over custom historical durations (Only editable by the Pond Owner).',
+                child: _buildDateRangeSelector(context),
+              ),
               Expanded(
                 child: Stack(
                   children: [
@@ -719,27 +759,32 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'export_btn',
-          onPressed: _isExporting ? null : () => _showExportOptions(context),
-          backgroundColor: _isExporting
-              ? Colors.grey.shade400
-              : const Color(0xFF0A74DA),
-          icon: _isExporting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.ios_share_rounded, color: Colors.white),
-          label: Text(
-            _isExporting ? "Exporting..." : "Export Report",
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+        floatingActionButton: CustomShowcase(
+          showcaseKey: _exportReportKey,
+          title: 'Export Report',
+          description: 'Generate high-resolution PNG charts, raw CSV data, or styled PDF reports to share with your team.',
+          child: FloatingActionButton.extended(
+            heroTag: 'export_btn',
+            onPressed: _isExporting ? null : () => _showExportOptions(context),
+            backgroundColor: _isExporting
+                ? Colors.grey.shade400
+                : const Color(0xFF0A74DA),
+            icon: _isExporting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.ios_share_rounded, color: Colors.white),
+            label: Text(
+              _isExporting ? "Exporting..." : "Export Report",
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
