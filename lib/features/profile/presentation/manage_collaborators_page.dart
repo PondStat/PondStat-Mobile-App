@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,8 @@ import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
 
 class ManageCollaboratorsPage extends ConsumerStatefulWidget {
   final String pondId;
@@ -243,7 +246,6 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
   @override
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    final isFocused = _emailFocus.hasFocus;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -339,80 +341,38 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
                     ),
                     const SizedBox(height: 16),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Expanded(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              color: isFocused
-                                  ? Theme.of(context).colorScheme.surface
-                                  : backgroundLight,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isFocused
-                                    ? primaryBlue
-                                    : Colors.grey.shade200,
-                                width: isFocused ? 2 : 1,
-                              ),
-                              boxShadow: isFocused
-                                  ? [
-                                      BoxShadow(
-                                        color: primaryBlue.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 6),
+                          child: PondStatTextField(
+                            controller: _emailController,
+                            focusNode: _emailFocus,
+                            label: 'Collaborator Email',
+                            hint: 'user@email.com',
+                            prefixIcon: Icons.email_rounded,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => _inviteCollaborator(),
+                            suffixIcon: _emailController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade300,
+                                        shape: BoxShape.circle,
                                       ),
-                                    ]
-                                  : [],
-                            ),
-                            child: TextField(
-                              controller: _emailController,
-                              focusNode: _emailFocus,
-                              keyboardType: TextInputType.emailAddress,
-                              autocorrect: false,
-                              textInputAction: TextInputAction.done,
-                              onSubmitted: (_) => _inviteCollaborator(),
-                              style: TextStyle(
-                                color: textDark,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: 'user@email.com',
-                                hintStyle: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                border: InputBorder.none,
-                                prefixIcon: Icon(
-                                  Icons.email_rounded,
-                                  color: isFocused
-                                      ? primaryBlue
-                                      : Colors.grey.shade400,
-                                  size: 20,
-                                ),
-                                suffixIcon: _emailController.text.isNotEmpty
-                                    ? IconButton(
-                                        icon: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey.shade300,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.close_rounded,
-                                            size: 14,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        onPressed: () {
-                                          HapticFeedback.selectionClick();
-                                          _emailController.clear();
-                                        },
-                                      )
-                                    : null,
-                              ),
-                            ),
+                                      child: const Icon(
+                                        Icons.close_rounded,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      HapticFeedback.selectionClick();
+                                      _emailController.clear();
+                                    },
+                                  )
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -422,7 +382,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
                             backgroundColor: primaryBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                              vertical: 16,
+                              vertical: 18,
                               horizontal: 20,
                             ),
                             shape: RoundedRectangleBorder(
@@ -486,16 +446,14 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Unable to load team members.',
-                          style: TextStyle(color: Colors.red.shade400),
-                        ),
+                      return ErrorStateCard(
+                        description: "Unable to load team members: ${snapshot.error}",
+                        onRetry: () => setState(() {}),
                       );
                     }
 
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
+                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                      return const LoadingPlaceholder(message: "Loading team members...");
                     }
 
                     final pond = snapshot.data!.data();
@@ -648,6 +606,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => SafeArea(
         child: Container(
@@ -708,13 +667,13 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
-                            color: Colors.blueGrey.shade900,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           userData?['fullName'] ?? 'User',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -810,7 +769,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: isDestructive ? color : Colors.blueGrey.shade900,
+                      color: isDestructive ? color : Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                     ),
                   ),
@@ -818,7 +777,7 @@ class _CollaboratorTileState extends State<CollaboratorTile>
                   Text(
                     description,
                     style: TextStyle(
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),

@@ -93,8 +93,8 @@ class CultureProgressCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               child: TweenAnimationBuilder<double>(
                 tween: Tween<double>(begin: 0.0, end: progress),
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeOutCubic,
+                duration: const Duration(milliseconds: 2500),
+                curve: Curves.easeOutQuart,
                 builder: (context, value, child) {
                   return LinearProgressIndicator(
                     value: value,

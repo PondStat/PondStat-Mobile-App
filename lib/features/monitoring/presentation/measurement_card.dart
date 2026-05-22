@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/core/widgets/destructive_dialog.dart';
 
 class MeasurementCard extends ConsumerWidget {
   final String time;
@@ -26,134 +27,29 @@ class MeasurementCard extends ConsumerWidget {
   });
 
   void _confirmGroupDelete(BuildContext context, MonitoringRepository monitoringRepo) {
-    final Color textDark = Theme.of(context).colorScheme.onSurface;
-    final Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
-
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        bool isDeleting = false;
+      builder: (context) => DestructiveDialog(
+        title: "Delete $title?",
+        content: "Are you sure you want to delete this $title measurement? This action cannot be undone.",
+        confirmText: "Delete",
+        onConfirm: () async {
+          final firstDocData = groupDocs.first.data() as Map<String, dynamic>;
+          final pondId = firstDocData['pondId'] as String;
 
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.warning_amber_rounded,
-                      color: Theme.of(context).colorScheme.error,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Delete $title?",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: textDark,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: Text(
-                "Are you sure you want to delete this $title measurement? This action cannot be undone.",
-                style: TextStyle(color: textMuted, height: 1.5, fontSize: 15),
-              ),
-              actionsPadding: const EdgeInsets.only(
-                bottom: 16,
-                right: 16,
-                left: 16,
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isDeleting ? null : () => Navigator.pop(context),
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.errorContainer,
-                    foregroundColor: Theme.of(context).colorScheme.error,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: isDeleting
-                      ? null
-                      : () async {
-                          setState(() => isDeleting = true);
+          await monitoringRepo.deleteMeasurementsGroup(
+            pondId: pondId,
+            docs: groupDocs,
+          );
 
-                          try {
-                            final firstDocData = groupDocs.first.data() as Map<String, dynamic>;
-                            final pondId = firstDocData['pondId'] as String;
+          HapticFeedback.heavyImpact();
 
-                            await monitoringRepo.deleteMeasurementsGroup(
-                              pondId: pondId,
-                              docs: groupDocs,
-                            );
-
-                            HapticFeedback.heavyImpact();
-
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              SnackbarHelper.showInfo(context, "$title entry deleted");
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              setState(() => isDeleting = false);
-                              SnackbarHelper.showError(context, "Failed to delete: $e");
-                            }
-                          }
-                        },
-                  child: isDeleting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.red,
-                          ),
-                        )
-                      : const Text(
-                          "Delete",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+          if (context.mounted) {
+            SnackbarHelper.showInfo(context, "$title deleted");
+          }
+        },
+      ),
     );
   }
 
@@ -228,76 +124,82 @@ class MeasurementCard extends ConsumerWidget {
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 18,
-                            color: textDark,
-                            letterSpacing: -0.3,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18,
+                              color: textDark,
+                              letterSpacing: -0.3,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ),
                 if (canEdit)
-                  PopupMenuButton<String>(
-                    padding: EdgeInsets.zero,
-                    icon: Icon(
-                      Icons.more_horiz_rounded,
-                      color: Colors.grey.shade400,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    onOpened: () => HapticFeedback.lightImpact(),
-                    onSelected: (value) {
-                      HapticFeedback.selectionClick();
-                      if (value == 'edit') onEdit();
-                      if (value == 'delete') _confirmGroupDelete(context, monitoringRepo);
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.edit_rounded,
-                              size: 18,
-                              color: primaryColor,
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Edit',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
+                  Semantics(
+                    label: "Measurement actions menu",
+                    button: true,
+                    child: PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      icon: Icon(
+                        Icons.more_horiz_rounded,
+                        color: Colors.grey.shade400,
                       ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline_rounded,
-                              size: 18,
-                              color: colorScheme.error,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Delete',
-                              style: TextStyle(
-                                color: colorScheme.error,
-                                fontWeight: FontWeight.w600,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      onOpened: () => HapticFeedback.lightImpact(),
+                      onSelected: (value) {
+                        HapticFeedback.selectionClick();
+                        if (value == 'edit') onEdit();
+                        if (value == 'delete') _confirmGroupDelete(context, monitoringRepo);
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit_rounded,
+                                size: 18,
+                                color: primaryColor,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Edit',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline_rounded,
+                                size: 18,
+                                color: colorScheme.error,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Delete',
+                                style: TextStyle(
+                                  color: colorScheme.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),

@@ -3,12 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
+import 'package:pondstat/core/widgets/destructive_dialog.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/presentation/record_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_growth_sheet.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 
 class GrowthPage extends ConsumerStatefulWidget {
@@ -31,6 +36,30 @@ class GrowthPage extends ConsumerStatefulWidget {
 
 class _GrowthPageState extends ConsumerState<GrowthPage> {
   int _refreshKey = 0;
+
+  final GlobalKey _growthListKey = GlobalKey();
+  final GlobalKey _recordGrowthKey = GlobalKey();
+
+  void _startTour() {
+    final keys = [_growthListKey];
+    if (widget.canEdit) {
+      keys.add(_recordGrowthKey);
+    }
+    ShowcaseView.get().startShowCase(keys);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final hasSeen = ref.read(onboardingTourProvider).hasSeenGrowth;
+      if (!hasSeen) {
+        _startTour();
+        ref.read(onboardingTourProvider.notifier).markGrowthAsSeen();
+      }
+    });
+  }
 
   void _showRecordGrowth() {
     showModalBottomSheet(
@@ -55,13 +84,13 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                 final now = DateTime.now();
                 final sixDaysAgo = now.subtract(const Duration(days: 6));
                 final snapshot = await ref.read(monitoringRepositoryProvider).measurementsCollection
-                    .where('pondId', isEqualTo: widget.pondId)
-                    .where('parameter', isEqualTo: label)
-                    .where(
-                      'timestamp',
-                      isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
-                    )
-                    .get();
+                     .where('pondId', isEqualTo: widget.pondId)
+                     .where('parameter', isEqualTo: label)
+                     .where(
+                       'timestamp',
+                       isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
+                     )
+                     .get();
 
                 if (snapshot.docs.isNotEmpty) {
                   throw Exception(
@@ -85,10 +114,22 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                 setState(() {
                   _refreshKey++;
                 });
-                SnackbarHelper.showSuccess(
-                  sheetContext,
-                  "Growth sampling recorded",
+                final connectivityResult = await Connectivity().checkConnectivity().timeout(
+                  const Duration(seconds: 1),
+                  onTimeout: () => [ConnectivityResult.none],
                 );
+                if (!sheetContext.mounted) return;
+                if (connectivityResult.contains(ConnectivityResult.none)) {
+                  SnackbarHelper.showSuccess(
+                    sheetContext,
+                    "Growth sampling saved locally (will sync when online)",
+                  );
+                } else {
+                  SnackbarHelper.showSuccess(
+                    sheetContext,
+                    "Growth sampling recorded",
+                  );
+                }
               } catch (e) {
                 if (!sheetContext.mounted) return;
                 SnackbarHelper.showError(
@@ -105,105 +146,23 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        bool isDeleting = false;
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return PopScope(
-              canPop: !isDeleting,
-              child: AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                title: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.red,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        "Delete Sampling?",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                content: const Text(
-                  "Are you sure you want to delete this sampling data? This action cannot be undone.",
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: isDeleting ? null : () => Navigator.pop(context),
-                    child: const Text(
-                      "Cancel",
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade50,
-                      foregroundColor: Colors.red,
-                      elevation: 0,
-                    ),
-                    onPressed: isDeleting
-                        ? null
-                        : () async {
-                            setStateDialog(() => isDeleting = true);
-                            final user = FirebaseAuth.instance.currentUser;
-
-                            try {
-                              await ref.read(growthRepositoryProvider).deleteGrowthSampling(
-                                m,
-                                user,
-                                widget.pondId,
-                              );
-                              HapticFeedback.heavyImpact();
-                              if (!context.mounted) return;
-                              Navigator.pop(context);
-                              setState(() => _refreshKey++);
-                              SnackbarHelper.showInfo(context, "Sampling deleted");
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              setStateDialog(() => isDeleting = false);
-                              SnackbarHelper.showError(context, "Error deleting: $e");
-                            }
-                          },
-                    child: isDeleting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.red,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            "Delete",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (context) => DestructiveDialog(
+        title: "Delete Sampling?",
+        content: "Are you sure you want to delete this sampling data? This action cannot be undone.",
+        onConfirm: () async {
+          final user = FirebaseAuth.instance.currentUser;
+          await ref.read(growthRepositoryProvider).deleteGrowthSampling(
+            m,
+            user,
+            widget.pondId,
+          );
+          HapticFeedback.heavyImpact();
+          if (context.mounted) {
+            setState(() => _refreshKey++);
+            SnackbarHelper.showInfo(context, "Sampling deleted");
+          }
+        },
+      ),
     );
   }
 
@@ -223,9 +182,19 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
       builder: (sheetContext) => EditGrowthSheet(
         metrics: m,
         pondId: widget.pondId,
-        onSave: () {
+        onSave: () async {
           setState(() => _refreshKey++);
-          SnackbarHelper.showSuccess(context, "Sampling updated");
+          final connectivityResult = await Connectivity().checkConnectivity().timeout(
+            const Duration(seconds: 1),
+            onTimeout: () => [ConnectivityResult.none],
+          );
+          if (mounted) {
+            if (connectivityResult.contains(ConnectivityResult.none)) {
+              SnackbarHelper.showSuccess(context, "Sampling saved locally (will sync when online)");
+            } else {
+              SnackbarHelper.showSuccess(context, "Sampling updated");
+            }
+          }
         },
       ),
     );
@@ -235,24 +204,44 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    ref.listen<int?>(tourTriggerProvider, (previous, next) {
+      if (next == 3) {
+        _startTour();
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: GrowthTab(
-        key: ValueKey(_refreshKey),
-        pondId: widget.pondId,
-        canEdit: widget.canEdit,
-        onEdit: _showEditGrowthSheet,
-        onDelete: _confirmDeleteGrowth,
+      body: CustomShowcase(
+        showcaseKey: _growthListKey,
+        title: 'Growth Performance & Records',
+        description: 'Track growth sampling indices like Average Body Weight (ABW), Average Daily Growth (ADG), Feed Conversion Ratio (FCR), and more over time.',
+        child: GrowthTab(
+          key: ValueKey(_refreshKey),
+          pondId: widget.pondId,
+          canEdit: widget.canEdit,
+          onEdit: _showEditGrowthSheet,
+          onDelete: _confirmDeleteGrowth,
+        ),
       ),
       floatingActionButton: widget.canEdit
-          ? FloatingActionButton.extended(
-              heroTag: 'growth_fab',
-              onPressed: () => _showRecordGrowth(),
-              backgroundColor: colorScheme.primary,
-              icon: Icon(Icons.add_rounded, color: colorScheme.onPrimary),
-              label: Text(
-                "Record Sampling",
-                style: TextStyle(color: colorScheme.onPrimary),
+          ? CustomShowcase(
+              showcaseKey: _recordGrowthKey,
+              title: 'Record Sampling',
+              description: 'Tap here to log a new periodic fish growth sampling session (ABW, replicates, etc.).',
+              child: Semantics(
+                label: "Record growth sampling data",
+                button: true,
+                child: FloatingActionButton.extended(
+                  heroTag: 'growth_fab',
+                  onPressed: () => _showRecordGrowth(),
+                  backgroundColor: colorScheme.primary,
+                  icon: Icon(Icons.add_rounded, color: colorScheme.onPrimary),
+                  label: Text(
+                    "Record Sampling",
+                    style: TextStyle(color: colorScheme.onPrimary),
+                  ),
+                ),
               ),
             )
           : null,

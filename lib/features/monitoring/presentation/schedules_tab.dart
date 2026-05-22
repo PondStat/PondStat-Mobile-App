@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/core/utils/string_extensions.dart';
@@ -10,6 +11,12 @@ import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 class SchedulesTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -29,7 +36,7 @@ class SchedulesTab extends ConsumerStatefulWidget {
 
 class _SchedulesTabState extends ConsumerState<SchedulesTab>
     with AutomaticKeepAliveClientMixin {
-  final Color primaryBlue = const Color(0xFF0A74DA);
+  Color get primaryBlue => Theme.of(context).colorScheme.primary;
   final List<String> _daysOfWeek = [
     'Monday',
     'Tuesday',
@@ -39,6 +46,57 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     'Saturday',
     'Sunday',
   ];
+
+  late Stream<QuerySnapshot> _schedulesStream;
+
+  final GlobalKey _shiftsListKey = GlobalKey();
+  final GlobalKey _assignShiftsKey = GlobalKey();
+
+  void _startTour() {
+    final keys = [_shiftsListKey];
+    if (widget.canEdit) {
+      keys.add(_assignShiftsKey);
+    }
+    ShowcaseView.get().startShowCase(keys);
+  }
+
+  void _initStream() {
+    _schedulesStream = ref.read(monitoringRepositoryProvider).schedulesCollection
+        .where('pondId', isEqualTo: widget.pondId)
+        .snapshots();
+  }
+
+  Future<void> _refreshData() async {
+    setState(() {
+      _initStream();
+    });
+    try {
+      await _schedulesStream.first.timeout(const Duration(seconds: 2));
+    } catch (_) {}
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initStream();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final hasSeen = ref.read(onboardingTourProvider).hasSeenOperations;
+      if (!hasSeen) {
+        _startTour();
+        ref.read(onboardingTourProvider.notifier).markOperationsAsSeen();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant SchedulesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pondId != widget.pondId) {
+      _initStream();
+    }
+  }
 
   @override
   bool get wantKeepAlive => true;
@@ -68,15 +126,16 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StreamBuilder<QuerySnapshot>(
-        stream: ref.read(monitoringRepositoryProvider).schedulesCollection
-            .where('pondId', isEqualTo: widget.pondId)
-            .snapshots(),
+        stream: _schedulesStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text("Error loading schedules"));
+            return ErrorStateCard(
+              description: "Error loading schedules: ${snapshot.error}",
+              onRetry: _refreshData,
+            );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingPlaceholder(message: "Loading schedules...");
           }
 
           final docs = snapshot.data?.docs ?? [];
@@ -123,55 +182,99 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
             }
           }
 
-          if (isCompletelyEmpty && !widget.canEdit) {
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: EmptyStateCard(
-                image: const Icon(Icons.event_busy_rounded),
-                title: 'No Schedules Assigned',
-                description:
-                    'There are currently no shifts scheduled for this pond.',
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.only(
-              top: 12,
-              left: 20,
-              right: 20,
-              bottom: 100, // padding for FAB
-            ),
-            itemCount: _daysOfWeek.length,
-            itemBuilder: (context, index) {
-              final day = _daysOfWeek[index];
-              final morningUsers = groupedSchedules[day]!['morning']!;
-              final afternoonUsers = groupedSchedules[day]!['afternoon']!;
-
-              // Only show days that have at least one assignment, unless we are in edit mode
-              // If edit mode, show all days so they can see nothing is assigned.
-              if (morningUsers.isEmpty &&
-                  afternoonUsers.isEmpty &&
-                  !widget.canEdit) {
-                return const SizedBox.shrink();
+          ref.listen<int?>(tourTriggerProvider, (previous, next) {
+            if (next == 0) {
+              final tabController = DefaultTabController.of(context);
+              if (tabController.index == 0) {
+                _startTour();
               }
+            }
+          });
 
-              return _buildDayCard(day, morningUsers, afternoonUsers);
-            },
+          bool didShowcaseShiftCard = false;
+
+          return RefreshIndicator(
+            onRefresh: _refreshData,
+            color: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            child: isCompletelyEmpty && !widget.canEdit
+                ? Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: CustomShowcase(
+                      showcaseKey: _shiftsListKey,
+                      title: 'Shift Schedules',
+                      description: 'View the assigned morning and afternoon shifts for each day of the week.',
+                      child: EmptyStateCard(
+                        image: const Icon(Icons.event_busy_rounded),
+                        title: 'No Schedules Assigned',
+                        description:
+                            'There are currently no shifts scheduled for this pond.',
+                        scrollable: true,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(
+                      top: 12,
+                      left: 20,
+                      right: 20,
+                      bottom: 100, // padding for FAB
+                    ),
+                    itemCount: _daysOfWeek.length,
+                    itemBuilder: (context, index) {
+                      final day = _daysOfWeek[index];
+                      final morningUsers = groupedSchedules[day]!['morning']!;
+                      final afternoonUsers = groupedSchedules[day]!['afternoon']!;
+
+                      // Only show days that have at least one assignment, unless we are in edit mode
+                      // If edit mode, show all days so they can see nothing is assigned.
+                      if (morningUsers.isEmpty &&
+                          afternoonUsers.isEmpty &&
+                          !widget.canEdit) {
+                        return const SizedBox.shrink();
+                      }
+
+                      Widget dayCard = _buildDayCard(day, morningUsers, afternoonUsers);
+                      if (!didShowcaseShiftCard) {
+                        didShowcaseShiftCard = true;
+                        dayCard = CustomShowcase(
+                          showcaseKey: _shiftsListKey,
+                          title: 'Shift Schedules',
+                          description: 'View the assigned morning and afternoon shifts for each day of the week.',
+                          child: dayCard,
+                        );
+                      }
+
+                      return StaggeredListItem(
+                        index: index,
+                        child: dayCard,
+                      );
+                    },
+                  ),
           );
         },
       ),
       floatingActionButton: widget.canEdit
-          ? FloatingActionButton.extended(
-              heroTag: 'schedules_fab',
-              onPressed: _showAssignSheet,
-              backgroundColor: primaryBlue,
-              icon: const Icon(Icons.group_add_rounded, color: Colors.white),
-              label: const Text(
-                "Assign Shifts",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          ? CustomShowcase(
+              showcaseKey: _assignShiftsKey,
+              title: 'Assign Shifts',
+              description: 'Assign or modify shifts for team members and coordinators.',
+              child: Semantics(
+                label: "Assign schedules or shifts to pond collaborators",
+                button: true,
+                child: FloatingActionButton.extended(
+                  heroTag: 'schedules_fab',
+                  onPressed: _showAssignSheet,
+                  backgroundColor: primaryBlue,
+                  icon: const Icon(Icons.group_add_rounded, color: Colors.white),
+                  label: const Text(
+                    "Assign Shifts",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             )
@@ -184,13 +287,15 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     List<Map<String, dynamic>> morningUsers,
     List<Map<String, dynamic>> afternoonUsers,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final onSurface = colorScheme.onSurface;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -200,7 +305,7 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
           ),
         ],
         border: Border.all(
-          color: isDark ? Colors.white12 : Colors.grey.shade200,
+          color: colorScheme.outlineVariant,
         ),
       ),
       child: Column(
@@ -210,15 +315,13 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.grey.shade50,
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
               ),
               border: Border(
                 bottom: BorderSide(
-                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  color: colorScheme.outlineVariant,
                 ),
               ),
             ),
@@ -234,21 +337,21 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
           _ShiftExpansionTile(
             shiftName: "Morning",
             icon: Icons.wb_sunny_rounded,
-            iconColor: Colors.amber.shade700,
-            bgColor: Colors.amber.shade50,
+            iconColor: isDark ? Colors.amber.shade300 : Colors.amber.shade700,
+            bgColor: isDark ? Colors.amber.withValues(alpha: 0.15) : Colors.amber.shade50,
             assignedUsers: morningUsers,
           ),
           Divider(
             height: 1,
-            color: Colors.grey.shade200,
+            color: colorScheme.outlineVariant,
             indent: 16,
             endIndent: 16,
           ),
           _ShiftExpansionTile(
             shiftName: "Afternoon",
             icon: Icons.wb_twilight_rounded,
-            iconColor: Colors.indigo.shade600,
-            bgColor: Colors.indigo.shade50,
+            iconColor: isDark ? Colors.indigo.shade300 : Colors.indigo.shade600,
+            bgColor: isDark ? Colors.indigo.withValues(alpha: 0.2) : Colors.indigo.shade50,
             assignedUsers: afternoonUsers,
           ),
         ],
@@ -256,6 +359,17 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     );
   }
 }
+
+const List<Color> _avatarPastelColors = [
+  Color(0xFFFDA4AF),
+  Color(0xFFFCD34D),
+  Color(0xFF6EE7B7),
+  Color(0xFF93C5FD),
+  Color(0xFFC4B5FD),
+  Color(0xFFF9A8D4),
+  Color(0xFFFDBA74),
+  Color(0xFF5EEAD4),
+];
 
 class _ShiftExpansionTile extends StatefulWidget {
   final String shiftName;
@@ -289,8 +403,8 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurface = colorScheme.onSurface;
 
     return InkWell(
       onTap: widget.assignedUsers.isNotEmpty ? _toggleExpanded : null,
@@ -319,9 +433,7 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
-                          color: isDark
-                              ? onSurface.withValues(alpha: 0.9)
-                              : const Color(0xFF334155),
+                          color: onSurface,
                         ),
                       ),
                       Text(
@@ -331,10 +443,8 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                         style: TextStyle(
                           fontSize: 12,
                           color: widget.assignedUsers.isEmpty
-                              ? Colors.red.shade400
-                              : (isDark
-                                    ? Colors.white38
-                                    : Colors.grey.shade600),
+                              ? colorScheme.error
+                              : colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -348,7 +458,7 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
                     _isExpanded
                         ? Icons.expand_less_rounded
                         : Icons.expand_more_rounded,
-                    color: isDark ? Colors.white24 : Colors.grey.shade400,
+                    color: colorScheme.onSurfaceVariant,
                     size: 20,
                   ),
                 ],
@@ -407,18 +517,8 @@ class _ShiftExpansionTileState extends State<_ShiftExpansionTile> {
   }
 
   Color _getAvatarColor(String name) {
-    final pastelColors = [
-      const Color(0xFFFDA4AF),
-      const Color(0xFFFCD34D),
-      const Color(0xFF6EE7B7),
-      const Color(0xFF93C5FD),
-      const Color(0xFFC4B5FD),
-      const Color(0xFFF9A8D4),
-      const Color(0xFFFDBA74),
-      const Color(0xFF5EEAD4),
-    ];
     final hash = name.hashCode.abs();
-    return pastelColors[hash % pastelColors.length];
+    return _avatarPastelColors[hash % _avatarPastelColors.length];
   }
 }
 
@@ -428,6 +528,7 @@ class _OverlapAvatarGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final maxToShow = 3;
     final int toShow = users.length > maxToShow ? maxToShow : users.length;
     final int remaining = users.length > maxToShow
@@ -443,13 +544,13 @@ class _OverlapAvatarGroup extends StatelessWidget {
             widthFactor: 0.6,
             child: CircleAvatar(
               radius: 14,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: colorScheme.surfaceContainerHigh,
               child: Text(
                 "+$remaining",
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
-                  color: Colors.grey.shade700,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -458,22 +559,15 @@ class _OverlapAvatarGroup extends StatelessWidget {
 
         final user = users[index];
         final name = user['name'] as String;
-        final pastelColors = [
-          const Color(0xFFFDA4AF),
-          const Color(0xFFFCD34D),
-          const Color(0xFF6EE7B7),
-          const Color(0xFF93C5FD),
-          const Color(0xFFC4B5FD),
-        ];
         final hash = name.hashCode.abs();
-        final color = pastelColors[hash % pastelColors.length];
+        final color = _avatarPastelColors[hash % _avatarPastelColors.length];
 
         return Align(
           widthFactor: 0.6,
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+              border: Border.all(color: colorScheme.surfaceContainer, width: 2),
             ),
             child: CircleAvatar(
               radius: 14,
@@ -515,7 +609,7 @@ class AssignShiftSheet extends ConsumerStatefulWidget {
 }
 
 class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
-  final Color primaryBlue = const Color(0xFF0A74DA);
+  Color get primaryBlue => Theme.of(context).colorScheme.primary;
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -682,7 +776,17 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
 
       if (mounted) {
         Navigator.pop(context); // close bottom sheet
-        SnackbarHelper.showSuccess(context, "Schedules updated successfully for $updatedCount members");
+        final connectivityResult = await Connectivity().checkConnectivity().timeout(
+          const Duration(seconds: 1),
+          onTimeout: () => [ConnectivityResult.none],
+        );
+        if (mounted) {
+          if (connectivityResult.contains(ConnectivityResult.none)) {
+            SnackbarHelper.showSuccess(context, "Schedules saved locally for $updatedCount members (will sync when online)");
+          } else {
+            SnackbarHelper.showSuccess(context, "Schedules updated successfully for $updatedCount members");
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -897,7 +1001,7 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
                               Icon(
                                 Icons.wb_sunny_rounded,
                                 size: 14,
-                                color: Colors.amber.shade700,
+                                color: isDark ? Colors.amber.shade300 : Colors.amber.shade700,
                               ),
                               const SizedBox(width: 6),
                               const Text(
@@ -914,7 +1018,7 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
                               Icon(
                                 Icons.wb_twilight_rounded,
                                 size: 14,
-                                color: Colors.indigo.shade700,
+                                color: isDark ? Colors.indigo.shade300 : Colors.indigo.shade700,
                               ),
                               const SizedBox(width: 6),
                               const Text(

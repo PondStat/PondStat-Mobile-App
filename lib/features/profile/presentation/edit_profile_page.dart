@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/core/widgets/pondstat_text_field.dart';
+import 'package:pondstat/core/widgets/primary_button.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -441,27 +443,29 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  _buildLiquidTextField(
+                  PondStatTextField(
                     controller: _nameController,
                     focusNode: _nameFocus,
                     label: "Full Name",
-                    icon: Icons.person_outline_rounded,
+                    prefixIcon: Icons.person_outline_rounded,
                     keyboardType: TextInputType.name,
                     textInputAction: TextInputAction.next,
+                    enabled: !_isLoading,
                     validator: (val) => val == null || val.trim().isEmpty
                         ? "Name is required"
                         : null,
                   ),
                   const SizedBox(height: 24),
 
-                  _buildLiquidTextField(
+                  PondStatTextField(
                     controller: _studentNumController,
                     focusNode: _studentNumFocus,
                     label: "Student Number",
-                    icon: Icons.badge_outlined,
+                    prefixIcon: Icons.badge_outlined,
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) {
+                    enabled: !_isLoading,
+                    onSubmitted: (_) {
                       if (_hasChanges.value && !_isLoading) _saveChanges();
                     },
                     validator: (val) => val == null || val.trim().isEmpty
@@ -492,124 +496,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           child: ValueListenableBuilder<bool>(
             valueListenable: _hasChanges,
             builder: (context, hasChanges, child) {
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: hasChanges
-                      ? [
-                          BoxShadow(
-                            color: primaryBlue.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ]
-                      : [],
-                ),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    backgroundColor: primaryBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: (_isLoading || !hasChanges) ? null : _saveChanges,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 3,
-                          ),
-                        )
-                      : const Text(
-                          "Save Changes",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                ),
+              return PrimaryButton(
+                text: "Save Changes",
+                onPressed: (_isLoading || !hasChanges) ? null : _saveChanges,
+                isLoading: _isLoading,
+                backgroundColor: primaryBlue,
               );
             },
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLiquidTextField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required String label,
-    required IconData icon,
-    required TextInputType keyboardType,
-    required TextInputAction textInputAction,
-    Function(String)? onFieldSubmitted,
-    String? Function(String?)? validator,
-  }) {
-    final isFocused = focusNode.hasFocus;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isFocused
-              ? primaryBlue
-              : Theme.of(context).colorScheme.surface,
-          width: 2,
-        ),
-        boxShadow: [
-          if (isFocused)
-            BoxShadow(
-              color: primaryBlue.withValues(alpha: 0.15),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            )
-          else
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-        ],
-      ),
-      child: TextFormField(
-        controller: controller,
-        focusNode: focusNode,
-        enabled: !_isLoading,
-        keyboardType: keyboardType,
-        textInputAction: textInputAction,
-        onFieldSubmitted: onFieldSubmitted,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: textDark,
-          fontSize: 16,
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(
-            color: isFocused ? primaryBlue : textMuted,
-            fontWeight: FontWeight.w600,
-          ),
-          prefixIcon: Icon(
-            icon,
-            color: isFocused ? primaryBlue : Colors.grey.shade400,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 18,
-          ),
-        ),
-        validator: validator,
-      ),
     );
   }
 }

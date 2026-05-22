@@ -113,6 +113,19 @@ class MonitoringRepository {
 
     final String dateKey =
         "${selectedDay.year}-${selectedDay.month}-${selectedDay.day}";
+
+    // Validate that the parameter has not already been recorded for this day
+    final existing = await measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .where('type', isEqualTo: type)
+        .where('dateKey', isEqualTo: dateKey)
+        .where('parameter', isEqualTo: label)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      throw Exception("Parameter '$label' has already been recorded for this day.");
+    }
+
     final batch = _firestore.batch();
     final measurementRef = measurementsCollection.doc();
 
@@ -151,7 +164,7 @@ class MonitoringRepository {
       },
     );
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
     return measurementRef.id;
   }
 
@@ -178,7 +191,7 @@ class MonitoringRepository {
       after: null,
     );
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Deletes a list/group of measurements from Firestore in a batch and logs to history.
@@ -191,7 +204,8 @@ class MonitoringRepository {
     final batch = _firestore.batch();
 
     for (var doc in docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
+      if (data is! Map<String, dynamic>) continue;
 
       batch.delete(doc.reference);
 
@@ -209,7 +223,55 @@ class MonitoringRepository {
       );
     }
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
+  }
+
+  /// Clears all input values (pointValues, replicateValues, value, notes) for a group of measurements.
+  Future<void> clearMeasurementsGroupInputs({
+    required String pondId,
+    required List<DocumentSnapshot> docs,
+  }) async {
+    if (currentUser == null) throw Exception('User not authenticated');
+
+    final batch = _firestore.batch();
+
+    for (var doc in docs) {
+      final data = doc.data();
+      if (data is! Map<String, dynamic>) continue;
+
+      final updateData = {
+        'pointValues': <String, double>{},
+        'replicateValues': <String, List<double>>{},
+        'value': null,
+        'notes': null,
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': currentUser?.uid,
+        'editorName': currentUser?.displayName ?? 'Unknown',
+      };
+
+      batch.update(doc.reference, updateData);
+
+      // Log to history
+      final historyRef = measurementHistoryCollection.doc();
+      batch.set(historyRef, {
+        'pondId': pondId,
+        'measurementId': doc.id,
+        'parameter': data['parameter'],
+        'action': 'clear_inputs',
+        'editedAt': FieldValue.serverTimestamp(),
+        'editedBy': currentUser?.uid,
+        'editorName': currentUser?.displayName ?? 'Unknown',
+        'before': {
+          'value': data['value'],
+          'pointValues': data['pointValues'],
+          'replicateValues': data['replicateValues'],
+          'notes': data['notes'],
+        },
+        'after': updateData,
+      });
+    }
+
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Updates multiple measurements in a single batch and logs them to history.
@@ -223,7 +285,8 @@ class MonitoringRepository {
     final batch = _firestore.batch();
 
     for (var doc in docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
+      if (data is! Map<String, dynamic>) continue;
       final newPoints = updatedValues[doc.id];
       if (newPoints == null) continue;
 
@@ -245,7 +308,7 @@ class MonitoringRepository {
       );
     }
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Updates measurements with replicate values and calculates point averages.
@@ -261,32 +324,31 @@ class MonitoringRepository {
     final batch = _firestore.batch();
 
     for (var doc in docs) {
-      if (!doc.exists) continue;
-
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
+      if (data is! Map<String, dynamic>) continue;
       final newPointValues = updatedPointValues[doc.id];
       final newReplicateValues = updatedReplicateValues[doc.id];
       final newNote = updatedNotes?[doc.id];
 
       if (newPointValues == null || newReplicateValues == null) continue;
 
-      final double avg = double.parse(
-        (newPointValues.values.reduce((a, b) => a + b) / newPointValues.length)
-            .toStringAsFixed(2),
-      );
+      final double? avg = newPointValues.isNotEmpty
+          ? double.parse(
+              (newPointValues.values.reduce((a, b) => a + b) /
+                      newPointValues.length)
+                  .toStringAsFixed(2),
+            )
+          : null;
 
       final updateData = {
         'pointValues': newPointValues,
         'replicateValues': newReplicateValues,
         'value': avg,
+        'notes': newNote,
         'editedAt': FieldValue.serverTimestamp(),
         'editedBy': currentUser?.uid,
         'editorName': currentUser?.displayName ?? 'Unknown',
       };
-
-      if (newNote != null) {
-        updateData['notes'] = newNote;
-      }
 
       batch.update(doc.reference, updateData);
 
@@ -310,7 +372,7 @@ class MonitoringRepository {
       });
     }
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Adds a new custom parameter to Firestore.
@@ -319,6 +381,7 @@ class MonitoringRepository {
     required String unit,
     required String type,
     required String category,
+    required String pondId,
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
@@ -327,6 +390,7 @@ class MonitoringRepository {
       'unit': unit,
       'type': type,
       'category': category,
+      'pondId': pondId,
       'createdAt': FieldValue.serverTimestamp(),
       'createdBy': currentUser!.uid,
     });
@@ -424,5 +488,12 @@ class MonitoringRepository {
       'before': before,
       'after': after,
     });
+  }
+
+  Future<void> _commitBatchWithTimeout(WriteBatch batch) async {
+    await batch.commit().timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => null,
+    );
   }
 }

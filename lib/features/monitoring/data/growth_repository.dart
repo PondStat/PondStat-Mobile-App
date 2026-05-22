@@ -9,10 +9,10 @@ part 'growth_repository.g.dart';
 class GrowthMetrics {
   final DateTime date;
   final int weekNumber;
-  final double abw;
-  final double adg;
-  final double fcr;
-  final double dfr;
+  final double? abw;
+  final double? adg;
+  final double? fcr;
+  final double? dfr;
   final double totalWeight;
   final double sampleCount;
   final double feedingRate;
@@ -24,14 +24,15 @@ class GrowthMetrics {
   final String? fcrDocId;
   final String? recorderName;
   final String? editorName;
+  final String? notes;
 
   GrowthMetrics({
     required this.date,
     required this.weekNumber,
-    required this.abw,
-    this.adg = 0.0,
-    this.fcr = 0.0,
-    this.dfr = 0.0,
+    this.abw,
+    this.adg,
+    this.fcr,
+    this.dfr,
     this.totalWeight = 0.0,
     this.sampleCount = 0.0,
     this.feedingRate = 0.0,
@@ -43,6 +44,7 @@ class GrowthMetrics {
     this.fcrDocId,
     this.recorderName,
     this.editorName,
+    this.notes,
   });
 }
 
@@ -143,6 +145,7 @@ class GrowthRepository {
         displayWeek,
         () => {
           'date': date,
+          'notes': <String>[],
           ParameterNames.totalWeightSampled: 0.0,
           ParameterNames.numFishSampled: 0.0,
           ParameterNames.feedingRate: 0.0,
@@ -158,6 +161,16 @@ class GrowthRepository {
       weeklyBuckets[displayWeek]!['date'] = date;
       weeklyBuckets[displayWeek]![param] =
           (weeklyBuckets[displayWeek]![param] as double) + val;
+
+      final note = data['notes'] as String?;
+      if (note != null && note.trim().isNotEmpty) {
+        final list = weeklyBuckets[displayWeek]!['notes'] as List<String>? ?? <String>[];
+        final trimmed = note.trim();
+        if (!list.contains(trimmed)) {
+          list.add(trimmed);
+        }
+        weeklyBuckets[displayWeek]!['notes'] = list;
+      }
 
       if (param == ParameterNames.totalWeightSampled) {
         weeklyBuckets[displayWeek]!['weightDocId'] = doc.id;
@@ -206,17 +219,19 @@ class GrowthRepository {
       final double explicitDfr = bucket[ParameterNames.dfr];
       final double explicitFcr = bucket[ParameterNames.fcr];
 
-      final double currentAbw = explicitAbw > 0
+      final double? currentAbw = explicitAbw > 0
           ? explicitAbw
-          : (sampleCount > 0 ? totalWeight / sampleCount : 0.0);
+          : (sampleCount > 0 ? totalWeight / sampleCount : null);
 
-      double adg = explicitAdg > 0 ? explicitAdg : 0.0;
-      double dfr = explicitDfr > 0
+      double? adg = explicitAdg > 0 ? explicitAdg : null;
+      double? dfr = explicitDfr > 0
           ? explicitDfr
-          : (currentAbw * fishCount * feedingRate / 100.0);
-      double fcr = explicitFcr > 0
+          : (currentAbw != null && feedingRate > 0
+              ? (currentAbw * fishCount * feedingRate / 100.0)
+              : null);
+      double? fcr = explicitFcr > 0
           ? explicitFcr
-          : (weightGained > 0 ? feedConsumed / weightGained : 0.0);
+          : (weightGained > 0 && feedConsumed > 0 ? feedConsumed / weightGained : null);
 
       if (i > 0 && explicitAdg == 0.0) {
         final prevWeek = sortedWeeks[i - 1];
@@ -228,18 +243,21 @@ class GrowthRepository {
             prevBucket[ParameterNames.numFishSampled] as double;
         final prevExplicitAbw = prevBucket[ParameterNames.abw] as double;
 
-        final prevAbw = prevExplicitAbw > 0
+        final double? prevAbw = prevExplicitAbw > 0
             ? prevExplicitAbw
-            : (prevSampleCount > 0 ? prevTotalWeight / prevSampleCount : 0.0);
+            : (prevSampleCount > 0 ? prevTotalWeight / prevSampleCount : null);
 
         final DateTime currentDate = bucket['date'] as DateTime;
         final DateTime prevDate = prevBucket['date'] as DateTime;
         final int daysBetween = currentDate.difference(prevDate).inDays;
 
-        if (daysBetween > 0 && currentAbw > 0 && prevAbw > 0) {
+        if (daysBetween > 0 && currentAbw != null && prevAbw != null && currentAbw > 0 && prevAbw > 0) {
           adg = (currentAbw - prevAbw) / daysBetween;
         }
       }
+
+      final notesList = bucket['notes'] as List<String>? ?? const <String>[];
+      final String? combinedNotes = notesList.isNotEmpty ? notesList.join('\n') : null;
 
       metrics.add(
         GrowthMetrics(
@@ -261,6 +279,7 @@ class GrowthRepository {
           fcrDocId: bucket['fcrDocId'] as String?,
           recorderName: bucket['recorderName'] as String?,
           editorName: bucket['editorName'] as String?,
+          notes: combinedNotes,
         ),
       );
     }
@@ -268,7 +287,8 @@ class GrowthRepository {
     return metrics.reversed.toList();
   }
 
-  static double _round(double value, int places) {
+  static double? _round(double? value, int places) {
+    if (value == null) return null;
     return double.parse(value.toStringAsFixed(places));
   }
 
@@ -295,9 +315,8 @@ class GrowthRepository {
     for (var i = 0; i < docIds.length; i++) {
       final id = docIds[i];
       final docSnap = snapshots[i];
-      if (!docSnap.exists) continue;
-
-      final data = docSnap.data() as Map<String, dynamic>;
+      final data = docSnap.data();
+      if (data == null) continue;
       final historyRef = measurementHistoryCollection.doc();
 
       batch.set(historyRef, {
@@ -314,7 +333,7 @@ class GrowthRepository {
 
       batch.delete(docSnap.reference);
     }
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
   }
 
   /// Updates growth sampling metrics in a single batch and logs them to history.
@@ -325,50 +344,66 @@ class GrowthRepository {
     required double? newAdg,
     required double? newDfr,
     required double? newFcr,
+    required String? newNotes,
     required GrowthMetrics metrics,
   }) async {
-    final docIds = [
-      if (newAbw != null && newAbw != metrics.abw) metrics.abwDocId,
-      if (newAdg != null && newAdg != metrics.adg) metrics.adgDocId,
-      if (newDfr != null && newDfr != metrics.dfr) metrics.dfrDocId,
-      if (newFcr != null && newFcr != metrics.fcr) metrics.fcrDocId,
-    ].whereType<String>().toList();
+    final allDocIds = [
+      metrics.abwDocId,
+      metrics.adgDocId,
+      metrics.dfrDocId,
+      metrics.fcrDocId,
+    ].whereType<String>().toSet().toList();
 
-    if (docIds.isEmpty) return;
+    if (allDocIds.isEmpty) return;
 
     // Fetch all docs in parallel
     final snapshots = await Future.wait(
-      docIds.map((id) => measurementsCollection.doc(id).get()),
+      allDocIds.map((id) => measurementsCollection.doc(id).get()),
     );
 
     final batch = _baseRef.firestore.batch();
 
-    for (var i = 0; i < docIds.length; i++) {
-      final id = docIds[i];
+    for (var i = 0; i < allDocIds.length; i++) {
+      final id = allDocIds[i];
       final docSnap = snapshots[i];
-      if (!docSnap.exists) continue;
+      final data = docSnap.data();
+      if (data == null) continue;
 
-      final data = docSnap.data() as Map<String, dynamic>;
+      final Map<String, dynamic> updates = {};
+      final Map<String, dynamic> historyBefore = {};
+      final Map<String, dynamic> historyAfter = {};
 
       double? newValue;
-      if (id == metrics.abwDocId) {
+      if (id == metrics.abwDocId && newAbw != null && newAbw != metrics.abw) {
         newValue = newAbw;
-      } else if (id == metrics.adgDocId) {
+      } else if (id == metrics.adgDocId && newAdg != null && newAdg != metrics.adg) {
         newValue = newAdg;
-      } else if (id == metrics.dfrDocId) {
+      } else if (id == metrics.dfrDocId && newDfr != null && newDfr != metrics.dfr) {
         newValue = newDfr;
-      } else if (id == metrics.fcrDocId) {
+      } else if (id == metrics.fcrDocId && newFcr != null && newFcr != metrics.fcr) {
         newValue = newFcr;
       }
 
-      if (newValue == null) continue;
+      if (newValue != null) {
+        updates['value'] = newValue;
+        historyBefore['value'] = data['value'];
+        historyAfter['value'] = newValue;
+      }
 
-      batch.update(docSnap.reference, {
-        'value': newValue,
-        'editedAt': FieldValue.serverTimestamp(),
-        'editedBy': user?.uid,
-        'editorName': user?.displayName,
-      });
+      if (newNotes != metrics.notes) {
+        final cleanNotes = (newNotes?.trim().isNotEmpty == true) ? newNotes!.trim() : null;
+        updates['notes'] = cleanNotes;
+        historyBefore['notes'] = data['notes'];
+        historyAfter['notes'] = cleanNotes;
+      }
+
+      if (updates.isEmpty) continue;
+
+      updates['editedAt'] = FieldValue.serverTimestamp();
+      updates['editedBy'] = user?.uid;
+      updates['editorName'] = user?.displayName;
+
+      batch.update(docSnap.reference, updates);
 
       final historyRef = measurementHistoryCollection.doc();
       batch.set(historyRef, {
@@ -379,11 +414,18 @@ class GrowthRepository {
         'editedAt': FieldValue.serverTimestamp(),
         'editedBy': user?.uid,
         'editorName': user?.displayName ?? 'Unknown',
-        'before': {'value': data['value']},
-        'after': {'value': newValue},
+        'before': historyBefore,
+        'after': historyAfter,
       });
     }
 
-    await batch.commit();
+    await _commitBatchWithTimeout(batch);
+  }
+
+  Future<void> _commitBatchWithTimeout(WriteBatch batch) async {
+    await batch.commit().timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => null,
+    );
   }
 }

@@ -146,8 +146,12 @@ class ParameterChartCard extends StatelessWidget {
                       ),
                       titlesData: FlTitlesData(
                         show: true,
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) => const SizedBox.shrink(),
+                          ),
                         ),
                         topTitles: const AxisTitles(
                           sideTitles: SideTitles(showTitles: false),
@@ -258,6 +262,8 @@ class ParameterChartCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutQuad,
                   ),
                 ),
           const SizedBox(height: 24),

@@ -6,6 +6,9 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/measurement_card.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
 
 class MeasurementListView extends ConsumerStatefulWidget {
   final String pondId;
@@ -58,23 +61,28 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
         .snapshots();
   }
 
+  Future<void> _refreshData() async {
+    setState(() {
+      _initStream();
+    });
+    try {
+      await _measurementsStream.first.timeout(const Duration(seconds: 2));
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: _measurementsStream,
       builder: (context, snapshot) {
-        // Only show loader if we have NO data yet AND we are waiting
-        if (!snapshot.hasData &&
-            snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const LoadingPlaceholder(message: "Loading measurements...");
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              "Error: ${snapshot.error}",
-              style: const TextStyle(color: Colors.red),
-            ),
+          return ErrorStateCard(
+            description: "Error: ${snapshot.error}",
+            onRetry: _refreshData,
           );
         }
 
@@ -83,7 +91,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
             .map((p) => p.label)
             .toSet();
         final docs = rawDocs.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
+          final data = doc.data() as Map<String, dynamic>? ?? {};
           final param = data['parameter'] as String?;
           return param != null && !excludedParams.contains(param);
         }).toList();
@@ -92,8 +100,8 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
 
         final sortedDocs = docs.toList()
           ..sort((a, b) {
-            final dataA = a.data() as Map<String, dynamic>;
-            final dataB = b.data() as Map<String, dynamic>;
+            final dataA = a.data() as Map<String, dynamic>? ?? {};
+            final dataB = b.data() as Map<String, dynamic>? ?? {};
             final tA = dataA['timestamp'] as Timestamp?;
             final tB = dataB['timestamp'] as Timestamp?;
             if (tA == null || tB == null) return 0;
@@ -103,7 +111,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
         // 1. Extract Unique Parameters
         final Set<String> uniqueParams = {};
         for (var doc in sortedDocs) {
-          final data = doc.data() as Map<String, dynamic>;
+          final data = doc.data() as Map<String, dynamic>? ?? {};
           final param = data['parameter'] as String?;
           if (param != null) uniqueParams.add(param);
         }
@@ -126,7 +134,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
         final filteredDocs = activeFilter == null
             ? sortedDocs
             : sortedDocs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
+                final data = doc.data() as Map<String, dynamic>? ?? {};
                 return data['parameter'] == activeFilter;
               }).toList();
 
@@ -153,8 +161,7 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
             Expanded(
               child: RefreshIndicator(
                 color: widget.primaryBlue,
-                onRefresh: () async =>
-                    await Future.delayed(const Duration(milliseconds: 800)),
+                onRefresh: _refreshData,
                 child: ListView.builder(
                   padding: const EdgeInsets.only(
                     top: 4,
@@ -165,17 +172,21 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
                   itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
                     final data =
-                        filteredDocs[index].data() as Map<String, dynamic>;
-                    return MeasurementCard(
-                      key: ValueKey(filteredDocs[index].id),
-                      time: data['timeString'] ?? 'Unknown Time',
-                      title: data['parameter'] ?? 'Unknown Parameter',
-                      content:
-                          "${data['value'] ?? '0'} ${data['unit'] ?? ''}\n(Avg across recorded points)",
-                      canEdit: widget.canEdit,
-                      groupDocs: [filteredDocs[index]],
-                      onEdit: () => widget.onEdit([filteredDocs[index]]),
-                      notes: data['notes'] as String?,
+                        filteredDocs[index].data() as Map<String, dynamic>? ?? {};
+                    return StaggeredListItem(
+                      index: index,
+                      child: MeasurementCard(
+                        key: ValueKey(filteredDocs[index].id),
+                        time: data['timeString'] ?? 'Unknown Time',
+                        title: data['parameter'] ?? 'Unknown Parameter',
+                        content: data['value'] != null
+                            ? "${data['value']} ${data['unit'] ?? ''}\n(Avg across recorded points)"
+                            : "n/a",
+                        canEdit: widget.canEdit,
+                        groupDocs: [filteredDocs[index]],
+                        onEdit: () => widget.onEdit([filteredDocs[index]]),
+                        notes: data['notes'] as String?,
+                      ),
                     );
                   },
                 ),
@@ -189,53 +200,62 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
 
   Widget _buildFilterChip(String label, String? filterValue) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     // We know filterValue might be null (for 'All') or a string.
     final isSelected = _selectedFilter == filterValue;
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
-      child: ChoiceChip(
-        label: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: isSelected
-                ? Colors.white
-                : theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
+      child: Semantics(
+        label: "Filter measurements by $label",
         selected: isSelected,
-        onSelected: (selected) {
-          HapticFeedback.selectionClick();
-          if (selected) {
-            setState(() => _selectedFilter = filterValue);
-          } else if (_selectedFilter == filterValue) {
-            // Prevent unselecting the current chip if it's the only one selected
-            // (always keep something selected, usually 'All')
-            if (filterValue != null) {
-              setState(() => _selectedFilter = null);
+        button: true,
+        child: ChoiceChip(
+          label: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: isSelected
+                  ? Colors.white
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          selected: isSelected,
+          onSelected: (selected) {
+            HapticFeedback.selectionClick();
+            if (selected) {
+              setState(() => _selectedFilter = filterValue);
+            } else if (_selectedFilter == filterValue) {
+              // Prevent unselecting the current chip if it's the only one selected
+              // (always keep something selected, usually 'All')
+              if (filterValue != null) {
+                setState(() => _selectedFilter = null);
+              }
             }
-          }
-        },
-        selectedColor: widget.primaryBlue,
-        backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
-        side: BorderSide(
-          color: isSelected
-              ? widget.primaryBlue
-              : (isDark ? Colors.white24 : Colors.grey.shade300),
+          },
+          selectedColor: widget.primaryBlue,
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          side: BorderSide(
+            color: isSelected
+                ? widget.primaryBlue
+                : theme.colorScheme.outlineVariant,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return EmptyStateCard(
-      image: const Icon(Icons.assignment_outlined),
-      title: "No ${widget.type} records",
-      description: "Tap 'Record Data' to log a measurement.",
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: widget.primaryBlue,
+      child: EmptyStateCard(
+        image: const Icon(Icons.assignment_outlined),
+        title: "No ${widget.type} records",
+        description: "Tap 'Record Data' to log a measurement.",
+        scrollable: true,
+      ),
     );
   }
 }

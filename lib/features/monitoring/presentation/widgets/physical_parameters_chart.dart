@@ -88,7 +88,14 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(height: 220, child: LineChart(_buildChartData(isDark))),
+          SizedBox(
+            height: 220,
+            child: LineChart(
+              _buildChartData(isDark),
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutQuad,
+            ),
+          ),
           const SizedBox(height: 24),
           _buildLegend(isDark),
         ],
@@ -110,21 +117,44 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       timestampIndices[sortedTimestamps[i]] = i;
     }
 
+    double minY = double.infinity;
+    double maxY = -double.infinity;
+
     for (var entry in widget.normalizedData.entries) {
       final parameterName = entry.key;
       final points = entry.value;
 
       if (_visibleParameters[parameterName] != true) continue;
 
-      final paramItem = MonitoringParameters.getParameterByLabel(
-        parameterName,
-        widget.species,
-      );
-      final paramColor = paramItem?.getColor(context) ?? Colors.grey;
+      for (var p in points) {
+        if (p.actualValue < minY) minY = p.actualValue;
+        if (p.actualValue > maxY) maxY = p.actualValue;
+      }
+    }
+
+    if (minY == double.infinity || maxY == -double.infinity) {
+      minY = 0.0;
+      maxY = 100.0;
+    } else if (minY == maxY) {
+      minY = (minY - 1.0).clamp(0.0, double.infinity);
+      maxY = maxY + 1.0;
+    } else {
+      final padding = (maxY - minY) * 0.15;
+      minY = (minY - padding).clamp(0.0, double.infinity);
+      maxY = maxY + padding;
+    }
+
+    for (var entry in widget.normalizedData.entries) {
+      final parameterName = entry.key;
+      final points = entry.value;
+
+      if (_visibleParameters[parameterName] != true) continue;
+
+      final paramColor = MonitoringParameters.getUniqueColor(parameterName);
 
       final spots = points.map((p) {
         final x = timestampIndices[p.timestamp]!.toDouble();
-        return FlSpot(x, p.normalizedValue);
+        return FlSpot(x, p.actualValue);
       }).toList();
 
       lineBars.add(
@@ -141,6 +171,8 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
     }
 
     return LineChartData(
+      minY: minY,
+      maxY: maxY,
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
@@ -153,8 +185,12 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       ),
       titlesData: FlTitlesData(
         show: true,
-        rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+        rightTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 40,
+            getTitlesWidget: (value, meta) => const SizedBox.shrink(),
+          ),
         ),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(
@@ -190,7 +226,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
               return SideTitleWidget(
                 meta: meta,
                 child: Text(
-                  '${value.toInt()}%',
+                  value.toStringAsFixed(1),
                   style: TextStyle(
                     color: isDark ? Colors.white38 : Colors.grey.shade400,
                     fontWeight: FontWeight.w600,
@@ -234,7 +270,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
                   widget.species,
                 );
                 final unit = paramItem?.unit ?? '';
-                final paramColor = paramItem?.getColor(context) ?? Colors.white;
+                final paramColor = MonitoringParameters.getUniqueColor(matchedParam);
 
                 final point = widget.normalizedData[matchedParam]!.firstWhere(
                   (p) => p.timestamp == timestamp,
@@ -268,11 +304,7 @@ class _PhysicalParametersChartState extends State<PhysicalParametersChart> {
       spacing: 12,
       runSpacing: 8,
       children: _visibleParameters.keys.map((param) {
-        final paramItem = MonitoringParameters.getParameterByLabel(
-          param,
-          widget.species,
-        );
-        final paramColor = paramItem?.getColor(context) ?? Colors.grey;
+        final paramColor = MonitoringParameters.getUniqueColor(param);
         final isVisible = _visibleParameters[param]!;
 
         return GestureDetector(

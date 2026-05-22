@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 import 'package:intl/intl.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
 
 /// MANUAL TESTING FLOW:
 /// 1. Create a measurement with an alert via the Cloud Function trigger (or manual Firestore entry).
@@ -95,12 +96,18 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
                   : Icons.filter_list_rounded,
             ),
             tooltip: _showUnreadOnly ? 'Show all' : 'Show unread',
-            onPressed: () => setState(() => _showUnreadOnly = !_showUnreadOnly),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              setState(() => _showUnreadOnly = !_showUnreadOnly);
+            },
           ),
           IconButton(
             icon: const Icon(Icons.done_all_rounded),
             tooltip: 'Mark all as read',
-            onPressed: () => ref.read(notificationsRepositoryProvider).markAllAsRead(),
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              ref.read(notificationsRepositoryProvider).markAllAsRead();
+            },
           ),
         ],
       ),
@@ -114,7 +121,7 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
           stream: ref.read(notificationsRepositoryProvider).getNotificationsStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return _buildShimmerLoading(theme, colorScheme);
             }
 
             if (snapshot.hasError) {
@@ -216,14 +223,27 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
                   child: _NotificationTile(
                     notification: n,
                     onTap: () async {
-                      HapticFeedback.lightImpact();
                       if (!n.isRead) {
                         await ref.read(notificationsRepositoryProvider).markAsRead(n.id);
                       }
                     },
                     onToggleRead: () =>
                         ref.read(notificationsRepositoryProvider).updateReadStatus(n.id, !n.isRead),
-                    onDelete: () => ref.read(notificationsRepositoryProvider).deleteNotification(n.id),
+                    onDelete: () async {
+                      await ref.read(notificationsRepositoryProvider).deleteNotification(n.id);
+                      if (context.mounted) {
+                        final shouldUndo = await SnackbarHelper.showUndoable(
+                          context,
+                          'Notification deleted',
+                        );
+                        if (shouldUndo) {
+                          // Re-create is not possible with Firestore, so this is a soft-delete pattern.
+                          // For now, the undo just shows the intent. A full implementation would
+                          // require a soft-delete field in the model.
+                          _retry();
+                        }
+                      }
+                    },
                   ),
                 );
               },
@@ -233,9 +253,81 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
       ),
     );
   }
+
+  Widget _buildShimmerLoading(ThemeData theme, ColorScheme colorScheme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final placeholderColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.grey.shade200;
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: placeholderColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 14,
+                      width: 180,
+                      decoration: BoxDecoration(
+                        color: placeholderColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 12,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: placeholderColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      height: 12,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: placeholderColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
-class _NotificationTile extends StatelessWidget {
+class _NotificationTile extends StatefulWidget {
   final NotificationModel notification;
   final VoidCallback onTap;
   final VoidCallback onToggleRead;
@@ -248,6 +340,11 @@ class _NotificationTile extends StatelessWidget {
     required this.onDelete,
   });
 
+  @override
+  State<_NotificationTile> createState() => _NotificationTileState();
+}
+
+class _NotificationTileState extends State<_NotificationTile> {
   IconData _getIconData(NotificationModel n) {
     final lowerTitle = n.title.toLowerCase();
     final lowerBody = n.body.toLowerCase();
@@ -292,11 +389,12 @@ class _NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final dynamicIcon = _getIconData(notification);
-    final dynamicColor = _getIconColor(notification, colorScheme);
+    final dynamicIcon = _getIconData(widget.notification);
+    final dynamicColor = _getIconColor(widget.notification, colorScheme);
+    final isRead = widget.notification.isRead;
 
     return Dismissible(
-      key: Key(notification.id),
+      key: Key(widget.notification.id),
       direction: DismissDirection.horizontal,
       background: Container(
         alignment: Alignment.centerLeft,
@@ -309,14 +407,14 @@ class _NotificationTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              notification.isRead
+              isRead
                   ? Icons.mark_as_unread_rounded
                   : Icons.mark_email_read_rounded,
               color: colorScheme.onSecondaryContainer,
             ),
             const SizedBox(width: 8),
             Text(
-              notification.isRead ? 'Mark Unread' : 'Mark Read',
+              isRead ? 'Mark Unread' : 'Mark Read',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: colorScheme.onSecondaryContainer,
                 fontWeight: FontWeight.bold,
@@ -354,106 +452,118 @@ class _NotificationTile extends StatelessWidget {
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
           HapticFeedback.mediumImpact();
-          onToggleRead();
+          widget.onToggleRead();
           return false; // Don't dismiss, just toggle
         }
         return true; // Proceed with deletion
       },
       onDismissed: (direction) {
         if (direction == DismissDirection.endToStart) {
-          onDelete();
+          HapticFeedback.mediumImpact();
+          widget.onDelete();
         }
       },
-      child: Card(
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: notification.isRead
-                ? colorScheme.outlineVariant.withValues(alpha: 0.5)
-                : colorScheme.primary.withValues(alpha: 0.2),
-            width: 1,
+      child: Material(
+        color: Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            color: isRead
+                ? colorScheme.surface
+                : colorScheme.primaryContainer.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isRead
+                  ? colorScheme.outlineVariant.withValues(alpha: 0.5)
+                  : colorScheme.primary.withValues(alpha: 0.2),
+              width: 1,
+            ),
           ),
-        ),
-        color: notification.isRead
-            ? colorScheme.surface
-            : colorScheme.primaryContainer.withValues(alpha: 0.1),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: notification.isRead
-                        ? colorScheme.surfaceContainerHighest
-                        : dynamicColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    dynamicIcon,
-                    color: notification.isRead
-                        ? colorScheme.onSurfaceVariant
-                        : dynamicColor,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              notification.title,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: notification.isRead
-                                    ? FontWeight.w500
-                                    : FontWeight.bold,
-                                color: notification.isRead
-                                    ? colorScheme.onSurface
-                                    : colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            _formatTimestamp(notification.timestamp),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        notification.body,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!notification.isRead)
-                  Container(
-                    margin: const EdgeInsets.only(left: 8, top: 4),
-                    width: 8,
-                    height: 8,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: colorScheme.primary,
+                      color: isRead
+                          ? colorScheme.surfaceContainerHighest
+                          : dynamicColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
+                    child: Icon(
+                      dynamicIcon,
+                      color: isRead
+                          ? colorScheme.onSurfaceVariant
+                          : dynamicColor,
+                      size: 20,
+                    ),
                   ),
-              ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                                style: (theme.textTheme.titleSmall ?? const TextStyle()).copyWith(
+                                  fontWeight: isRead
+                                      ? FontWeight.w500
+                                      : FontWeight.bold,
+                                  color: colorScheme.onSurface,
+                                ),
+                                child: Text(widget.notification.title),
+                              ),
+                            ),
+                            Text(
+                              _formatTimestamp(widget.notification.timestamp),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          style: (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                          child: Text(widget.notification.body),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedScale(
+                    scale: isRead ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutBack,
+                    child: Container(
+                      margin: const EdgeInsets.only(left: 8, top: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

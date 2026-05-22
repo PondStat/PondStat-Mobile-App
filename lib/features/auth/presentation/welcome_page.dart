@@ -7,6 +7,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/core/widgets/primary_button.dart';
 
 class OnboardingStep {
   final String title;
@@ -44,7 +45,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
     OnboardingStep(
       title: 'Fish 125: Aquaculture Technologies',
       description:
-          'Learn the basic operation of different culture systems, soil and water chemistry and its influence in productivity, pond management, production of natural food, nutrition and feeding, water quality management, site selection, design and construction of aquaculture facilities as well as harvest and post-harvest handling.',
+          'Master pond operations, water chemistry, nutrition, and harvest handling in a hands-on aquaculture laboratory course.',
       icon: Icons.school_rounded,
     ),
     OnboardingStep(
@@ -430,50 +431,20 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
             ),
           ),
           const SizedBox(height: 48.0),
-          ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: double.infinity,
-              minHeight: 56.0,
-            ),
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _signInWithGoogle,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: primaryColor,
-                disabledBackgroundColor: Colors.white.withValues(alpha: 0.8),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28.0),
-                ),
+          PrimaryButton(
+            text: 'Continue with Google',
+            icon: FontAwesomeIcons.google,
+            isLoading: _isLoading,
+            onPressed: _signInWithGoogle,
+            backgroundColor: Colors.white,
+            foregroundColor: primaryColor,
+            customShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-              child: _isLoading
-                  ? SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        color: primaryColor,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        FaIcon(
-                          FontAwesomeIcons.google,
-                          size: 22,
-                          color: primaryColor,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Continue with Google',
-                          style: TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
+            ],
           ),
         ],
       ),
@@ -487,21 +458,32 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
-            children: List.generate(
-              _steps.length + 1,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.only(right: 6),
-                height: 8,
-                width: _currentPage == index ? 24 : 8,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(
-                    alpha: _currentPage == index ? 1.0 : 0.4,
+            children: [
+              ...List.generate(
+                _steps.length + 1,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.only(right: 6),
+                  height: 10,
+                  width: _currentPage == index ? 28 : 10,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(
+                      alpha: _currentPage == index ? 1.0 : 0.4,
+                    ),
+                    borderRadius: BorderRadius.circular(5),
                   ),
-                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                '${_currentPage + 1} of ${_steps.length + 1}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
           if (_currentPage < _steps.length)
             SizedBox(

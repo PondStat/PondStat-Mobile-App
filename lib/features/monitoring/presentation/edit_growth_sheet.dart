@@ -28,6 +28,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
   late final TextEditingController adgController;
   late final TextEditingController dfrController;
   late final TextEditingController fcrController;
+  late final TextEditingController notesController;
 
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
@@ -36,15 +37,17 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
   @override
   void initState() {
     super.initState();
-    abwController = TextEditingController(text: widget.metrics.abw.toString());
-    adgController = TextEditingController(text: widget.metrics.adg.toString());
-    dfrController = TextEditingController(text: widget.metrics.dfr.toString());
-    fcrController = TextEditingController(text: widget.metrics.fcr.toString());
+    abwController = TextEditingController(text: widget.metrics.abw?.toString() ?? "");
+    adgController = TextEditingController(text: widget.metrics.adg?.toString() ?? "");
+    dfrController = TextEditingController(text: widget.metrics.dfr?.toString() ?? "");
+    fcrController = TextEditingController(text: widget.metrics.fcr?.toString() ?? "");
+    notesController = TextEditingController(text: widget.metrics.notes ?? "");
 
     abwController.addListener(_checkDirtyState);
     adgController.addListener(_checkDirtyState);
     dfrController.addListener(_checkDirtyState);
     fcrController.addListener(_checkDirtyState);
+    notesController.addListener(_checkDirtyState);
   }
 
   @override
@@ -53,21 +56,24 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
     adgController.removeListener(_checkDirtyState);
     dfrController.removeListener(_checkDirtyState);
     fcrController.removeListener(_checkDirtyState);
+    notesController.removeListener(_checkDirtyState);
 
     abwController.dispose();
     adgController.dispose();
     dfrController.dispose();
     fcrController.dispose();
+    notesController.dispose();
     super.dispose();
   }
 
   void _checkDirtyState() {
-    final abwDirty = abwController.text != widget.metrics.abw.toString();
-    final adgDirty = adgController.text != widget.metrics.adg.toString();
-    final dfrDirty = dfrController.text != widget.metrics.dfr.toString();
-    final fcrDirty = fcrController.text != widget.metrics.fcr.toString();
+    final abwDirty = abwController.text != (widget.metrics.abw?.toString() ?? "");
+    final adgDirty = adgController.text != (widget.metrics.adg?.toString() ?? "");
+    final dfrDirty = dfrController.text != (widget.metrics.dfr?.toString() ?? "");
+    final fcrDirty = fcrController.text != (widget.metrics.fcr?.toString() ?? "");
+    final notesDirty = notesController.text != (widget.metrics.notes ?? "");
 
-    final isNowDirty = abwDirty || adgDirty || dfrDirty || fcrDirty;
+    final isNowDirty = abwDirty || adgDirty || dfrDirty || fcrDirty || notesDirty;
     if (_isDirty != isNowDirty) {
       setState(() {
         _isDirty = isNowDirty;
@@ -106,7 +112,10 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
     final newDfr = double.tryParse(dfrController.text);
     final newFcr = double.tryParse(fcrController.text);
 
-    if (newAbw == null || newAdg == null || newDfr == null || newFcr == null) {
+    if ((widget.metrics.abwDocId != null && newAbw == null) ||
+        (widget.metrics.adgDocId != null && newAdg == null) ||
+        (widget.metrics.dfrDocId != null && newDfr == null) ||
+        (widget.metrics.fcrDocId != null && newFcr == null)) {
       SnackbarHelper.showInfo(context, "Please enter valid numbers");
       return;
     }
@@ -123,6 +132,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
         newAdg: newAdg,
         newDfr: newDfr,
         newFcr: newFcr,
+        newNotes: notesController.text,
         metrics: widget.metrics,
       );
 
@@ -301,7 +311,16 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
                     validator: _positiveNumberValidator,
                     textInputAction: TextInputAction.done,
                   ),
-                if (m.fcrDocId != null) const SizedBox(height: 24),
+                if (m.fcrDocId != null) const SizedBox(height: 16),
+
+                PondStatTextField(
+                  controller: notesController,
+                  label: "Notes (Optional)",
+                  hint: "Add notes...",
+                  maxLines: 3,
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 24),
 
                 SizedBox(
                   width: double.infinity,

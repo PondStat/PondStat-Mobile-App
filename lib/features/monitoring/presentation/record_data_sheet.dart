@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -15,6 +14,8 @@ import 'package:pondstat/core/widgets/primary_button.dart';
 class RecordDataSheet extends ConsumerStatefulWidget {
   final int tabIndex;
   final String species;
+  final String pondId;
+  final DateTime selectedDay;
   final Future<void> Function({
     required String label,
     required String unit,
@@ -34,6 +35,8 @@ class RecordDataSheet extends ConsumerStatefulWidget {
     required this.tabIndex,
     required this.onSave,
     required this.species,
+    required this.pondId,
+    required this.selectedDay,
     this.customParams,
     this.customType,
   });
@@ -59,21 +62,13 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   late final Map<String, FocusNode> focusNodes;
   final TextEditingController _notesController = TextEditingController();
 
-  // Bacterial Analysis Controllers
-  final TextEditingController _yAvg1Controller = TextEditingController();
-  final TextEditingController _yCfu1Controller = TextEditingController();
-  final TextEditingController _yAvg2Controller = TextEditingController();
-  final TextEditingController _yCfu2Controller = TextEditingController();
-  final TextEditingController _gAvg1Controller = TextEditingController();
-  final TextEditingController _gCfu1Controller = TextEditingController();
-  final TextEditingController _gAvg2Controller = TextEditingController();
-  final TextEditingController _gCfu2Controller = TextEditingController();
-
   bool _isSaving = false;
 
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
   Color get primaryColor => Theme.of(context).colorScheme.primary;
+
+
 
   @override
   void initState() {
@@ -96,6 +91,8 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     for (var node in focusNodes.values) {
       node.addListener(() => setState(() {}));
     }
+
+
   }
 
   @override
@@ -106,14 +103,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     for (var node in focusNodes.values) {
       node.dispose();
     }
-    _yAvg1Controller.dispose();
-    _yCfu1Controller.dispose();
-    _yAvg2Controller.dispose();
-    _yCfu2Controller.dispose();
-    _gAvg1Controller.dispose();
-    _gCfu1Controller.dispose();
-    _gAvg2Controller.dispose();
-    _gCfu2Controller.dispose();
+
     _notesController.dispose();
     super.dispose();
   }
@@ -123,16 +113,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     for (var controller in valueControllers.values) {
       if (controller.text.isNotEmpty) return true;
     }
-    if (_yAvg1Controller.text.isNotEmpty ||
-        _yCfu1Controller.text.isNotEmpty ||
-        _yAvg2Controller.text.isNotEmpty ||
-        _yCfu2Controller.text.isNotEmpty ||
-        _gAvg1Controller.text.isNotEmpty ||
-        _gCfu1Controller.text.isNotEmpty ||
-        _gAvg2Controller.text.isNotEmpty ||
-        _gCfu2Controller.text.isNotEmpty) {
-      return true;
-    }
+
     return false;
   }
 
@@ -141,14 +122,6 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
       controller.clear();
     }
     _notesController.clear();
-    _yAvg1Controller.clear();
-    _yCfu1Controller.clear();
-    _yAvg2Controller.clear();
-    _yCfu2Controller.clear();
-    _gAvg1Controller.clear();
-    _gCfu1Controller.clear();
-    _gAvg2Controller.clear();
-    _gCfu2Controller.clear();
   }
 
   void _closeForm() {
@@ -218,10 +191,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   void _processAndSaveForm({bool keepOpen = false}) async {
     if (selectedParameter == null || _isSaving) return;
 
-    if (selectedParameter!.label == 'Bacterial Analysis') {
-      await _saveBacterialAnalysis();
-      return;
-    }
+
 
     // Validate that all entered values are valid numbers (typo safety)
     for (var p in points) {
@@ -325,127 +295,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     }
   }
 
-  Future<void> _saveBacterialAnalysis({bool keepOpen = false}) async {
-    final mappings = {
-      'Test 10-1 (Average yellow colonies)': {
-        'val': _yAvg1Controller.text.trim(),
-        'unit': '',
-      },
-      'Test yellow 10-1 (CFU/ml)': {
-        'val': _yCfu1Controller.text.trim(),
-        'unit': 'CFU/mL',
-      },
-      'Test 10-2 (Average yellow colonies)': {
-        'val': _yAvg2Controller.text.trim(),
-        'unit': '',
-      },
-      'Test yellow 10-2 (CFU/ml)': {
-        'val': _yCfu2Controller.text.trim(),
-        'unit': 'CFU/mL',
-      },
-      'Test 10-1 (Average green colonies)': {
-        'val': _gAvg1Controller.text.trim(),
-        'unit': '',
-      },
-      'Test green 10-1 (CFU/ml)': {
-        'val': _gCfu1Controller.text.trim(),
-        'unit': 'CFU/mL',
-      },
-      'Test 10-2 (Average green colonies)': {
-        'val': _gAvg2Controller.text.trim(),
-        'unit': '',
-      },
-      'Test green 10-2 (CFU/ml)': {
-        'val': _gCfu2Controller.text.trim(),
-        'unit': 'CFU/mL',
-      },
-    };
 
-    // Pre-validate all inputs to ensure they are non-negative numbers
-    for (var entry in mappings.entries) {
-      final textVal = entry.value['val']!;
-      if (textVal.isNotEmpty) {
-        final doubleVal = double.tryParse(textVal);
-        if (doubleVal == null) {
-          SnackbarHelper.showError(
-            context,
-            "Invalid value for ${entry.key}: '$textVal' is not a valid number",
-          );
-          return;
-        }
-        if (doubleVal < 0) {
-          SnackbarHelper.showError(
-            context,
-            "Value for ${entry.key} cannot be negative",
-          );
-          return;
-        }
-      }
-    }
-
-    setState(() => _isSaving = true);
-    String type =
-        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
-    final timeStr = selectedTime.format(context);
-    final notes = _notesController.text.trim();
-
-    int saves = 0;
-    try {
-      for (var entry in mappings.entries) {
-        if (entry.value['val']!.isNotEmpty) {
-          final doubleVal = double.tryParse(entry.value['val']!)!;
-          await widget.onSave(
-            label: entry.key,
-            unit: entry.value['unit']!,
-            timeString: timeStr,
-            averageValue: doubleVal,
-            type: type,
-            pointValues: {'A': doubleVal}, // Treated as single point
-            replicateValues: {
-              'A': [doubleVal],
-            },
-            notes: notes,
-          );
-          saves++;
-        }
-      }
-
-      if (saves == 0) {
-        if (mounted) {
-          SnackbarHelper.showInfo(context, "Please enter at least one value");
-        }
-        setState(() => _isSaving = false);
-        return;
-      }
-
-      HapticFeedback.heavyImpact();
-      if (mounted) {
-        if (keepOpen) {
-          _clearInputs();
-          if (_wizardStepIndex < _wizardSequence.length - 1) {
-            setState(() {
-              _wizardStepIndex++;
-              selectedParameter = _wizardSequence[_wizardStepIndex];
-              selectedDocId = _wizardDocIds[_wizardStepIndex];
-            });
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (mounted) focusNodes['A-1']?.requestFocus();
-            });
-          } else {
-            _closeForm();
-          }
-        } else {
-          Navigator.pop(context);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, "Failed to save: $e");
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
 
   void _showCreateParameterDialog() {
     final nameController = TextEditingController();
@@ -556,6 +406,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
                       unit: unitController.text.trim(),
                       type: type,
                       category: selectedCategory!,
+                      pondId: widget.pondId,
                     );
                     if (context.mounted) Navigator.pop(context);
                   } else {
@@ -799,6 +650,104 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     );
   }
 
+  Widget _buildAllRecordedState() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          colors: [
+            primaryColor.withValues(alpha: 0.08),
+            primaryColor.withValues(alpha: 0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: primaryColor.withValues(alpha: 0.15),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.015),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Circular premium checkmark icon with double borders
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: primaryColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: primaryColor.withValues(alpha: 0.2),
+                width: 4,
+              ),
+            ),
+            child: Icon(
+              Icons.verified_rounded,
+              color: primaryColor,
+              size: 48,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "All Recorded!",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: textDark,
+              letterSpacing: -0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              "Great job! All parameters for this day have already been recorded for this pond.\n\nIf you need to make changes or updates, you can edit them directly in the listing or history tab.",
+              style: TextStyle(
+                fontSize: 14,
+                color: textMuted,
+                height: 1.5,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showCreateParameterDialog();
+            },
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text(
+              "Add Custom Parameter",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildParameterGrid() {
     List<ParameterItem> hardcodedParams =
         widget.customParams ??
@@ -823,11 +772,15 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
       return _buildGridWithStartButton(gridItems);
     }
 
+    final String dateKey =
+        "${widget.selectedDay.year}-${widget.selectedDay.month}-${widget.selectedDay.day}";
+
     return StreamBuilder<QuerySnapshot>(
       stream: ref.read(monitoringRepositoryProvider).customParametersCollection
           .where('type', isEqualTo: type)
+          .where('pondId', isEqualTo: widget.pondId)
           .snapshots(),
-      builder: (context, snapshot) {
+      builder: (context, customSnapshot) {
         List<ParameterItem> allParams = List.from(hardcodedParams);
         List<String?> docIds = List.filled(
           hardcodedParams.length,
@@ -835,8 +788,8 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
           growable: true,
         );
 
-        if (snapshot.hasData) {
-          for (var doc in snapshot.data!.docs) {
+        if (customSnapshot.hasData) {
+          for (var doc in customSnapshot.data!.docs) {
             final data = doc.data() as Map<String, dynamic>;
             allParams.add(
               ParameterItem(
@@ -851,19 +804,52 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
           }
         }
 
-        List<Widget> items = [];
-        for (int i = 0; i < allParams.length; i++) {
-          items.add(
-            _buildParamTile(
-              param: allParams[i],
-              docId: docIds[i],
-              allParams: allParams,
-              index: i,
-            ),
-          );
-        }
-        items.add(_buildAddNewButton());
-        return _buildGridWithStartButton(items);
+        return StreamBuilder<QuerySnapshot>(
+          stream: ref.read(monitoringRepositoryProvider).measurementsCollection
+              .where('pondId', isEqualTo: widget.pondId)
+              .where('type', isEqualTo: type)
+              .where('dateKey', isEqualTo: dateKey)
+              .snapshots(),
+          builder: (context, measurementsSnapshot) {
+            final Set<String> recordedLabels = {};
+            if (measurementsSnapshot.hasData) {
+              for (var doc in measurementsSnapshot.data!.docs) {
+                final data = doc.data() as Map<String, dynamic>;
+                if (data['parameter'] != null) {
+                  recordedLabels.add(data['parameter'] as String);
+                }
+              }
+            }
+
+            final List<ParameterItem> filteredParams = [];
+            final List<String?> filteredDocIds = [];
+
+            for (int i = 0; i < allParams.length; i++) {
+              if (!recordedLabels.contains(allParams[i].label)) {
+                filteredParams.add(allParams[i]);
+                filteredDocIds.add(docIds[i]);
+              }
+            }
+
+            if (filteredParams.isEmpty) {
+              return _buildAllRecordedState();
+            }
+
+            List<Widget> items = [];
+            for (int i = 0; i < filteredParams.length; i++) {
+              items.add(
+                _buildParamTile(
+                  param: filteredParams[i],
+                  docId: filteredDocIds[i],
+                  allParams: filteredParams,
+                  index: i,
+                ),
+              );
+            }
+            items.add(_buildAddNewButton());
+            return _buildGridWithStartButton(items);
+          },
+        );
       },
     );
   }
@@ -1019,15 +1005,18 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
                             letterSpacing: 1.2,
                           ),
                         ),
-                        Text(
-                          selectedParameter!.label,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 24,
-                            color: textDark,
-                            letterSpacing: -0.5,
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Text(
+                            selectedParameter!.label,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 24,
+                              color: textDark,
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -1065,14 +1054,6 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
           replicates: replicates,
           valueControllers: valueControllers,
           focusNodes: focusNodes,
-          yAvg1Controller: _yAvg1Controller,
-          yCfu1Controller: _yCfu1Controller,
-          yAvg2Controller: _yAvg2Controller,
-          yCfu2Controller: _yCfu2Controller,
-          gAvg1Controller: _gAvg1Controller,
-          gCfu1Controller: _gCfu1Controller,
-          gAvg2Controller: _gAvg2Controller,
-          gCfu2Controller: _gCfu2Controller,
           calculatePointAverage: _calculatePointAverage,
           onFieldSubmitted: (key) {
             final keys = valueControllers.keys.toList();

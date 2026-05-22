@@ -61,6 +61,7 @@ class _TrendsTabState extends ConsumerState<TrendsTab> {
     ).snapshots();
 
     _customParamsStream = monitoringRepo.customParametersCollection
+        .where('pondId', isEqualTo: widget.pondId)
         .snapshots();
 
     _growthMetricsFuture =

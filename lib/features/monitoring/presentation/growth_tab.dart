@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
 
 class GrowthTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -23,8 +26,6 @@ class GrowthTab extends ConsumerStatefulWidget {
 }
 
 class _GrowthTabState extends ConsumerState<GrowthTab> {
-  final Color primaryIndigo = Colors.indigo;
-
   late Future<List<GrowthMetrics>> _growthMetricsFuture;
 
   @override
@@ -64,11 +65,14 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
       future: _growthMetricsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingPlaceholder(message: "Loading growth metrics...");
         }
 
         if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
+          return ErrorStateCard(
+            description: "Error: ${snapshot.error}",
+            onRetry: _refreshData,
+          );
         }
 
         final metrics = snapshot.data ?? [];
@@ -122,11 +126,14 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                     final previous = (index < metrics.length - 1)
                         ? metrics[index + 1]
                         : null;
-                    return _buildGrowthCard(
-                      current,
-                      previous,
-                      colorScheme,
-                      isDark,
+                    return StaggeredListItem(
+                      index: index,
+                      child: _buildGrowthCard(
+                        current,
+                        previous,
+                        colorScheme,
+                        isDark,
+                      ),
                     );
                   }, childCount: metrics.length),
                 ),
@@ -148,8 +155,8 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
     bool isDark,
   ) {
     double? deltaAbw;
-    if (previous != null) {
-      deltaAbw = m.abw - previous.abw;
+    if (previous != null && m.abw != null && previous.abw != null) {
+      deltaAbw = m.abw! - previous.abw!;
     }
 
     return Container(
@@ -158,7 +165,7 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
-        border: isDark ? Border.all(color: Colors.white12) : null,
+        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -254,68 +261,68 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                     ),
                   if (widget.canEdit) ...[
                     const SizedBox(width: 8),
-                    PopupMenuButton<String>(
-                      padding: EdgeInsets.zero,
-                      icon: Icon(
-                        Icons.more_horiz_rounded,
-                        color: colorScheme.onSurfaceVariant.withValues(
-                          alpha: 0.5,
-                        ),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      color: colorScheme.surfaceContainerHigh,
-                      onSelected: (value) {
-                        if (value == 'edit') widget.onEdit(m);
-                        if (value == 'delete') widget.onDelete(m);
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.edit_rounded,
-                                size: 18,
-                                color: colorScheme.primary,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.onSurface,
-                                ),
-                              ),
-                            ],
+                    Semantics(
+                      label: "Growth sampling actions menu",
+                      button: true,
+                      child: PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        icon: Icon(
+                          Icons.more_horiz_rounded,
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.5,
                           ),
                         ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.delete_outline_rounded,
-                                size: 18,
-                                color: isDark
-                                    ? Colors.red.shade400
-                                    : Colors.red,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Delete',
-                                style: TextStyle(
-                                  color: isDark
-                                      ? Colors.red.shade400
-                                      : Colors.red,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ],
+                        color: colorScheme.surfaceContainerHigh,
+                        onSelected: (value) {
+                          if (value == 'edit') widget.onEdit(m);
+                          if (value == 'delete') widget.onDelete(m);
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit_rounded,
+                                  size: 18,
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Edit',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 18,
+                                  color: colorScheme.error,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(
+                                    color: colorScheme.error,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ],
@@ -338,31 +345,68 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
               children: [
                 _buildMiniMetric(
                   "ABW",
-                  "${m.abw}g",
+                  m.abw != null ? "${m.abw}g" : "n/a",
                   isDark ? Colors.green.shade300 : Colors.green.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "ADG",
-                  "${m.adg.toStringAsFixed(2)}g",
+                  m.adg != null ? "${m.adg!.toStringAsFixed(2)}g" : "n/a",
                   isDark ? Colors.green.shade300 : Colors.green.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "FCR",
-                  m.fcr.toStringAsFixed(2),
+                  m.fcr != null ? m.fcr!.toStringAsFixed(2) : "n/a",
                   isDark ? Colors.orange.shade300 : Colors.orange.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "DFR",
-                  m.dfr.toStringAsFixed(2),
+                  m.dfr != null ? m.dfr!.toStringAsFixed(2) : "n/a",
                   isDark ? Colors.purple.shade300 : Colors.purple.shade700,
                   colorScheme,
                 ),
               ],
             ),
           ),
+          if (m.notes != null && m.notes!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.tertiaryContainer,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: colorScheme.tertiary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.sticky_note_2_rounded,
+                    size: 16,
+                    color: colorScheme.onTertiaryContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      m.notes!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onTertiaryContainer,
+                        fontWeight: FontWeight.w500,
+                        fontStyle: FontStyle.italic,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
 
           // FOOTER: Editors
@@ -392,7 +436,7 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                       Text(
                         "•",
                         style: TextStyle(
-                          color: isDark ? Colors.white24 : Colors.grey.shade300,
+                          color: colorScheme.outlineVariant,
                           fontSize: 11,
                         ),
                       ),

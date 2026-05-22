@@ -28,13 +28,13 @@ class MonitoringCalendar extends ConsumerWidget {
 
   Widget _buildStatusDot(Color color, bool isSelected) {
     return Container(
-      width: isSelected ? 8 : 6,
-      height: isSelected ? 8 : 6,
-      margin: const EdgeInsets.symmetric(horizontal: 2.0),
+      width: isSelected ? 6 : 5,
+      height: isSelected ? 6 : 5,
+      margin: const EdgeInsets.symmetric(horizontal: 1.0),
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
-        border: isSelected ? Border.all(color: Colors.white, width: 1.5) : null,
+        border: isSelected ? Border.all(color: Colors.white, width: 1.0) : null,
       ),
     );
   }
@@ -275,10 +275,18 @@ class MonitoringCalendar extends ConsumerWidget {
                   if (types.contains('biweekly')) {
                     activeDots.add(_buildStatusDot(primaryColor, isSelected));
                   }
+                  if (types.contains('growth')) {
+                    activeDots.add(
+                      _buildStatusDot(Colors.purple.shade400, isSelected),
+                    );
+                  }
 
                   return Positioned(
-                    bottom: 8,
+                    bottom: 5,
+                    left: 0,
+                    right: 0,
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: activeDots,
                     ),
@@ -290,15 +298,20 @@ class MonitoringCalendar extends ConsumerWidget {
             // Legend
             Padding(
               padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildLegendItem(Colors.green.shade400, "Daily", textMuted),
-                  const SizedBox(width: 16),
-                  _buildLegendItem(Colors.amber.shade400, "Weekly", textMuted),
-                  const SizedBox(width: 16),
-                  _buildLegendItem(primaryColor, "Biweekly/Growth", textMuted),
-                ],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildLegendItem(Colors.green.shade400, "Daily", textMuted),
+                    const SizedBox(width: 12),
+                    _buildLegendItem(Colors.amber.shade400, "Weekly", textMuted),
+                    const SizedBox(width: 12),
+                    _buildLegendItem(primaryColor, "Biweekly", textMuted),
+                    const SizedBox(width: 12),
+                    _buildLegendItem(Colors.purple.shade400, "Growth", textMuted),
+                  ],
+                ),
               ),
             ),
           ],

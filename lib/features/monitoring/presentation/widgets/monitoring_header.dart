@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class MonitoringHeader extends StatelessWidget {
   final String pondId;
   final String pondName;
+  final String species;
   final VoidCallback onBackTap;
   final VoidCallback onHistoryTap;
   final VoidCallback onProfileTap;
+  final VoidCallback? onHelpTap;
 
   const MonitoringHeader({
     super.key,
     required this.pondId,
     required this.pondName,
+    required this.species,
     required this.onBackTap,
     required this.onHistoryTap,
     required this.onProfileTap,
+    this.onHelpTap,
   });
 
   @override
@@ -33,17 +38,43 @@ class MonitoringHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
       child: Row(
         children: [
-          Transform.translate(
-            offset: const Offset(-8, 0),
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_rounded, color: onSurface),
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                onBackTap();
-              },
+          // Hero species icon — matches pond-icon-{pondId} tag in PondListCard
+          Hero(
+            tag: 'pond-icon-$pondId',
+            child: Container(
+              height: 44,
+              width: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [colorScheme.secondary, colorScheme.primary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: isDark ? 0.4 : 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Material(
+                type: MaterialType.transparency,
+                child: FaIcon(
+                  _getSpeciesIcon(species),
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 0),
+          IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: onSurface),
+            onPressed: onBackTap,
+            tooltip: 'Back',
+          ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,6 +102,19 @@ class MonitoringHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (onHelpTap != null) ...[
+            _buildCircleIconButton(
+              context: context,
+              icon: Icons.help_outline_rounded,
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onHelpTap!();
+              },
+              tooltip: 'Help & Tour',
+              surfaceContainer: surfaceContainer,
+            ),
+            const SizedBox(width: 8),
+          ],
           _buildCircleIconButton(
             context: context,
             icon: Icons.receipt_long_rounded,
@@ -172,5 +216,17 @@ class MonitoringHeader extends StatelessWidget {
       ),
       child: child,
     );
+  }
+  IconData _getSpeciesIcon(String species) {
+    final lower = species.toLowerCase();
+    if (lower.contains('tilapia') || lower.contains('fish')) {
+      return FontAwesomeIcons.fish;
+    }
+    if (lower.contains('shrimp') ||
+        lower.contains('prawn') ||
+        lower.contains('vannamei')) {
+      return FontAwesomeIcons.shrimp;
+    }
+    return FontAwesomeIcons.droplet;
   }
 }

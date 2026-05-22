@@ -20,7 +20,10 @@ import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
-import 'package:pondstat/features/notifications/presentation/notifications_inbox_page.dart';
+import 'package:pondstat/core/widgets/error_boundary.dart';
+import 'package:pondstat/core/router/route_names.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
 
 class DefaultDashboardScreen extends ConsumerStatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -38,8 +41,13 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   bool _showOnlineMessage = false;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
-  final Color primaryBlue = const Color(0xFF0A74DA);
-  final Color secondaryBlue = const Color(0xFF4FA0F0);
+  // Search & Filter state
+  String _searchQuery = '';
+  String? _filterRole;
+  String? _filterSpecies;
+
+  final FocusNode _searchFocusNode = FocusNode();
+  final TextEditingController _searchController = TextEditingController();
 
   late Stream<List<Pond>> _userPondsStream;
 
@@ -64,12 +72,33 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
       _updateConnectionStatus,
     );
+    _searchFocusNode.addListener(() => setState(() {}));
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
+
+  Future<void> _refreshData() async {
+    final user = ref.read(authRepositoryProvider).currentUser;
+    setState(() {
+      _userPondsStream = ref.read(pondRepositoryProvider).getUserPondsStream(
+        user?.uid ?? '',
+      );
+    });
+    try {
+      await _userPondsStream.first.timeout(const Duration(seconds: 2));
+    } catch (_) {}
   }
 
   Future<void> _initConnectivity() async {
     late List<ConnectivityResult> result;
     try {
-      result = await Connectivity().checkConnectivity();
+      result = await Connectivity().checkConnectivity().timeout(
+        const Duration(seconds: 1),
+        onTimeout: () => [ConnectivityResult.none],
+      );
     } catch (e, stackTrace) {
       ref.read(appLoggerProvider).error("Couldn't check connectivity status", error: e, stackTrace: stackTrace, tag: 'NETWORK');
       return;
@@ -111,6 +140,8 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   void dispose() {
     _connectivitySubscription?.cancel();
     _shimmerController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -118,6 +149,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) => const ProfileBottomSheet(),
     );
@@ -127,6 +159,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const CreatePondSheet(),
     );
@@ -140,6 +173,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) =>
           EditPondSheet(pondId: pondId, initialData: pondData),
@@ -251,10 +285,10 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text(
+                  child: Text(
                     "Cancel",
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -328,7 +362,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                 gradient: isDark
                     ? null
                     : LinearGradient(
-                        colors: [primaryBlue, secondaryBlue],
+                        colors: [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.75)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -347,7 +381,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "Pondstat",
+                          "PondStat",
                           style: TextStyle(
                             color: isDark ? colorScheme.primary : Colors.white,
                             fontWeight: FontWeight.w900,
@@ -380,55 +414,51 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
             ),
             actions: [
               _NotificationBadge(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationsInboxPage(),
-                    ),
-                  );
-                },
+                onTap: () => context.push(AppRoutes.notifications),
                 isDark: isDark,
-                primaryBlue: primaryBlue,
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 20.0),
                 child: Center(
-                  child: GestureDetector(
-                    onTap: () => _showProfileSheet(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.white12
-                              : Colors.white.withValues(alpha: 0.5),
-                          width: 2,
+                  child: Semantics(
+                    button: true,
+                    label: 'Open profile',
+                    child: GestureDetector(
+                      onTap: () => _showProfileSheet(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white12
+                                : Colors.white.withValues(alpha: 0.5),
+                            width: 2,
+                          ),
                         ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: isDark
-                            ? colorScheme.primaryContainer
-                            : Colors.white,
-                        backgroundImage: user.photoURL != null
-                            ? NetworkImage(user.photoURL!)
-                            : null,
-                        child: user.photoURL == null
-                            ? Text(
-                                user.displayName?.isNotEmpty == true
-                                    ? user.displayName![0].toUpperCase()
-                                    : 'U',
-                                style: TextStyle(
-                                  color: isDark
-                                      ? colorScheme.onPrimaryContainer
-                                      : primaryBlue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              )
-                            : null,
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: isDark
+                              ? colorScheme.primaryContainer
+                              : Colors.white,
+                          backgroundImage: user.photoURL != null
+                              ? NetworkImage(user.photoURL!)
+                              : null,
+                          child: user.photoURL == null
+                              ? Text(
+                                  user.displayName?.isNotEmpty == true
+                                      ? user.displayName![0].toUpperCase()
+                                      : 'U',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? colorScheme.onPrimaryContainer
+                                        : colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                )
+                              : null,
+                        ),
                       ),
                     ),
                   ),
@@ -468,33 +498,17 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                   curve: Curves.easeInOut,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
-                    child: !_hasConnection
-                        ? Container(
-                            key: const ValueKey('offline'),
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            color: Colors.grey.shade600,
-                            child: const Text(
-                              "You have no internet connection",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          )
-                        : _showOnlineMessage
+                    child: _showOnlineMessage
                         ? Container(
                             key: const ValueKey('online'),
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 8),
-                            color: Colors.green,
-                            child: const Text(
+                            color: colorScheme.primaryContainer,
+                            child: Text(
                               "Back online!",
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.white,
+                                color: colorScheme.onPrimaryContainer,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
                               ),
@@ -518,7 +532,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
                           BoxShadow(
-                            color: primaryBlue.withValues(alpha: 0.4),
+                            color: colorScheme.primary.withValues(alpha: 0.4),
                             blurRadius: 16,
                             offset: const Offset(0, 8),
                           ),
@@ -531,10 +545,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                       ),
                       child: FloatingActionButton.extended(
                         heroTag: 'dashboard_fab',
-                        onPressed: () {
-                          HapticFeedback.mediumImpact();
-                          _showCreatePondSheet(context);
-                        },
+                        onPressed: () => _showCreatePondSheet(context),
                         backgroundColor: Colors.transparent,
                         elevation: 0,
                         focusElevation: 0,
@@ -572,8 +583,47 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
         return tB.compareTo(tA);
       });
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification notification) {
+    final uniqueSpecies = sortedPonds
+        .map((p) => p.species.trim())
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList();
+    uniqueSpecies.sort();
+
+    // Apply search and filter
+    final filteredPonds = sortedPonds.where((pond) {
+      final String pondName = pond.name.isNotEmpty ? pond.name : 'Unnamed Pond';
+      final String userRole = pond.roles[user.uid] ?? 'viewer';
+
+      // Search filter
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        if (!pondName.toLowerCase().contains(query) &&
+            !pond.species.toLowerCase().contains(query)) {
+          return false;
+        }
+      }
+
+      // Role filter
+      if (_filterRole != null && userRole != _filterRole) {
+        return false;
+      }
+
+      // Species filter
+      if (_filterSpecies != null &&
+          pond.species.trim().toLowerCase() != _filterSpecies!.trim().toLowerCase()) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: colorScheme.primary,
+      backgroundColor: colorScheme.surface,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification notification) {
         if (notification is ScrollStartNotification ||
             notification is ScrollUpdateNotification) {
           if (_isFabVisible) {
@@ -586,57 +636,138 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
         }
         return false;
       },
-      child: RefreshIndicator(
-        color: primaryBlue,
-        backgroundColor: Colors.white,
-        triggerMode: RefreshIndicatorTriggerMode.anywhere,
-        onRefresh: () async => await Future.delayed(
-          const Duration(milliseconds: 800),
-        ),
-        child: ListView.builder(
+      child: ListView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(
             16,
           ).copyWith(bottom: 100),
-          itemCount: sortedPonds.length + 2,
+          itemCount: filteredPonds.isEmpty ? 3 : filteredPonds.length + 2,
           itemBuilder: (context, index) {
             if (index == 0) {
               return const PondyAquariumCard();
             }
             if (index == 1) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 12.0,
+                      left: 4.0,
+                    ),
+                    child: Text(
+                      "Pond List",
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  // Search and Filter Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _searchFocusNode.hasFocus
+                                  ? colorScheme.primary
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            decoration: InputDecoration(
+                              hintText: 'Search ponds...',
+                              hintStyle: TextStyle(
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search_rounded,
+                                color: _searchFocusNode.hasFocus
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              ),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: Icon(
+                                        Icons.clear_rounded,
+                                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: _buildFilterDropdown(uniqueSpecies, colorScheme),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              );
+            }
+
+            if (filteredPonds.isEmpty && index == 2) {
               return Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 16.0,
-                  left: 4.0,
-                ),
-                child: Text(
-                  "Pond List",
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                    letterSpacing: -0.5,
+                padding: const EdgeInsets.only(top: 24.0, bottom: 24.0),
+                child: EmptyStateCard(
+                  image: const Icon(Icons.search_off_rounded, size: 48),
+                  title: "No Ponds Found",
+                  description: "Try adjusting your search keywords or filters to find what you're looking for.",
+                  action: SecondaryButton(
+                    text: "Clear Search",
+                    onPressed: () {
+                      _searchFocusNode.unfocus();
+                      _searchController.clear();
+                      setState(() {
+                        _filterRole = null;
+                        _filterSpecies = null;
+                      });
+                    },
+                    width: 180,
                   ),
                 ),
               );
             }
 
-            final pond = sortedPonds[index - 2];
+            final pond = filteredPonds[index - 2];
             final String pondName = pond.name.isNotEmpty ? pond.name : 'Unnamed Pond';
             final String userRole = pond.roles[user.uid] ?? 'viewer';
             final bool isOwner = userRole == 'owner';
 
-            final card = PondListCard(
+            final card = ErrorBoundary(
+              child: PondListCard(
               pondId: pond.id,
               pondName: pondName,
               species: pond.species.isNotEmpty ? pond.species : 'Unspecified',
               userRole: userRole,
               createdAt: pond.createdAt ?? DateTime.now(),
               targetCulturePeriodDays: pond.targetCulturePeriodDays > 0 ? pond.targetCulturePeriodDays : 90,
+              ),
             );
 
+            final Widget itemContent;
             if (isOwner) {
-              return Slidable(
+              itemContent = Slidable(
                 key: Key(pond.id),
                 endActionPane: ActionPane(
                   motion: const ScrollMotion(),
@@ -644,7 +775,6 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                   children: [
                     CustomSlidableAction(
                       onPressed: (context) {
-                        HapticFeedback.mediumImpact();
                         _showEditPondSheet(
                           context,
                           pond.id,
@@ -660,7 +790,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                           left: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: primaryBlue,
+                          color: colorScheme.primary,
                           borderRadius:
                               BorderRadius.circular(20),
                         ),
@@ -734,10 +864,153 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                 ),
                 child: card,
               );
+            } else {
+              itemContent = card;
             }
 
-            return card;
+            return StaggeredListItem(
+              index: index - 2,
+              child: itemContent,
+            );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown(List<String> uniqueSpecies, ColorScheme colorScheme) {
+    int activeFiltersCount = 0;
+    if (_filterRole != null) activeFiltersCount++;
+    if (_filterSpecies != null) activeFiltersCount++;
+
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 50),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      tooltip: 'Filter Ponds',
+      onSelected: (value) {
+        if (value.startsWith('role:')) {
+          final role = value.split(':')[1];
+          setState(() => _filterRole = role.isEmpty ? null : role);
+        } else if (value.startsWith('species:')) {
+          final species = value.split(':')[1];
+          setState(() => _filterSpecies = species.isEmpty ? null : species);
+        }
+      },
+      itemBuilder: (context) {
+        return [
+          PopupMenuItem(
+            enabled: false,
+            child: Text('Roles', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary)),
+          ),
+          PopupMenuItem(
+            value: 'role:',
+            child: Row(
+              children: [
+                Icon(Icons.check, color: _filterRole == null ? colorScheme.primary : Colors.transparent),
+                const SizedBox(width: 12),
+                const Text('All Roles'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'role:owner',
+            child: Row(
+              children: [
+                Icon(Icons.check, color: _filterRole == 'owner' ? colorScheme.primary : Colors.transparent),
+                const SizedBox(width: 12),
+                const Text('Owner'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'role:editor',
+            child: Row(
+              children: [
+                Icon(Icons.check, color: _filterRole == 'editor' ? colorScheme.primary : Colors.transparent),
+                const SizedBox(width: 12),
+                const Text('Editor'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'role:viewer',
+            child: Row(
+              children: [
+                Icon(Icons.check, color: _filterRole == 'viewer' ? colorScheme.primary : Colors.transparent),
+                const SizedBox(width: 12),
+                const Text('Viewer'),
+              ],
+            ),
+          ),
+          if (uniqueSpecies.isNotEmpty) ...[
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              enabled: false,
+              child: Text('Species', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary)),
+            ),
+            PopupMenuItem(
+              value: 'species:',
+              child: Row(
+                children: [
+                  Icon(Icons.check, color: _filterSpecies == null ? colorScheme.primary : Colors.transparent),
+                  const SizedBox(width: 12),
+                  const Text('All Species'),
+                ],
+              ),
+            ),
+            for (final species in uniqueSpecies)
+              PopupMenuItem(
+                value: 'species:$species',
+                child: Row(
+                  children: [
+                    Icon(Icons.check, color: _filterSpecies == species ? colorScheme.primary : Colors.transparent),
+                    const SizedBox(width: 12),
+                    Text(species),
+                  ],
+                ),
+              ),
+          ],
+        ];
+      },
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: activeFiltersCount > 0 
+              ? colorScheme.primary.withValues(alpha: 0.1) 
+              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: activeFiltersCount > 0 ? colorScheme.primary : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.filter_list_rounded, 
+              size: 20, 
+              color: activeFiltersCount > 0 ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            ),
+            if (activeFiltersCount > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$activeFiltersCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -752,7 +1025,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: 4,
+      itemCount: 2,
       itemBuilder: (context, index) {
         final double titleWidth = 140.0 + (index % 3) * 40.0;
         final double subWidth = 90.0 + (index % 2) * 30.0;
@@ -773,8 +1046,8 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
             ],
           ),
           padding: const EdgeInsets.all(16),
-          child: AnimatedBuilder(
-            animation: _shimmerController,
+          child: ListenableBuilder(
+            listenable: _shimmerController,
             builder: (context, child) {
               return ShaderMask(
                 blendMode: BlendMode.srcATop,
@@ -840,8 +1113,19 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return NoPondAssignedWidget(
-      onCreatePond: () => _showCreatePondSheet(context),
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: Theme.of(context).colorScheme.primary,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height - 150,
+          child: NoPondAssignedWidget(
+            onCreatePond: () => _showCreatePondSheet(context),
+          ),
+        ),
+      ),
     );
   }
 
@@ -852,63 +1136,132 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
       friendlyMessage = "You don't have permission to view this data.";
     }
 
-    return EmptyStateCard(
-      image: const Icon(Icons.cloud_off_rounded),
-      title: "Unable to Load",
-      description: friendlyMessage,
-      action: SecondaryButton(
-        text: "Try Again",
-        icon: Icons.refresh_rounded,
-        onPressed: () => setState(() {}),
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: Theme.of(context).colorScheme.primary,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      child: EmptyStateCard(
+        image: const Icon(Icons.cloud_off_rounded),
+        title: "Unable to Load",
+        description: friendlyMessage,
+        scrollable: true,
+        action: SecondaryButton(
+          text: "Try Again",
+          icon: Icons.refresh_rounded,
+          onPressed: _refreshData,
+        ),
       ),
     );
   }
 }
 
-class _NotificationBadge extends ConsumerWidget {
+class _NotificationBadge extends ConsumerStatefulWidget {
   final VoidCallback onTap;
   final bool isDark;
-  final Color primaryBlue;
 
   const _NotificationBadge({
     required this.onTap,
     required this.isDark,
-    required this.primaryBlue,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_NotificationBadge> createState() => _NotificationBadgeState();
+}
+
+class _NotificationBadgeState extends ConsumerState<_NotificationBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
+  int _lastCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.04), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -0.04, end: 0.04), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.04, end: -0.03), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.03, end: 0.03), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.03, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(
+      parent: _shakeController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
+  }
+
+  void _triggerShake() {
+    if (mounted) {
+      _shakeController.reset();
+      _shakeController.forward();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final repository = ref.read(notificationsRepositoryProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return StreamBuilder<int>(
       stream: repository.getUnreadCountStream(),
       builder: (context, snapshot) {
         final int unreadCount = snapshot.data ?? 0;
 
+        if (unreadCount > _lastCount) {
+          _lastCount = unreadCount;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _triggerShake();
+          });
+        } else if (unreadCount < _lastCount) {
+          _lastCount = unreadCount;
+        }
+
         return Stack(
           alignment: Alignment.center,
           children: [
-            IconButton(
-              icon: Icon(
-                unreadCount > 0
-                    ? Icons.notifications_active_rounded
-                    : Icons.notifications_none_rounded,
-                color: isDark ? null : Colors.white,
-                size: 28,
+            Semantics(
+              button: true,
+              label: unreadCount > 0
+                  ? '$unreadCount unread notifications'
+                  : 'Notifications',
+              child: RotationTransition(
+                turns: _shakeAnimation,
+                child: IconButton(
+                  icon: Icon(
+                    unreadCount > 0
+                        ? Icons.notifications_active_rounded
+                        : Icons.notifications_none_rounded,
+                    color: widget.isDark ? null : Colors.white,
+                    size: 28,
+                  ),
+                  onPressed: widget.onTap,
+                ),
               ),
-              onPressed: onTap,
             ),
-            if (unreadCount > 0)
-              Positioned(
-                right: 8,
-                top: 12,
+            Positioned(
+              right: 8,
+              top: 12,
+              child: AnimatedScale(
+                scale: unreadCount > 0 ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOutBack,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: Colors.red,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isDark ? Colors.black : primaryBlue,
+                      color: widget.isDark ? Colors.black : colorScheme.primary,
                       width: 1.5,
                     ),
                   ),
@@ -916,23 +1269,38 @@ class _NotificationBadge extends ConsumerWidget {
                     minWidth: 18,
                     minHeight: 18,
                   ),
-                  child: Text(
-                    unreadCount > 9 ? '9+' : '$unreadCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return ScaleTransition(
+                        scale: animation,
+                        child: FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      unreadCount > 9 ? '9+' : '$unreadCount',
+                      key: ValueKey<int>(unreadCount),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
+            ),
           ],
         );
       },
     );
   }
 }
+
 
 class SlideGradientTransform extends GradientTransform {
   final double percent;
@@ -947,3 +1315,4 @@ class SlideGradientTransform extends GradientTransform {
     );
   }
 }
+

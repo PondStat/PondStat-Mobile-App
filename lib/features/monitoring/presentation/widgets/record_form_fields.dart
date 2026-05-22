@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pondstat/core/widgets/pondstat_text_field.dart';
+import 'package:flutter/services.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
 class RecordFormFields extends StatefulWidget {
@@ -9,14 +9,6 @@ class RecordFormFields extends StatefulWidget {
   final List<int> replicates;
   final Map<String, TextEditingController> valueControllers;
   final Map<String, FocusNode> focusNodes;
-  final TextEditingController yAvg1Controller;
-  final TextEditingController yCfu1Controller;
-  final TextEditingController yAvg2Controller;
-  final TextEditingController yCfu2Controller;
-  final TextEditingController gAvg1Controller;
-  final TextEditingController gCfu1Controller;
-  final TextEditingController gAvg2Controller;
-  final TextEditingController gCfu2Controller;
   final double? Function(String) calculatePointAverage;
   final Function(String) onFieldSubmitted;
 
@@ -28,14 +20,6 @@ class RecordFormFields extends StatefulWidget {
     required this.replicates,
     required this.valueControllers,
     required this.focusNodes,
-    required this.yAvg1Controller,
-    required this.yCfu1Controller,
-    required this.yAvg2Controller,
-    required this.yCfu2Controller,
-    required this.gAvg1Controller,
-    required this.gCfu1Controller,
-    required this.gAvg2Controller,
-    required this.gCfu2Controller,
     required this.calculatePointAverage,
     required this.onFieldSubmitted,
   });
@@ -45,17 +29,11 @@ class RecordFormFields extends StatefulWidget {
 }
 
 class _RecordFormFieldsState extends State<RecordFormFields> {
-  int _bacterialTabIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     final bool hasRange =
         widget.selectedParameter.absoluteMin != null &&
         widget.selectedParameter.absoluteMax != null;
-
-    if (widget.selectedParameter.label == 'Bacterial Analysis') {
-      return _buildBacterialAnalysisUI(context, widget.themeColor);
-    }
 
     return Column(
       children: [
@@ -168,7 +146,6 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
     Color textDark = Theme.of(context).colorScheme.onSurface;
 
     if (widget.selectedParameter.isSinglePoint) {
-      // For single point parameters, show 1 input value (treated as Point A, Replicate 1 behind the scenes)
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: _buildReplicateInput(
@@ -182,7 +159,6 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
       );
     }
 
-    // For multi-point parameters, show each point with its 3 replicates and average
     return Column(
       children: [
         for (int pIdx = 0; pIdx < widget.points.length; pIdx++)
@@ -205,7 +181,6 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Point header
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
@@ -217,7 +192,6 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                     ),
                   ),
                 ),
-                // Replicate inputs
                 Row(
                   children: [
                     for (int rIdx = 0; rIdx < widget.replicates.length; rIdx++)
@@ -240,161 +214,11 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                       ),
                   ],
                 ),
-                // Average display for this point
                 const SizedBox(height: 10),
                 _buildAverageDisplay(context, widget.points[pIdx], themeColor),
               ],
             ),
           ),
-      ],
-    );
-  }
-
-  Widget _buildBacterialAnalysisUI(BuildContext context, Color themeColor) {
-    Color textMuted = Theme.of(context).colorScheme.onSurfaceVariant;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _bacterialTabIndex = 0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: _bacterialTabIndex == 0
-                          ? themeColor
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "Yellow Colonies",
-                        style: TextStyle(
-                          color: _bacterialTabIndex == 0
-                              ? Colors.white
-                              : textMuted,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _bacterialTabIndex = 1),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: _bacterialTabIndex == 1
-                          ? themeColor
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "Green Colonies",
-                        style: TextStyle(
-                          color: _bacterialTabIndex == 1
-                              ? Colors.white
-                              : textMuted,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Switch between Yellow and Green Tabs without TabBarView fixed height
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _bacterialTabIndex == 0
-              ? _buildBacterialTabContent(context, [
-                  (
-                    widget.yAvg1Controller,
-                    "Test 10-1 (Average)",
-                    Icons.circle_rounded,
-                    "e.g., 100",
-                  ),
-                  (
-                    widget.yCfu1Controller,
-                    "Test 10-1 (CFU/ml)",
-                    Icons.science_rounded,
-                    "e.g., 10000",
-                  ),
-                  (
-                    widget.yAvg2Controller,
-                    "Test 10-2 (Average)",
-                    Icons.circle_rounded,
-                    "e.g., 100",
-                  ),
-                  (
-                    widget.yCfu2Controller,
-                    "Test 10-2 (CFU/ml)",
-                    Icons.science_rounded,
-                    "e.g., 10000",
-                  ),
-                ])
-              : _buildBacterialTabContent(context, [
-                  (
-                    widget.gAvg1Controller,
-                    "Test 10-1 (Average)",
-                    Icons.circle_rounded,
-                    "e.g., 100",
-                  ),
-                  (
-                    widget.gCfu1Controller,
-                    "Test 10-1 (CFU/ml)",
-                    Icons.science_rounded,
-                    "e.g., 10000",
-                  ),
-                  (
-                    widget.gAvg2Controller,
-                    "Test 10-2 (Average)",
-                    Icons.circle_rounded,
-                    "e.g., 100",
-                  ),
-                  (
-                    widget.gCfu2Controller,
-                    "Test 10-2 (CFU/ml)",
-                    Icons.science_rounded,
-                    "e.g., 10000",
-                  ),
-                ]),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBacterialTabContent(
-    BuildContext context,
-    List<(TextEditingController, String, IconData, String)> fields,
-  ) {
-    return Column(
-      key: ValueKey(_bacterialTabIndex),
-      children: [
-        for (var field in fields) ...[
-          PondStatTextField(
-            controller: field.$1,
-            label: field.$2,
-            hint: field.$4,
-            prefixIcon: field.$3,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 12),
-        ],
       ],
     );
   }
@@ -452,7 +276,7 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                   color: isFocused || hasError
                       ? activeColor
                       : Colors.transparent,
-                  width: isFocused || hasError ? 2 : 0,
+                  width: 2,
                 ),
                 boxShadow: isFocused
                     ? [
@@ -471,6 +295,9 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                     controller: controller,
                     focusNode: widget.focusNodes[key],
                     keyboardType: widget.selectedParameter.keyboardType,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]')),
+                    ],
                     textInputAction: isLast
                         ? TextInputAction.done
                         : TextInputAction.next,
@@ -490,7 +317,7 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                       ),
                       hintText: isCompact
                           ? '0.0'
-                          : widget.selectedParameter.hint,
+                          : (customLabel ?? widget.selectedParameter.hint),
                       hintStyle: TextStyle(
                         color: Colors.grey.withValues(alpha: 0.4),
                         fontSize: isCompact ? 12 : 14,

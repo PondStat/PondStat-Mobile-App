@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/core/widgets/destructive_dialog.dart';
 
 class EditParameterSheet extends StatefulWidget {
   final List<DocumentSnapshot> docs;
@@ -32,7 +35,6 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
   late final Map<String, Map<String, TextEditingController>> groupControllers;
   late final Map<String, TextEditingController> notesControllers;
   bool _isSaving = false;
-  bool _isDeleting = false;
   bool _isDirty = false;
 
   @override
@@ -42,7 +44,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
     notesControllers = {};
 
     for (var doc in widget.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
       final replicateValuesMap =
           data['replicateValues'] as Map<String, dynamic>? ?? {};
       groupControllers[doc.id] = {};
@@ -90,7 +92,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
   void _checkDirtyState() {
     bool isNowDirty = false;
     for (var doc in widget.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
       final replicateValuesMap =
           data['replicateValues'] as Map<String, dynamic>? ?? {};
       final initialNote = data['notes'] as String? ?? '';
@@ -146,60 +148,30 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
     );
   }
 
-  Future<void> _handleBatchDelete() async {
-    final confirm = await showDialog<bool>(
+  void _clearAllFields() {
+    setState(() {
+      for (var controllersMap in groupControllers.values) {
+        for (var controller in controllersMap.values) {
+          controller.clear();
+        }
+      }
+      _isDirty = true;
+    });
+  }
+
+  void _handleBatchDelete() {
+    showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Confirm Delete"),
-        content: const Text(
-          "Are you sure you want to delete these measurements?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              "Cancel",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              "Delete",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => DestructiveDialog(
+        title: "Clear All Inputs?",
+        content: "Are you sure you want to clear all input values in this sheet? Notes will be preserved. You will need to click 'Save Changes' to apply this to the database.",
+        confirmText: "Clear Inputs",
+        onConfirm: () async {
+          _clearAllFields();
+        },
       ),
     );
-
-    if (confirm != true) return;
-
-    setState(() => _isDeleting = true);
-
-    try {
-      for (var doc in widget.docs) {
-        await widget.repository.deleteMeasurement(
-          pondId: widget.pondId,
-          measurementId: doc.id,
-          currentData: doc.data() as Map<String, dynamic>,
-        );
-      }
-      if (mounted) {
-        widget.onSave();
-        Navigator.pop(context); // close the edit sheet
-        SnackbarHelper.showInfo(context, "Measurements deleted");
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, "Error: $e");
-      }
-    } finally {
-      if (mounted) setState(() => _isDeleting = false);
-    }
   }
 
   Future<void> _handleBatchUpdateWithReplicates() async {
@@ -208,7 +180,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
     // Validate that all entered values are valid numbers (typo safety)
     for (var doc in widget.docs) {
       final controllersMap = groupControllers[doc.id]!;
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
       final paramName = data['parameter'] ?? 'Parameter';
 
       for (var p in points) {
@@ -271,10 +243,8 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
         }
       }
 
-      if (newPointValues.isNotEmpty) {
-        updatedPointValues[doc.id] = newPointValues;
-        updatedReplicateValues[doc.id] = newReplicateValues;
-      }
+      updatedPointValues[doc.id] = newPointValues;
+      updatedReplicateValues[doc.id] = newReplicateValues;
     }
 
     try {
@@ -288,7 +258,17 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
       if (mounted) {
         widget.onSave();
         Navigator.pop(context);
-        SnackbarHelper.showSuccess(context, "Measurements updated");
+        final connectivityResult = await Connectivity().checkConnectivity().timeout(
+          const Duration(seconds: 1),
+          onTimeout: () => [ConnectivityResult.none],
+        );
+        if (mounted) {
+          if (connectivityResult.contains(ConnectivityResult.none)) {
+            SnackbarHelper.showSuccess(context, "Measurements saved locally (will sync when online)");
+          } else {
+            SnackbarHelper.showSuccess(context, "Measurements updated");
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -327,18 +307,22 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
     ColorScheme colorScheme, {
     bool isSinglePoint = false,
   }) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "${data['parameter']} (${data['unit'] ?? ''})",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.primary,
-              fontSize: 16,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Text(
+              "${data['parameter']}${data['unit'] != null && (data['unit'] as String).trim().isNotEmpty ? ' (${data['unit']})' : ''}",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.primary,
+                fontSize: 16,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -390,6 +374,11 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
                                     ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'[0-9.,\-]'),
+                                  ),
+                                ],
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
@@ -558,7 +547,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
               child: SingleChildScrollView(
                 child: Column(
                   children: widget.docs.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
+                    final data = doc.data() as Map<String, dynamic>? ?? {};
                     final paramItem = MonitoringParameters.getParameterByLabel(
                       data['parameter'],
                       widget.species,
@@ -578,24 +567,15 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
             Row(
               children: [
                 TextButton.icon(
-                  onPressed: _isSaving || _isDeleting
+                  onPressed: _isSaving
                       ? null
                       : _handleBatchDelete,
-                  icon: _isDeleting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.red,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.delete_outline_rounded,
-                          color: Colors.red,
-                        ),
+                  icon: const Icon(
+                    Icons.clear_all_rounded,
+                    color: Colors.red,
+                  ),
                   label: const Text(
-                    "Delete All",
+                    "Clear All",
                     style: TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.bold,
@@ -607,7 +587,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
                   child: PrimaryButton(
                     text: "Save Changes",
                     isLoading: _isSaving,
-                    onPressed: _isDeleting || !_isDirty
+                    onPressed: !_isDirty
                         ? null
                         : _handleBatchUpdateWithReplicates,
                   ),

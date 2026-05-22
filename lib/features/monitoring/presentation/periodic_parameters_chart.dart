@@ -52,9 +52,9 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
     super.initState();
     List<ParameterItem> paramsToUse;
     if (widget.type == 'weekly') {
-      paramsToUse = MonitoringParameters.weeklyParameters;
+      paramsToUse = MonitoringParameters.getWeeklyParameters(widget.species);
     } else if (widget.type == 'biweekly') {
-      paramsToUse = MonitoringParameters.biweeklyParameters;
+      paramsToUse = MonitoringParameters.getBiweeklyParameters(widget.species);
     } else {
       paramsToUse = MonitoringParameters.getDailyParameters(widget.species);
     }
@@ -122,11 +122,13 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
           // Show all items from this date range (in chronological order for the chart)
           final limitedDocs = sortedDocs.reversed.toList();
 
-          return limitedDocs.map((doc) {
+          return limitedDocs
+              .where((doc) => doc.data()['value'] != null)
+              .map((doc) {
             final data = doc.data();
             final ts =
                 (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-            final avg = (data['value'] as num?)?.toDouble() ?? 0.0;
+            final avg = (data['value'] as num).toDouble();
             final rawPoints =
                 (data['pointValues'] as Map<String, dynamic>?) ?? {};
             final points = rawPoints.map(
@@ -150,6 +152,7 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
     return StreamBuilder<QuerySnapshot>(
       stream: ref.read(monitoringRepositoryProvider).customParametersCollection
           .where('type', isEqualTo: widget.type)
+          .where('pondId', isEqualTo: widget.pondId)
           .snapshots(),
       builder: (context, snapshot) {
         List<ParameterItem> allParams = List.from(_baseParams);
@@ -589,8 +592,12 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
                 },
               ),
             ),
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
+            rightTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 42,
+                getTitlesWidget: (value, meta) => const SizedBox.shrink(),
+              ),
             ),
             topTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: false),
@@ -651,6 +658,8 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
             ),
           ],
         ),
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutQuad,
       ),
     );
   }

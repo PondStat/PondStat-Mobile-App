@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:pondstat/core/widgets/loading_placeholder.dart';
+import 'package:pondstat/core/widgets/error_state_card.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/staggered_list_item.dart';
+import 'package:pondstat/core/widgets/destructive_dialog.dart';
 
 class ExpensesTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -23,23 +27,33 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
   late Stream<DocumentSnapshot<Pond>> _pondStream;
   late Stream<QuerySnapshot<Map<String, dynamic>>> _expensesStream;
 
-  @override
-  void initState() {
-    super.initState();
+  void _initStreams() {
     _pondStream = ref.read(pondRepositoryProvider).pondsCollection
         .doc(widget.pondId)
         .snapshots();
     _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
   }
 
+  Future<void> _refreshData() async {
+    setState(() {
+      _initStreams();
+    });
+    try {
+      await _expensesStream.first.timeout(const Duration(seconds: 2));
+    } catch (_) {}
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initStreams();
+  }
+
   @override
   void didUpdateWidget(covariant ExpensesTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pondId != widget.pondId) {
-      _pondStream = ref.read(pondRepositoryProvider).pondsCollection
-          .doc(widget.pondId)
-          .snapshots();
-      _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
+      _initStreams();
     }
   }
 
@@ -48,10 +62,17 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
     return StreamBuilder<DocumentSnapshot<Pond>>(
       stream: _pondStream,
       builder: (context, pondSnapshot) {
+        if (pondSnapshot.hasError) {
+          return ErrorStateCard(
+            description: "Error loading pond data: ${pondSnapshot.error}",
+            onRetry: _refreshData,
+          );
+        }
+
         // Only show loader if we have NO data yet
         if (!pondSnapshot.hasData &&
             pondSnapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingPlaceholder(message: "Loading pond details...");
         }
 
         final pond = pondSnapshot.data?.data();
@@ -71,21 +92,13 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
             // Only show loader if we have NO data yet
             if (!expenseSnapshot.hasData &&
                 expenseSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const LoadingPlaceholder(message: "Loading expenses...");
             }
 
             if (expenseSnapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Text(
-                    "Error loading expenses:\n${expenseSnapshot.error}",
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+              return ErrorStateCard(
+                description: "Error loading expenses: ${expenseSnapshot.error}",
+                onRetry: _refreshData,
               );
             }
 
@@ -105,7 +118,11 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
 
             final splitShare = totalGroupSpend / memberCount;
 
-            return CustomScrollView(
+            return RefreshIndicator(
+              onRefresh: _refreshData,
+              color: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              child: CustomScrollView(
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.all(20),
@@ -124,10 +141,13 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) => _buildExpenseCard(
-                          context,
-                          docs[index],
-                          memberCount,
+                        (context, index) => StaggeredListItem(
+                          index: index,
+                          child: _buildExpenseCard(
+                            context,
+                            docs[index],
+                            memberCount,
+                          ),
                         ),
                         childCount: docs.length,
                       ),
@@ -135,8 +155,9 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                   ),
                 const SliverToBoxAdapter(child: SizedBox(height: 120)),
               ],
-            );
-          },
+            ),
+          );
+        },
         );
       },
     );
@@ -453,33 +474,17 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          "Delete Expense?",
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        content: Text("Are you sure you want to remove '$item'?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              await ref.read(monitoringRepositoryProvider).deleteExpense(id);
-              if (context.mounted) {
-                HapticFeedback.mediumImpact();
-                SnackbarHelper.showSuccess(context, "Expense deleted");
-                Navigator.pop(context);
-              }
-            },
-            child: const Text(
-              "Delete",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => DestructiveDialog(
+        title: "Delete Expense?",
+        content: "Are you sure you want to remove '$item'? This action cannot be undone.",
+        onConfirm: () async {
+          await ref.read(monitoringRepositoryProvider).deleteExpense(id);
+          HapticFeedback.mediumImpact();
+          if (context.mounted) {
+            SnackbarHelper.showSuccess(context, "Expense deleted");
+          }
+        },
       ),
     );
   }

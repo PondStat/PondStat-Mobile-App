@@ -1,7 +1,8 @@
+import 'dart:math' show sin, pi;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:pondstat/features/monitoring/presentation/pond_monitoring_scaffold.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pondstat/core/router/route_names.dart';
 
 class PondListCard extends StatefulWidget {
   final String pondId;
@@ -25,8 +26,25 @@ class PondListCard extends StatefulWidget {
   State<PondListCard> createState() => _PondListCardState();
 }
 
-class _PondListCardState extends State<PondListCard> {
+class _PondListCardState extends State<PondListCard>
+    with TickerProviderStateMixin {
   bool _isNavigating = false;
+  late final AnimationController _waveController;
+
+  @override
+  void initState() {
+    super.initState();
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 5500),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _waveController.dispose();
+    super.dispose();
+  }
 
   Future<void> _navigateToMonitoring(BuildContext context) async {
     if (_isNavigating) return;
@@ -35,20 +53,15 @@ class _PondListCardState extends State<PondListCard> {
       _isNavigating = true;
     });
 
-    HapticFeedback.mediumImpact();
-
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PondMonitoringScaffold(
-          pondId: widget.pondId,
-          pondName: widget.pondName,
-          userRole: widget.userRole,
-          species: widget.species,
-          createdAt: widget.createdAt,
-          targetCulturePeriodDays: widget.targetCulturePeriodDays,
-        ),
-      ),
+    await context.push(
+      AppRoutes.pondPath(widget.pondId),
+      extra: <String, dynamic>{
+        'pondName': widget.pondName,
+        'userRole': widget.userRole,
+        'species': widget.species,
+        'createdAt': widget.createdAt,
+        'targetCulturePeriodDays': widget.targetCulturePeriodDays,
+      },
     );
 
     if (mounted) {
@@ -140,12 +153,16 @@ class _PondListCardState extends State<PondListCard> {
             children: [
               // Dynamic liquid water and floating bubbles painter
               Positioned.fill(
-                child: CustomPaint(
-                  painter: _PondWaterPainter(
-                    progress: progress,
-                    primaryColor: colorScheme.primary,
-                    secondaryColor: colorScheme.secondary,
-                    isDark: isDark,
+                child: AnimatedBuilder(
+                  animation: _waveController,
+                  builder: (context, _) => CustomPaint(
+                    painter: _PondWaterPainter(
+                      progress: progress,
+                      wavePhase: _waveController.value,
+                      primaryColor: colorScheme.primary,
+                      secondaryColor: colorScheme.secondary,
+                      isDark: isDark,
+                    ),
                   ),
                 ),
               ),
@@ -303,13 +320,13 @@ class _PondListCardState extends State<PondListCard> {
         break;
       case 'editor':
         bgColor = isDark
-            ? colorScheme.primary.withValues(alpha: 0.15)
+            ? Colors.blue.withValues(alpha: 0.15)
             : Colors.blue.shade50;
         borderColor = isDark
-            ? colorScheme.primary.withValues(alpha: 0.3)
+            ? Colors.blue.withValues(alpha: 0.3)
             : Colors.blue.shade200;
         textColor = isDark
-            ? colorScheme.primaryContainer
+            ? Colors.blue.shade300
             : Colors.blue.shade700;
         break;
       case 'viewer':
@@ -359,12 +376,14 @@ class _PondListCardState extends State<PondListCard> {
 
 class _PondWaterPainter extends CustomPainter {
   final double progress;
+  final double wavePhase;
   final Color primaryColor;
   final Color secondaryColor;
   final bool isDark;
 
   _PondWaterPainter({
     required this.progress,
+    required this.wavePhase,
     required this.primaryColor,
     required this.secondaryColor,
     required this.isDark,
@@ -397,43 +416,45 @@ class _PondWaterPainter extends CustomPainter {
         end: Alignment.topCenter,
       ).createShader(Rect.fromLTRB(0, size.height - waterHeight, size.width, size.height));
 
-    // First back layer wave (offset by 10 pixels vertically and shifting phase)
+    // Wave phase shift: sin oscillation drives crests left↔right smoothly
+    final double phase = sin(wavePhase * 2 * pi);
+    final double amp = size.height * 0.04; // 4% amplitude — subtle
+
+    // First back layer wave
     final path1 = Path();
     path1.moveTo(0, size.height);
-    path1.lineTo(0, size.height - waterHeight + 10);
-    
+    path1.lineTo(0, size.height - waterHeight + 10 + amp * phase);
     path1.quadraticBezierTo(
       size.width * 0.25,
-      size.height - waterHeight - 12,
+      size.height - waterHeight - 12 - amp * phase,
       size.width * 0.5,
-      size.height - waterHeight,
+      size.height - waterHeight + amp * phase * 0.5,
     );
     path1.quadraticBezierTo(
       size.width * 0.75,
-      size.height - waterHeight + 12,
+      size.height - waterHeight + 12 + amp * phase,
       size.width,
-      size.height - waterHeight - 8,
+      size.height - waterHeight - 8 - amp * phase * 0.5,
     );
     path1.lineTo(size.width, size.height);
     path1.close();
     canvas.drawPath(path1, paintWave1);
 
-    // Second front layer wave
+    // Second front layer wave (phase-inverted for natural cross-swell effect)
     final path2 = Path();
     path2.moveTo(0, size.height);
-    path2.lineTo(0, size.height - waterHeight);
-    
+    path2.lineTo(0, size.height - waterHeight - amp * phase * 0.8);
     path2.quadraticBezierTo(
       size.width * 0.3,
-      size.height - waterHeight + 15,
+      size.height - waterHeight + 15 + amp * phase,
       size.width * 0.65,
-      size.height - waterHeight - 10,
+      size.height - waterHeight - 10 - amp * phase * 0.6,
     );
     path2.quadraticBezierTo(
       size.width * 0.85,
-      size.height - waterHeight - 2,
+      size.height - waterHeight - 2 + amp * phase * 0.4,
       size.width,
-      size.height - waterHeight + 5,
+      size.height - waterHeight + 5 + amp * phase * 0.7,
     );
     path2.lineTo(size.width, size.height);
     path2.close();
@@ -473,6 +494,7 @@ class _PondWaterPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _PondWaterPainter oldDelegate) {
     return oldDelegate.progress != progress ||
+        oldDelegate.wavePhase != wavePhase ||
         oldDelegate.primaryColor != primaryColor ||
         oldDelegate.secondaryColor != secondaryColor ||
         oldDelegate.isDark != isDark;

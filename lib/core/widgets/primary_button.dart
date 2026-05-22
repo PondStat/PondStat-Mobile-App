@@ -7,6 +7,9 @@ class PrimaryButton extends StatelessWidget {
   final bool isLoading;
   final IconData? icon;
   final double? width;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final List<BoxShadow>? customShadow;
 
   const PrimaryButton({
     super.key,
@@ -15,6 +18,9 @@ class PrimaryButton extends StatelessWidget {
     this.isLoading = false,
     this.icon,
     this.width = double.infinity,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.customShadow,
   });
 
   @override
@@ -27,7 +33,7 @@ class PrimaryButton extends StatelessWidget {
         : Colors.grey.shade500;
     final currentForegroundColor = (onPressed == null || isLoading)
         ? disabledForegroundColor
-        : Colors.white;
+        : (foregroundColor ?? Colors.white);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -35,19 +41,19 @@ class PrimaryButton extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         boxShadow: onPressed != null && !isLoading
-            ? [
+            ? (customShadow ?? [
                 BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  color: (backgroundColor ?? theme.colorScheme.primary).withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
-              ]
+              ])
             : [],
       ),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: backgroundColor ?? theme.colorScheme.primary,
+          foregroundColor: foregroundColor ?? Colors.white,
           disabledBackgroundColor: isDark
               ? Colors.white12
               : Colors.grey.shade300,
