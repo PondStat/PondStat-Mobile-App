@@ -5,9 +5,7 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/features/monitoring/data/trends_repository.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
-import 'package:pondstat/features/monitoring/presentation/widgets/physical_parameters_chart.dart';
-import 'package:pondstat/features/monitoring/presentation/widgets/chemical_parameters_chart.dart';
-import 'package:pondstat/features/monitoring/presentation/widgets/biological_parameters_chart.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/parameter_category_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/fish_gains_chart.dart';
 
 class TrendsTab extends ConsumerStatefulWidget {
@@ -193,19 +191,27 @@ class _TrendsTabState extends ConsumerState<TrendsTab> {
         bottom: 100, // Padding to protect from FAB
       ),
       children: [
-        PhysicalParametersChart(
+        ParameterCategoryChart(
+          title: "Physical Parameters",
           normalizedData: physicalData,
           species: widget.species,
           startDate: widget.startDate,
           endDate: widget.endDate,
+          initialVisibility: const {
+            'Temperature': true,
+            'Salinity': true,
+            'Transparency': true,
+          },
         ),
-        ChemicalParametersChart(
+        ParameterCategoryChart(
+          title: "Chemical Parameters",
           normalizedData: chemicalData,
           species: widget.species,
           startDate: widget.startDate,
           endDate: widget.endDate,
         ),
-        BiologicalParametersChart(
+        ParameterCategoryChart(
+          title: "Biological Parameters",
           normalizedData: biologicalData,
           species: widget.species,
           startDate: widget.startDate,
