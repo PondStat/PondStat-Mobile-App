@@ -30,6 +30,7 @@ class ParameterCategoryChart extends StatefulWidget {
 
 class _ParameterCategoryChartState extends State<ParameterCategoryChart> {
   final Map<String, bool> _visibleParameters = {};
+  int? _lastTouchedSpotIndex;
 
   @override
   void initState() {
@@ -335,6 +336,16 @@ class _ParameterCategoryChartState extends State<ParameterCategoryChart> {
       borderData: FlBorderData(show: false),
       lineBarsData: lineBars,
       lineTouchData: LineTouchData(
+        touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
+          if (response == null || response.lineBarSpots == null || response.lineBarSpots!.isEmpty) {
+            return;
+          }
+          final spotIndex = response.lineBarSpots!.first.spotIndex;
+          if (spotIndex != _lastTouchedSpotIndex) {
+            _lastTouchedSpotIndex = spotIndex;
+            HapticFeedback.selectionClick();
+          }
+        },
         touchTooltipData: LineTouchTooltipData(
           fitInsideHorizontally: true,
           fitInsideVertically: true,

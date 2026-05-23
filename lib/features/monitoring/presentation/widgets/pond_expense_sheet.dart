@@ -5,23 +5,38 @@ import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
+import 'package:pondstat/core/widgets/pondstat_dropdown_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-class ExpenseSheet extends ConsumerStatefulWidget {
+class PondExpenseSheet extends ConsumerStatefulWidget {
   final String pondId;
 
-  const ExpenseSheet({super.key, required this.pondId});
+  const PondExpenseSheet({super.key, required this.pondId});
 
   @override
-  ConsumerState<ExpenseSheet> createState() => _ExpenseSheetState();
+  ConsumerState<PondExpenseSheet> createState() => _PondExpenseSheetState();
 }
 
-class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
+class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _itemController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
+  final TextEditingController _unitController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+
+  String _selectedCategory = 'Feed';
+  final List<String> _categories = [
+    'Feed',
+    'Seed',
+    'Fertilizer',
+    'Labor',
+    'Medicine',
+    'Equipment',
+    'Utilities',
+    'Other',
+  ];
 
   bool _isSaving = false;
 
@@ -29,22 +44,35 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
   void dispose() {
     _itemController.dispose();
     _quantityController.dispose();
+    _unitController.dispose();
     _amountController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
+  double get _quantity {
+    return double.tryParse(_quantityController.text) ?? 0.0;
+  }
+
+  double get _amountPerUnit {
+    return double.tryParse(_amountController.text) ?? 0.0;
+  }
+
   double get _totalAmount {
-    final qty = int.tryParse(_quantityController.text) ?? 0;
-    final amt = double.tryParse(_amountController.text) ?? 0.0;
-    return qty * amt;
+    return _quantity * _amountPerUnit;
   }
 
   bool get _hasData {
-    return _itemController.text.isNotEmpty || _amountController.text.isNotEmpty;
+    return _itemController.text.isNotEmpty ||
+        _amountController.text.isNotEmpty ||
+        _notesController.text.isNotEmpty;
   }
 
   bool get _isValid {
-    return _itemController.text.trim().isNotEmpty && _totalAmount > 0;
+    return _itemController.text.trim().isNotEmpty &&
+        _selectedCategory.isNotEmpty &&
+        _quantity > 0 &&
+        _amountPerUnit > 0;
   }
 
   Future<void> _saveExpense() async {
@@ -54,31 +82,35 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
     HapticFeedback.mediumImpact();
 
     try {
-      await ref.read(monitoringRepositoryProvider).addExpense(
-        pondId: widget.pondId,
-        item: _itemController.text.trim(),
-        quantity: int.parse(_quantityController.text),
-        amountPerItem: double.parse(_amountController.text),
-        totalAmount: _totalAmount,
-      );
+      await ref.read(monitoringRepositoryProvider).addPondExpense(
+            pondId: widget.pondId,
+            category: _selectedCategory,
+            item: _itemController.text.trim(),
+            quantity: _quantity,
+            unit: _unitController.text.trim(),
+            amountPerUnit: _amountPerUnit,
+            totalAmount: _totalAmount,
+            notes: _notesController.text.trim(),
+          );
 
       if (mounted) {
         final connectivityResult = await Connectivity().checkConnectivity().timeout(
-          const Duration(seconds: 1),
-          onTimeout: () => [ConnectivityResult.none],
-        );
+              const Duration(seconds: 1),
+              onTimeout: () => [ConnectivityResult.none],
+            );
         if (mounted) {
           if (connectivityResult.contains(ConnectivityResult.none)) {
-            SnackbarHelper.showSuccess(context, "Expense saved locally (will sync when online)");
+            SnackbarHelper.showSuccess(
+                context, "Pond expense saved locally (will sync when online)");
           } else {
-            SnackbarHelper.showSuccess(context, "Expense recorded successfully");
+            SnackbarHelper.showSuccess(context, "Pond expense recorded successfully");
           }
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, "Error recording expense: $e");
+        SnackbarHelper.showError(context, "Error recording pond expense: $e");
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -94,7 +126,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
         builder: (context) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
-          title: const Text('Discard unsaved expense?'),
+          title: const Text('Discard unsaved changes?'),
           content: const Text('Are you sure you want to discard your changes?'),
           actions: [
             TextButton(
@@ -155,20 +187,19 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                       ),
                     ),
                   ),
-
                   Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: isDark
-                              ? Colors.teal.withValues(alpha: 0.2)
-                              : Colors.teal.shade50,
+                              ? Colors.indigo.withValues(alpha: 0.2)
+                              : Colors.indigo.shade50,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
-                          Icons.receipt_long_rounded,
-                          color: Colors.teal,
+                          Icons.receipt_rounded,
+                          color: Colors.indigo,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -177,7 +208,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Record Expense",
+                              "Record Pond Expense",
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w900,
@@ -185,7 +216,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                               ),
                             ),
                             const Text(
-                              "Add a new group expenditure",
+                              "Add a direct operational cost",
                               style: TextStyle(
                                 color: Color(0xFF64748B),
                                 fontSize: 13,
@@ -207,12 +238,30 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 28),
+                  PondStatDropdownField<String>(
+                    value: _selectedCategory,
+                    label: "Category",
+                    items: _categories.map((String category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    prefixIcon: Icons.category_outlined,
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() {
+                          _selectedCategory = v;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   PondStatTextField(
                     controller: _itemController,
-                    label: "Item Name",
-                    hint: "e.g., Fish Feed, Pump Repair",
+                    label: "Item Name / Description",
+                    hint: "e.g., Breeder Feed, Aerator Pump, Probiotics",
                     prefixIcon: Icons.shopping_bag_outlined,
                     onChanged: (_) => setState(() {}),
                     validator: (v) => v!.isEmpty ? "Required" : null,
@@ -226,55 +275,65 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                         child: PondStatTextField(
                           controller: _quantityController,
                           label: "Quantity",
-                          hint: "1",
+                          hint: "1.0",
                           prefixIcon: Icons.production_quantity_limits_rounded,
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                           ],
                           onChanged: (_) => setState(() {}),
                           validator: (v) =>
-                              int.tryParse(v ?? '') == null ? "Invalid" : null,
+                              double.tryParse(v ?? '') == null ? "Invalid" : null,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        flex: 3,
+                        flex: 2,
                         child: PondStatTextField(
-                          controller: _amountController,
-                          label: "Price per Item",
-                          hint: "0.00",
-                          prefixIcon: Icons.payments_outlined,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}'),
-                            ),
-                          ],
+                          controller: _unitController,
+                          label: "Unit",
+                          hint: "kg, bags, pcs",
+                          prefixIcon: Icons.unfold_more_rounded,
                           onChanged: (_) => setState(() {}),
-                          validator: (v) => double.tryParse(v ?? '') == null
-                              ? "Invalid"
-                              : null,
+                          validator: (v) => v!.isEmpty ? "Required" : null,
                         ),
                       ),
                     ],
                   ),
-
+                  const SizedBox(height: 16),
+                  PondStatTextField(
+                    controller: _amountController,
+                    label: "Price per Unit",
+                    hint: "0.00",
+                    prefixIcon: Icons.payments_outlined,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                    ],
+                    onChanged: (_) => setState(() {}),
+                    validator: (v) =>
+                        double.tryParse(v ?? '') == null ? "Invalid" : null,
+                  ),
+                  const SizedBox(height: 16),
+                  PondStatTextField(
+                    controller: _notesController,
+                    label: "Notes / Remarks",
+                    hint: "Optional details about this expense",
+                    prefixIcon: Icons.notes_rounded,
+                    maxLines: 2,
+                    onChanged: (_) => setState(() {}),
+                  ),
                   const SizedBox(height: 24),
                   _buildTotalCard(isDark),
-
                   const SizedBox(height: 32),
-
                   Theme(
                     data: Theme.of(context).copyWith(
-                      colorScheme: Theme.of(
-                        context,
-                      ).colorScheme.copyWith(primary: Colors.teal),
+                      colorScheme: Theme.of(context)
+                          .colorScheme
+                          .copyWith(primary: Colors.indigo),
                     ),
                     child: PrimaryButton(
-                      text: 'Save Expense',
+                      text: 'Save Pond Expense',
                       icon: Icons.check_circle_outline_rounded,
                       isLoading: _isSaving,
                       onPressed: _isValid ? _saveExpense : null,
@@ -295,13 +354,13 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.teal.withValues(alpha: 0.1)
-            : Colors.teal.shade50.withValues(alpha: 0.5),
+            ? Colors.indigo.withValues(alpha: 0.1)
+            : Colors.indigo.shade50.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark
-              ? Colors.teal.withValues(alpha: 0.3)
-              : Colors.teal.shade100,
+              ? Colors.indigo.withValues(alpha: 0.3)
+              : Colors.indigo.shade100,
         ),
       ),
       child: Row(
@@ -311,7 +370,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
             "Total Amount",
             style: TextStyle(
               fontWeight: FontWeight.w800,
-              color: Colors.teal,
+              color: Colors.indigo,
               fontSize: 16,
             ),
           ),
@@ -322,7 +381,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
             ).format(_totalAmount),
             style: const TextStyle(
               fontWeight: FontWeight.w900,
-              color: Colors.teal,
+              color: Colors.indigo,
               fontSize: 24,
             ),
           ),

@@ -20,6 +20,7 @@ class _FishGainsChartState extends State<FishGainsChart> {
     'DFR': true,
     'FCR': true,
   };
+  int? _lastTouchedSpotIndex;
 
   final Map<String, Color> _colors = {
     'ABW': Colors.blue,
@@ -306,6 +307,16 @@ class _FishGainsChartState extends State<FishGainsChart> {
       borderData: FlBorderData(show: false),
       lineBarsData: lineBars,
       lineTouchData: LineTouchData(
+        touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
+          if (response == null || response.lineBarSpots == null || response.lineBarSpots!.isEmpty) {
+            return;
+          }
+          final spotIndex = response.lineBarSpots!.first.spotIndex;
+          if (spotIndex != _lastTouchedSpotIndex) {
+            _lastTouchedSpotIndex = spotIndex;
+            HapticFeedback.selectionClick();
+          }
+        },
         touchTooltipData: LineTouchTooltipData(
           fitInsideHorizontally: true,
           fitInsideVertically: true,

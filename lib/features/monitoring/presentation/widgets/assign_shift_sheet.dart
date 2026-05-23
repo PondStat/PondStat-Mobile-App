@@ -206,7 +206,6 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
       }
 
       if (mounted) {
-        Navigator.pop(context); // close bottom sheet
         final connectivityResult = await Connectivity().checkConnectivity().timeout(
           const Duration(seconds: 1),
           onTimeout: () => [ConnectivityResult.none],
@@ -217,6 +216,7 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
           } else {
             SnackbarHelper.showSuccess(context, "Schedules updated successfully for $updatedCount members");
           }
+          Navigator.pop(context); // close bottom sheet
         }
       }
     } catch (e) {

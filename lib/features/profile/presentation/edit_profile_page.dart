@@ -124,10 +124,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: Theme.of(context).colorScheme.errorContainer,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.error,
+              ),
             ),
             const SizedBox(width: 12),
             Text(
@@ -157,8 +160,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade50,
-              foregroundColor: Colors.red.shade900,
+              backgroundColor: Theme.of(context).colorScheme.errorContainer,
+              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -191,6 +194,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       return;
     }
 
+    // Capture repository before the async gap to avoid ref access after unmount.
+    final authRepo = ref.read(authRepositoryProvider);
+
     try {
       bool nameChanged = _nameController.text.trim() != _initialName;
       bool studentNumChanged =
@@ -199,6 +205,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (nameChanged) {
         await user.updateDisplayName(_nameController.text.trim());
       }
+
+      if (!mounted) return;
 
       final Map<String, dynamic> firestoreUpdates = {};
       if (nameChanged) {
@@ -209,7 +217,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       }
 
       if (firestoreUpdates.isNotEmpty) {
-        await ref.read(authRepositoryProvider).usersCollection
+        await authRepo.usersCollection
             .doc(user.uid)
             .update(firestoreUpdates);
       }

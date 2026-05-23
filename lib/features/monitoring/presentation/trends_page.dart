@@ -129,13 +129,17 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
       _isExporting = true;
     });
 
+    // Capture repository before any async gap to prevent ref access after unmount.
+    final monitoringRepo = ref.read(monitoringRepositoryProvider);
+
     try {
       SnackbarHelper.showInfo(context, "Generating ${format.toUpperCase()} report...");
       final directory = await getTemporaryDirectory();
       final dateSuffix = DateFormat('yyyyMMdd').format(DateTime.now());
 
       if (format == 'csv') {
-        final querySnapshot = await ref.read(monitoringRepositoryProvider).getMeasurementsByDateRange(
+        if (!mounted) return;
+        final querySnapshot = await monitoringRepo.getMeasurementsByDateRange(
           widget.pondId,
           _startDate,
           _endDate,
@@ -206,7 +210,8 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
           return;
         }
 
-        final querySnapshot = await ref.read(monitoringRepositoryProvider).getMeasurementsByDateRange(
+        if (!mounted) return;
+        final querySnapshot = await monitoringRepo.getMeasurementsByDateRange(
           widget.pondId,
           _startDate,
           _endDate,

@@ -528,12 +528,13 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
     );
 
     if (shouldSignOut == true) {
+      final logger = ref.read(appLoggerProvider);
       if (context.mounted) Navigator.of(context).pop();
       try {
         await FirebaseAuth.instance.signOut();
         await GoogleSignIn().signOut();
       } catch (e, stackTrace) {
-        ref.read(appLoggerProvider).error("Sign out error", error: e, stackTrace: stackTrace, tag: 'AUTH');
+        logger.error("Sign out error", error: e, stackTrace: stackTrace, tag: 'AUTH');
       }
     }
   }

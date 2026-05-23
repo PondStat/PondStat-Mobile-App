@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
@@ -44,8 +45,8 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
 
   // Cache the active stream so it is not recreated on every build/setState.
   Stream<List<_DailyRecord>>? _cachedStream;
-  String?
-  _cachedStreamParamLabel; // tracks which param the cached stream belongs to
+  String? _cachedStreamParamLabel; // tracks which param the cached stream belongs to
+  int? _lastTouchedSpotIndex;
 
   @override
   void initState() {
@@ -251,6 +252,7 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
           return GestureDetector(
             onTap: () {
               if (_selectedIndex != i) {
+                HapticFeedback.selectionClick();
                 setState(() {
                   _selectedIndex = i;
                   // Invalidate cache so _getStream() rebuilds for new param
@@ -604,6 +606,16 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
             ),
           ),
           lineTouchData: LineTouchData(
+            touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
+              if (response == null || response.lineBarSpots == null || response.lineBarSpots!.isEmpty) {
+                return;
+              }
+              final spotIndex = response.lineBarSpots!.first.spotIndex;
+              if (spotIndex != _lastTouchedSpotIndex) {
+                _lastTouchedSpotIndex = spotIndex;
+                HapticFeedback.selectionClick();
+              }
+            },
             touchTooltipData: LineTouchTooltipData(
               fitInsideHorizontally: true,
               fitInsideVertically: true,

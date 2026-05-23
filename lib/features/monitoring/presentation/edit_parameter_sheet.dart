@@ -259,7 +259,6 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
       );
       if (mounted) {
         widget.onSave();
-        Navigator.pop(context);
         final connectivityResult = await Connectivity().checkConnectivity().timeout(
           const Duration(seconds: 1),
           onTimeout: () => [ConnectivityResult.none],
@@ -270,6 +269,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
           } else {
             SnackbarHelper.showSuccess(context, "Measurements updated");
           }
+          Navigator.pop(context);
         }
       }
     } catch (e) {

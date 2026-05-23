@@ -29,6 +29,7 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
   bool _vibeMode = false;
   double _hapticCooldown = 0.0;
   late final AudioPlayer _audioPlayer;
+  int _audioTransitionToken = 0;
 
   // Ecosystem Particles and Organisms
   final List<NeonFish> _fishList = [];
@@ -108,11 +109,26 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
   }
 
   Future<void> _toggleVibeAudio(bool enable) async {
+    final token = ++_audioTransitionToken;
     try {
       if (enable) {
+        await _audioPlayer.setVolume(0.0);
         await _audioPlayer.setReleaseMode(ReleaseMode.loop);
         await _audioPlayer.play(UrlSource('https://www.soundjay.com/nature/sounds/ocean-wave-1.mp3'));
+        
+        // Slowly fade in volume over 500ms (20 steps of 25ms)
+        for (int i = 1; i <= 20; i++) {
+          await Future.delayed(const Duration(milliseconds: 25));
+          if (token != _audioTransitionToken || !mounted) return;
+          await _audioPlayer.setVolume(i / 20.0);
+        }
       } else {
+        // Slowly fade out volume over 500ms (20 steps of 25ms)
+        for (int i = 20; i >= 0; i--) {
+          await Future.delayed(const Duration(milliseconds: 25));
+          if (token != _audioTransitionToken || !mounted) return;
+          await _audioPlayer.setVolume(i / 20.0);
+        }
         await _audioPlayer.stop();
       }
     } catch (e) {

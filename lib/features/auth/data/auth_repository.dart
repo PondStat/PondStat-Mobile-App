@@ -16,7 +16,9 @@ AuthRepository authRepository(Ref ref) {
   final auth = ref.watch(firebaseAuthProvider);
   final notificationService = ref.watch(notificationServiceProvider);
   final logger = ref.watch(appLoggerProvider);
-  return AuthRepository(baseRef, auth, notificationService, logger);
+  final repository = AuthRepository(baseRef, auth, notificationService, logger);
+  ref.onDispose(repository.dispose);
+  return repository;
 }
 
 class AuthException implements Exception {

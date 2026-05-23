@@ -96,6 +96,24 @@ service cloud.firestore {
         allow delete: if canEditPond(resource.data.pondId);
       }
 
+      // ── POND EXPENSES ──
+      match /pond_expenses/{expenseId} {
+        allow read: if isPondMember(resource.data.pondId);
+        allow create: if canEditPond(request.resource.data.pondId)
+          && request.resource.data.recordedById == uid();
+        allow update: if canEditPond(resource.data.pondId);
+        allow delete: if canEditPond(resource.data.pondId);
+      }
+
+      // ── POND SALES ──
+      match /pond_sales/{saleId} {
+        allow read: if isPondMember(resource.data.pondId);
+        allow create: if canEditPond(request.resource.data.pondId)
+          && request.resource.data.recordedById == uid();
+        allow update: if canEditPond(resource.data.pondId);
+        allow delete: if canEditPond(resource.data.pondId);
+      }
+
       // ── CUSTOM PARAMETERS ──
       match /custom_parameters/{paramId} {
         allow read: if isAuthenticated();
