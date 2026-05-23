@@ -61,6 +61,8 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   late final Map<String, TextEditingController> valueControllers;
   late final Map<String, FocusNode> focusNodes;
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _customParamNameController = TextEditingController();
+  final TextEditingController _customParamUnitController = TextEditingController();
 
   bool _isSaving = false;
 
@@ -105,6 +107,8 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     }
 
     _notesController.dispose();
+    _customParamNameController.dispose();
+    _customParamUnitController.dispose();
     super.dispose();
   }
 
@@ -298,8 +302,8 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
 
 
   void _showCreateParameterDialog() {
-    final nameController = TextEditingController();
-    final unitController = TextEditingController();
+    _customParamNameController.clear();
+    _customParamUnitController.clear();
     String? selectedCategory;
 
     showDialog(
@@ -318,14 +322,14 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 PondStatTextField(
-                  controller: nameController,
+                  controller: _customParamNameController,
                   label: "Parameter Name",
                   hint: "e.g., Turbidity",
                   prefixIcon: Icons.science_outlined,
                 ),
                 const SizedBox(height: 12),
                 PondStatTextField(
-                  controller: unitController,
+                  controller: _customParamUnitController,
                   label: "Unit",
                   hint: "e.g., NTU",
                   prefixIcon: Icons.straighten_rounded,
@@ -395,15 +399,15 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
                   ),
                 ),
                 onPressed: () async {
-                  if (nameController.text.isNotEmpty &&
-                      unitController.text.isNotEmpty &&
+                  if (_customParamNameController.text.isNotEmpty &&
+                      _customParamUnitController.text.isNotEmpty &&
                       selectedCategory != null) {
                     String type =
                         widget.customType ??
                         ['daily', 'weekly', 'biweekly'][widget.tabIndex];
                     await ref.read(monitoringRepositoryProvider).addCustomParameter(
-                      label: nameController.text.trim(),
-                      unit: unitController.text.trim(),
+                      label: _customParamNameController.text.trim(),
+                      unit: _customParamUnitController.text.trim(),
                       type: type,
                       category: selectedCategory!,
                       pondId: widget.pondId,

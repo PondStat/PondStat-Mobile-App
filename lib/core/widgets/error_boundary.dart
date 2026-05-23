@@ -1,5 +1,27 @@
 import 'package:flutter/material.dart';
 
+// Global list of currently active error boundaries in the build stack.
+// Since Flutter builds synchronously and single-threaded, the top boundary
+// in this list is the one currently building its descendant subtree.
+final List<_ErrorBoundaryState> _activeBoundaries = [];
+
+bool _isGlobalHandlerInitialized = false;
+
+void _initializeGlobalErrorHandler() {
+  if (_isGlobalHandlerInitialized) return;
+  _isGlobalHandlerInitialized = true;
+
+  final originalBuilder = ErrorWidget.builder;
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    if (_activeBoundaries.isNotEmpty) {
+      final boundary = _activeBoundaries.last;
+      boundary.reportError(details.exception);
+      return const SizedBox.shrink(); // Temporary blank box during this frame
+    }
+    return originalBuilder(details);
+  };
+}
+
 /// A widget that catches build-time errors in its child and displays
 /// a compact fallback card instead of crashing the entire widget tree.
 ///
@@ -17,10 +39,45 @@ class ErrorBoundary extends StatefulWidget {
 
   @override
   State<ErrorBoundary> createState() => _ErrorBoundaryState();
+
+  @override
+  StatefulElement createElement() {
+    _initializeGlobalErrorHandler();
+    return ErrorBoundaryElement(this);
+  }
+}
+
+class ErrorBoundaryElement extends StatefulElement {
+  ErrorBoundaryElement(ErrorBoundary super.widget);
+
+  _ErrorBoundaryState get _boundaryState => (state as _ErrorBoundaryState);
+
+  @override
+  void performRebuild() {
+    _activeBoundaries.add(_boundaryState);
+    try {
+      super.performRebuild();
+    } finally {
+      _activeBoundaries.remove(_boundaryState);
+    }
+  }
 }
 
 class _ErrorBoundaryState extends State<ErrorBoundary> {
-  bool _hasError = false;
+  Object? _error;
+
+  void reportError(Object error) {
+    if (_error == null) {
+      // Schedule a rebuild to render the fallback card on the next frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _error = error;
+          });
+        }
+      });
+    }
+  }
 
   @override
   void didUpdateWidget(covariant ErrorBoundary oldWidget) {
@@ -28,13 +85,13 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
     // Reset error state when child identity changes (e.g. data rebuild)
     if (oldWidget.child.runtimeType != widget.child.runtimeType ||
         oldWidget.child.key != widget.child.key) {
-      setState(() => _hasError = false);
+      setState(() => _error = null);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_hasError) {
+    if (_error != null) {
       return widget.fallback ?? _defaultFallback(context);
     }
     return widget.child;
