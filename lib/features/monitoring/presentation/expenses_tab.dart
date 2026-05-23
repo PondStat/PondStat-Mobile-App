@@ -12,6 +12,7 @@ import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
 import 'package:pondstat/core/widgets/destructive_dialog.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/expense_summary_card.dart';
 
 class ExpensesTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -127,10 +128,10 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                 SliverPadding(
                   padding: const EdgeInsets.all(20),
                   sliver: SliverToBoxAdapter(
-                    child: _buildSummaryCard(
-                      totalGroupSpend,
-                      memberCount,
-                      splitShare,
+                    child: ExpenseSummaryCard(
+                      total: totalGroupSpend,
+                      members: memberCount,
+                      share: splitShare,
                     ),
                   ),
                 ),
@@ -163,132 +164,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
     );
   }
 
-  Widget _buildSummaryCard(double total, int members, double share) {
-    final currencyFormat = NumberFormat.currency(symbol: '₱', decimalDigits: 2);
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F766E).withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "TOTAL GROUP SPEND",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        currencyFormat.format(total),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.group_rounded,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      "$members ${members == 1 ? 'Member' : 'Members'}",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Individual Share",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      currencyFormat.format(share),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildExpenseCard(
     BuildContext context,

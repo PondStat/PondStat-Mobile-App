@@ -10,6 +10,9 @@ import 'package:pondstat/features/monitoring/presentation/widgets/record_form_fi
 import 'package:pondstat/features/monitoring/presentation/widgets/record_submit_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/all_recorded_state_card.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/create_parameter_dialog.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/delete_parameter_dialog.dart';
 
 class RecordDataSheet extends ConsumerStatefulWidget {
   final int tabIndex;
@@ -61,8 +64,6 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   late final Map<String, TextEditingController> valueControllers;
   late final Map<String, FocusNode> focusNodes;
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _customParamNameController = TextEditingController();
-  final TextEditingController _customParamUnitController = TextEditingController();
 
   bool _isSaving = false;
 
@@ -107,8 +108,6 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     }
 
     _notesController.dispose();
-    _customParamNameController.dispose();
-    _customParamUnitController.dispose();
     super.dispose();
   }
 
@@ -302,129 +301,12 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
 
 
   void _showCreateParameterDialog() {
-    _customParamNameController.clear();
-    _customParamUnitController.clear();
-    String? selectedCategory;
-
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            title: const Text(
-              "New Parameter",
-              style: TextStyle(fontWeight: FontWeight.w900),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                PondStatTextField(
-                  controller: _customParamNameController,
-                  label: "Parameter Name",
-                  hint: "e.g., Turbidity",
-                  prefixIcon: Icons.science_outlined,
-                ),
-                const SizedBox(height: 12),
-                PondStatTextField(
-                  controller: _customParamUnitController,
-                  label: "Unit",
-                  hint: "e.g., NTU",
-                  prefixIcon: Icons.straighten_rounded,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedCategory,
-                  decoration: InputDecoration(
-                    labelText: "Graph Category",
-                    prefixIcon: const Icon(
-                      Icons.category_rounded,
-                      color: Colors.grey,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: primaryColor, width: 2),
-                    ),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'Chemical',
-                      child: Text('Chemical'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Physical',
-                      child: Text('Physical'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Biological',
-                      child: Text('Biological'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      selectedCategory = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  "Cancel",
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () async {
-                  if (_customParamNameController.text.isNotEmpty &&
-                      _customParamUnitController.text.isNotEmpty &&
-                      selectedCategory != null) {
-                    String type =
-                        widget.customType ??
-                        ['daily', 'weekly', 'biweekly'][widget.tabIndex];
-                    await ref.read(monitoringRepositoryProvider).addCustomParameter(
-                      label: _customParamNameController.text.trim(),
-                      unit: _customParamUnitController.text.trim(),
-                      type: type,
-                      category: selectedCategory!,
-                      pondId: widget.pondId,
-                    );
-                    if (context.mounted) Navigator.pop(context);
-                  } else {
-                    SnackbarHelper.showInfo(context, "Please fill out all fields");
-                  }
-                },
-                child: const Text(
-                  "Create",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          );
-        },
+      builder: (context) => CreateParameterDialog(
+        pondId: widget.pondId,
+        tabIndex: widget.tabIndex,
+        customType: widget.customType,
       ),
     );
   }
@@ -432,74 +314,21 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   void _confirmDeleteParameter() {
     if (selectedDocId == null || selectedParameter == null) return;
 
-    showDialog(
+    showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.errorContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.warning_amber_rounded,
-                color: Theme.of(context).colorScheme.error,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              "Delete Parameter",
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-            ),
-          ],
-        ),
-        content: Text(
-          "Delete '${selectedParameter!.label}'? This will remove it for everyone.",
-          style: TextStyle(color: textMuted, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              "Cancel",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-              foregroundColor: Theme.of(context).colorScheme.error,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () async {
-              final idToDelete = selectedDocId!;
-              await ref.read(monitoringRepositoryProvider).deleteCustomParameter(idToDelete);
-              if (context.mounted) {
-                Navigator.pop(context);
-                setState(() {
-                  selectedParameter = null;
-                  selectedDocId = null;
-                });
-                SnackbarHelper.showInfo(context, "Parameter deleted");
-              }
-            },
-            child: const Text(
-              "Delete",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      builder: (context) => DeleteParameterDialog(
+        label: selectedParameter!.label,
+        docId: selectedDocId!,
       ),
-    );
+    ).then((deleted) {
+      if (deleted == true && mounted) {
+        setState(() {
+          selectedParameter = null;
+          selectedDocId = null;
+        });
+        SnackbarHelper.showInfo(context, "Parameter deleted");
+      }
+    });
   }
 
   // --- UI Helpers ---
@@ -654,103 +483,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     );
   }
 
-  Widget _buildAllRecordedState() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 24),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          colors: [
-            primaryColor.withValues(alpha: 0.08),
-            primaryColor.withValues(alpha: 0.02),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(
-          color: primaryColor.withValues(alpha: 0.15),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Circular premium checkmark icon with double borders
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: primaryColor.withValues(alpha: 0.2),
-                width: 4,
-              ),
-            ),
-            child: Icon(
-              Icons.verified_rounded,
-              color: primaryColor,
-              size: 48,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            "All Recorded!",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: textDark,
-              letterSpacing: -0.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(
-              "Great job! All parameters for this day have already been recorded for this pond.\n\nIf you need to make changes or updates, you can edit them directly in the listing or history tab.",
-              style: TextStyle(
-                fontSize: 14,
-                color: textMuted,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              _showCreateParameterDialog();
-            },
-            icon: const Icon(Icons.add_rounded, size: 20),
-            label: const Text(
-              "Add Custom Parameter",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildParameterGrid() {
     List<ParameterItem> hardcodedParams =
@@ -836,7 +569,9 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
             }
 
             if (filteredParams.isEmpty) {
-              return _buildAllRecordedState();
+              return AllRecordedStateCard(
+                onAddCustomParameter: _showCreateParameterDialog,
+              );
             }
 
             List<Widget> items = [];

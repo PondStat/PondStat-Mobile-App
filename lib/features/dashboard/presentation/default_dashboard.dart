@@ -19,11 +19,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
-import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 import 'package:pondstat/core/widgets/error_boundary.dart';
 import 'package:pondstat/core/router/route_names.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/notification_badge.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/pond_skeleton_loader.dart';
 
 class DefaultDashboardScreen extends ConsumerStatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -32,10 +33,8 @@ class DefaultDashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DefaultDashboardScreen> createState() => _DefaultDashboardScreenState();
 }
 
-class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
-    with SingleTickerProviderStateMixin {
+class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen> {
   bool _isFabVisible = true;
-  late AnimationController _shimmerController;
 
   bool _hasConnection = true;
   bool _showOnlineMessage = false;
@@ -62,11 +61,6 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 
     // Sync FCM token on initialization
     ref.read(authRepositoryProvider).updateFcmToken();
-
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
 
     _initConnectivity();
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
@@ -139,7 +133,6 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   @override
   void dispose() {
     _connectivitySubscription?.cancel();
-    _shimmerController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -413,7 +406,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
               ),
             ),
             actions: [
-              _NotificationBadge(
+              NotificationBadge(
                 onTap: () => context.push(AppRoutes.notifications),
                 isDark: isDark,
               ),
@@ -477,7 +470,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                         if (!snapshot.hasData &&
                             snapshot.connectionState ==
                                 ConnectionState.waiting)
-                          _buildSkeletonLoader()
+                          const PondSkeletonLoader()
                         else if (snapshot.hasError)
                           _buildErrorState(snapshot.error.toString())
                         else if (ponds.isEmpty)
@@ -1016,102 +1009,6 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     );
   }
 
-  Widget _buildSkeletonLoader() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final cardColor = theme.cardTheme.color ?? theme.cardColor;
-    final dividerColor = theme.dividerColor;
-    final placeholderColor = isDark ? Colors.grey.shade800 : Colors.white;
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 2,
-      itemBuilder: (context, index) {
-        final double titleWidth = 140.0 + (index % 3) * 40.0;
-        final double subWidth = 90.0 + (index % 2) * 30.0;
-
-        return Container(
-          height: 120,
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: dividerColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(16),
-          child: ListenableBuilder(
-            listenable: _shimmerController,
-            builder: (context, child) {
-              return ShaderMask(
-                blendMode: BlendMode.srcATop,
-                shaderCallback: (bounds) {
-                  return LinearGradient(
-                    colors: [dividerColor, cardColor, dividerColor],
-                    stops: const [0.1, 0.5, 0.9],
-                    begin: const Alignment(-1.0, -0.3),
-                    end: const Alignment(1.0, 0.3),
-                    transform: SlideGradientTransform(_shimmerController.value),
-                  ).createShader(bounds);
-                },
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 18,
-                      width: titleWidth,
-                      decoration: BoxDecoration(
-                        color: placeholderColor,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      height: 12,
-                      width: subWidth,
-                      decoration: BoxDecoration(
-                        color: placeholderColor,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const Spacer(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          height: 24,
-                          width: 80,
-                          decoration: BoxDecoration(
-                            color: placeholderColor,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        Container(
-                          height: 24,
-                          width: 24,
-                          decoration: BoxDecoration(
-                            color: placeholderColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildEmptyState(BuildContext context) {
     return RefreshIndicator(
       onRefresh: _refreshData,
@@ -1155,164 +1052,5 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   }
 }
 
-class _NotificationBadge extends ConsumerStatefulWidget {
-  final VoidCallback onTap;
-  final bool isDark;
 
-  const _NotificationBadge({
-    required this.onTap,
-    required this.isDark,
-  });
-
-  @override
-  ConsumerState<_NotificationBadge> createState() => _NotificationBadgeState();
-}
-
-class _NotificationBadgeState extends ConsumerState<_NotificationBadge>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _shakeController;
-  late final Animation<double> _shakeAnimation;
-  int _lastCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _shakeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.04), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -0.04, end: 0.04), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 0.04, end: -0.03), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -0.03, end: 0.03), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 0.03, end: 0.0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.easeInOut,
-    ));
-  }
-
-  @override
-  void dispose() {
-    _shakeController.dispose();
-    super.dispose();
-  }
-
-  void _triggerShake() {
-    if (mounted) {
-      _shakeController.reset();
-      _shakeController.forward();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final repository = ref.read(notificationsRepositoryProvider);
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return StreamBuilder<int>(
-      stream: repository.getUnreadCountStream(),
-      builder: (context, snapshot) {
-        final int unreadCount = snapshot.data ?? 0;
-
-        if (unreadCount > _lastCount) {
-          _lastCount = unreadCount;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _triggerShake();
-          });
-        } else if (unreadCount < _lastCount) {
-          _lastCount = unreadCount;
-        }
-
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            Semantics(
-              button: true,
-              label: unreadCount > 0
-                  ? '$unreadCount unread notifications'
-                  : 'Notifications',
-              child: RotationTransition(
-                turns: _shakeAnimation,
-                child: IconButton(
-                  icon: Icon(
-                    unreadCount > 0
-                        ? Icons.notifications_active_rounded
-                        : Icons.notifications_none_rounded,
-                    color: widget.isDark ? null : Colors.white,
-                    size: 28,
-                  ),
-                  onPressed: widget.onTap,
-                ),
-              ),
-            ),
-            Positioned(
-              right: 8,
-              top: 12,
-              child: AnimatedScale(
-                scale: unreadCount > 0 ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeOutBack,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: widget.isDark ? Colors.black : colorScheme.primary,
-                      width: 1.5,
-                    ),
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (Widget child, Animation<double> animation) {
-                      return ScaleTransition(
-                        scale: animation,
-                        child: FadeTransition(
-                          opacity: animation,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Text(
-                      unreadCount > 9 ? '9+' : '$unreadCount',
-                      key: ValueKey<int>(unreadCount),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-
-class SlideGradientTransform extends GradientTransform {
-  final double percent;
-  const SlideGradientTransform(this.percent);
-
-  @override
-  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.translationValues(
-      bounds.width * (percent * 3 - 1.5),
-      0.0,
-      0.0,
-    );
-  }
-}
 
