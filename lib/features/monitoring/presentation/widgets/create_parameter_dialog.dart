@@ -107,48 +107,70 @@ class _CreateParameterDialogState extends ConsumerState<CreateParameterDialog> {
           ],
         ),
       ),
+      actionsPadding: const EdgeInsets.only(
+        bottom: 20,
+        right: 20,
+        left: 20,
+      ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            "Cancel",
-            style: TextStyle(
-              color: Colors.grey,
-              fontWeight: FontWeight.bold,
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  "Cancel",
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  if (_customParamNameController.text.isNotEmpty &&
+                      _customParamUnitController.text.isNotEmpty &&
+                      selectedCategory != null) {
+                    String type = widget.customType ??
+                        ['daily', 'weekly', 'biweekly'][widget.tabIndex];
+                    await ref.read(monitoringRepositoryProvider).addCustomParameter(
+                          label: _customParamNameController.text.trim(),
+                          unit: _customParamUnitController.text.trim(),
+                          type: type,
+                          category: selectedCategory!,
+                          pondId: widget.pondId,
+                        );
+                    if (context.mounted) Navigator.pop(context);
+                  } else {
+                    SnackbarHelper.showInfo(context, "Please fill out all fields");
+                  }
+                },
+                child: const Text(
+                  "Create",
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
             ),
-          ),
-          onPressed: () async {
-            if (_customParamNameController.text.isNotEmpty &&
-                _customParamUnitController.text.isNotEmpty &&
-                selectedCategory != null) {
-              String type = widget.customType ??
-                  ['daily', 'weekly', 'biweekly'][widget.tabIndex];
-              await ref.read(monitoringRepositoryProvider).addCustomParameter(
-                    label: _customParamNameController.text.trim(),
-                    unit: _customParamUnitController.text.trim(),
-                    type: type,
-                    category: selectedCategory!,
-                    pondId: widget.pondId,
-                  );
-              if (context.mounted) Navigator.pop(context);
-            } else {
-              SnackbarHelper.showInfo(context, "Please fill out all fields");
-            }
-          },
-          child: const Text(
-            "Create",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          ],
         ),
       ],
     );

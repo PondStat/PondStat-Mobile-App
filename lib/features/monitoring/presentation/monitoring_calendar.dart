@@ -68,6 +68,11 @@ class MonitoringCalendar extends ConsumerWidget {
     final Color textDark = colorScheme.onSurface;
     final Color textMuted = colorScheme.onSurfaceVariant;
 
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    // Adapt rowHeight and daysOfWeekHeight to screen height dynamically
+    final double calendarRowHeight = (screenHeight * 0.055).clamp(36.0, 56.0);
+    final double calendarDaysOfWeekHeight = (screenHeight * 0.025).clamp(16.0, 24.0);
+
     // Constrain the query to the visible month to prevent a Firestore read bomb
     final startOfMonth = DateTime(focusedDay.year, focusedDay.month, 1);
     final endOfMonth = DateTime(
@@ -167,6 +172,8 @@ class MonitoringCalendar extends ConsumerWidget {
               startingDayOfWeek: StartingDayOfWeek.monday,
               availableCalendarFormats: const {CalendarFormat.month: 'Month'},
               headerVisible: false,
+              rowHeight: calendarRowHeight,
+              daysOfWeekHeight: calendarDaysOfWeekHeight,
 
               daysOfWeekStyle: DaysOfWeekStyle(
                 weekdayStyle: TextStyle(

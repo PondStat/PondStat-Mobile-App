@@ -44,36 +44,58 @@ class DeleteParameterDialog extends ConsumerWidget {
         "Delete '$label'? This will remove it for everyone.",
         style: TextStyle(color: textMuted, height: 1.4),
       ),
+      actionsPadding: const EdgeInsets.only(
+        bottom: 20,
+        right: 20,
+        left: 20,
+      ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(
-            "Cancel",
-            style: TextStyle(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.bold,
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  "Cancel",
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: theme.colorScheme.errorContainer,
-            foregroundColor: errorColor,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.errorContainer,
+                  foregroundColor: errorColor,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  await ref.read(monitoringRepositoryProvider).deleteCustomParameter(docId);
+                  if (context.mounted) {
+                    Navigator.pop(context, true);
+                  }
+                },
+                child: const Text(
+                  "Delete",
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
             ),
-          ),
-          onPressed: () async {
-            await ref.read(monitoringRepositoryProvider).deleteCustomParameter(docId);
-            if (context.mounted) {
-              Navigator.pop(context, true);
-            }
-          },
-          child: const Text(
-            "Delete",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          ],
         ),
       ],
     );

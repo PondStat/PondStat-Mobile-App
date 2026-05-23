@@ -408,6 +408,8 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
         title: const Text('Discard Unsaved Data?'),
         content: const Text(
           'You have entered data that has not been saved yet. Are you sure you want to close this sheet?',

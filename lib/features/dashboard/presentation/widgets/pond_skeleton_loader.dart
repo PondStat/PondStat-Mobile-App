@@ -17,7 +17,7 @@ class _PondSkeletonLoaderState extends State<PondSkeletonLoader>
     super.initState();
     _shimmerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1800),
     )..repeat();
   }
 
@@ -34,6 +34,12 @@ class _PondSkeletonLoaderState extends State<PondSkeletonLoader>
     final cardColor = theme.cardTheme.color ?? theme.cardColor;
     final dividerColor = theme.dividerColor;
     final placeholderColor = isDark ? Colors.grey.shade800 : Colors.white;
+
+    // Liquid-metal gloss: a bright highlight band sandwiched between
+    // the base divider color, giving a premium metallic sweep.
+    final highlightColor = isDark
+        ? Colors.grey.shade600
+        : Colors.white.withValues(alpha: 0.85);
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -65,10 +71,16 @@ class _PondSkeletonLoaderState extends State<PondSkeletonLoader>
                 blendMode: BlendMode.srcATop,
                 shaderCallback: (bounds) {
                   return LinearGradient(
-                    colors: [dividerColor, cardColor, dividerColor],
-                    stops: const [0.1, 0.5, 0.9],
-                    begin: const Alignment(-1.0, -0.3),
-                    end: const Alignment(1.0, 0.3),
+                    colors: [
+                      dividerColor,
+                      cardColor,
+                      highlightColor,
+                      cardColor,
+                      dividerColor,
+                    ],
+                    stops: const [0.0, 0.35, 0.5, 0.65, 1.0],
+                    begin: const Alignment(-1.2, -0.4),
+                    end: const Alignment(1.2, 0.4),
                     transform: SlideGradientTransform(_shimmerController.value),
                   ).createShader(bounds);
                 },

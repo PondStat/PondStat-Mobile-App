@@ -32,6 +32,7 @@ class AuthRepository {
   final NotificationService _notificationService;
   final AppLogger _log;
   StreamSubscription<String>? _tokenRefreshSub;
+  StreamSubscription<User?>? _authStateSub;
 
   AuthRepository(this._baseRef, this._auth, this._notificationService, this._log) {
     // SRP: Listen for FCM token refreshes and persist to Firestore.
@@ -39,11 +40,15 @@ class AuthRepository {
     _tokenRefreshSub = _notificationService.onTokenRefresh.listen(
       (newToken) => _persistFcmToken(newToken),
     );
+
+    // Auto-heal/sync user Firestore document on state changes (login, app launch, etc.)
+    _authStateSub = _auth.authStateChanges().listen((user) => _ensureUserDocument(user));
   }
 
-  /// Clean up the token refresh listener.
+  /// Clean up listeners.
   void dispose() {
     _tokenRefreshSub?.cancel();
+    _authStateSub?.cancel();
   }
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -90,11 +95,20 @@ class AuthRepository {
       if (!userDoc.exists) {
         await usersCollection.doc(user.uid).set({
           'fullName': user.displayName ?? 'New User',
-          'email': user.email,
+          'email': user.email?.toLowerCase() ?? '',
           'role': 'member',
           'assignedPond': null,
           'createdAt': FieldValue.serverTimestamp(),
         });
+      } else {
+        // Migration: Ensure existing user emails are saved in lowercase.
+        final data = userDoc.data();
+        final currentEmail = data?['email'] as String?;
+        if (currentEmail != null && currentEmail != currentEmail.toLowerCase()) {
+          await usersCollection.doc(user.uid).update({
+            'email': currentEmail.toLowerCase(),
+          });
+        }
       }
 
       // Update FCM token on login
@@ -130,6 +144,42 @@ class AuthRepository {
     } catch (e) {
       _log.error(
         'Error persisting FCM token',
+        error: e,
+        tag: 'AUTH',
+      );
+    }
+  }
+
+  /// Ensures the user's Firestore document exists and is properly synced.
+  Future<void> _ensureUserDocument(User? user) async {
+    if (user == null) return;
+
+    try {
+      final userDoc = await usersCollection.doc(user.uid).get();
+
+      if (!userDoc.exists) {
+        await usersCollection.doc(user.uid).set({
+          'fullName': user.displayName ?? 'New User',
+          'email': user.email?.toLowerCase() ?? '',
+          'role': 'member',
+          'assignedPond': null,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        _log.info('Created missing user document in Firestore for UID: ${user.uid}', tag: 'AUTH');
+      } else {
+        // Sync: Ensure existing user emails are saved in lowercase.
+        final data = userDoc.data();
+        final currentEmail = data?['email'] as String?;
+        if (currentEmail != null && currentEmail != currentEmail.toLowerCase()) {
+          await usersCollection.doc(user.uid).update({
+            'email': currentEmail.toLowerCase(),
+          });
+          _log.info('Normalized email to lowercase for UID: ${user.uid}', tag: 'AUTH');
+        }
+      }
+    } catch (e) {
+      _log.error(
+        'Error ensuring user document exists in Firestore',
         error: e,
         tag: 'AUTH',
       );

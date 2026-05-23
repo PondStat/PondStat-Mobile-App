@@ -461,6 +461,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
+          actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
           title: Row(
             children: [
               Container(

@@ -61,12 +61,18 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
   }
 
   Future<void> _loadData() async {
+    // Capture providers before any async gap to avoid ref access after unmount.
+    final pondRepo = ref.read(pondRepositoryProvider);
+    final authRepo = ref.read(authRepositoryProvider);
+    final monitoringRepo = ref.read(monitoringRepositoryProvider);
+    final logger = ref.read(appLoggerProvider);
+
     try {
       // 1. Fetch eligible users
-      final pondDoc = await ref.read(pondRepositoryProvider).pondsCollection
+      final pondDoc = await pondRepo.pondsCollection
           .doc(widget.pondId)
           .get();
-      if (!pondDoc.exists) return;
+      if (!mounted || !pondDoc.exists) return;
 
       final pond = pondDoc.data();
       if (pond == null) return;
@@ -75,9 +81,10 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
       List<Map<String, dynamic>> users = [];
       for (var entry in roles.entries) {
         if (entry.value == 'owner' || entry.value == 'editor') {
-          final userDoc = await ref.read(authRepositoryProvider).usersCollection
+          final userDoc = await authRepo.usersCollection
               .doc(entry.key)
               .get();
+          if (!mounted) return;
           if (userDoc.exists) {
             final userData = userDoc.data()!;
             users.add({
@@ -91,10 +98,11 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
       // 2. Fetch existing schedules for all those users
       for (var user in users) {
         final userId = user['id'];
-        final scheduleData = await ref.read(monitoringRepositoryProvider).getJobSchedule(
+        final scheduleData = await monitoringRepo.getJobSchedule(
           widget.pondId,
           userId,
         );
+        if (!mounted) return;
 
         // Initialize an empty 7-day schedule
         Map<String, dynamic> fullSchedule = {};
@@ -128,7 +136,7 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
         });
       }
     } catch (e, stackTrace) {
-      ref.read(appLoggerProvider).error('Error loading data for assignment', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
+      logger.error('Error loading data for assignment', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -165,6 +173,9 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
     setState(() => _isSaving = true);
     HapticFeedback.heavyImpact();
 
+    // Capture provider before async gap.
+    final monitoringRepo = ref.read(monitoringRepositoryProvider);
+
     try {
       int updatedCount = 0;
       for (var user in _eligibleUsers) {
@@ -183,12 +194,13 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
         }
 
         if (userChanged) {
-          await ref.read(monitoringRepositoryProvider).saveJobSchedule(
+          await monitoringRepo.saveJobSchedule(
             pondId: widget.pondId,
             userId: userId,
             userName: user['name'],
             schedule: current,
           );
+          if (!mounted) return;
           updatedCount++;
         }
       }

@@ -73,12 +73,13 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
   }
 
   Future<void> _inviteCollaborator() async {
-    final email = _emailController.text.trim().toLowerCase();
+    final emailInput = _emailController.text.trim();
+    final emailLowercase = emailInput.toLowerCase();
 
     final emailRegex = RegExp(
       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
     );
-    if (email.isEmpty || !emailRegex.hasMatch(email)) {
+    if (emailInput.isEmpty || !emailRegex.hasMatch(emailInput)) {
       SnackbarHelper.showInfo(context, 'Please enter a valid email address.');
       return;
     }
@@ -86,34 +87,47 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
     setState(() => _isAdding = true);
     FocusScope.of(context).unfocus();
 
+    // Capture providers before any async gap to avoid Riverpod ref access after unmount.
+    final authRepo = ref.read(authRepositoryProvider);
+    final pondRepo = ref.read(pondRepositoryProvider);
+
     try {
-      final query = await ref.read(authRepositoryProvider).usersCollection
-          .where('email', isEqualTo: email)
+      var query = await authRepo.usersCollection
+          .where('email', isEqualTo: emailLowercase)
           .limit(1)
           .get();
 
+      if (!mounted) return;
+
+      // Fallback: If not found, and the original input had capital letters, query by the exact casing.
+      if (query.docs.isEmpty && emailInput != emailLowercase) {
+        query = await authRepo.usersCollection
+            .where('email', isEqualTo: emailInput)
+            .limit(1)
+            .get();
+        
+        if (!mounted) return;
+      }
+
       if (query.docs.isEmpty) {
-        if (mounted) {
-          SnackbarHelper.showInfo(context, 'User not found. They must sign up for PondStat first.');
-        }
+        SnackbarHelper.showInfo(context, 'User not found. They must sign up for PondStat first.');
         setState(() => _isAdding = false);
         return;
       }
 
       final targetUserId = query.docs.first.id;
-      final pondRef = ref.read(pondRepositoryProvider).pondsCollection.doc(widget.pondId);
+      final pondRef = pondRepo.pondsCollection.doc(widget.pondId);
 
       await pondRef.update({
         'memberIds': FieldValue.arrayUnion([targetUserId]),
         'roles.$targetUserId': 'viewer',
       });
 
+      if (!mounted) return;
+
       HapticFeedback.heavyImpact();
       _emailController.clear();
-
-      if (mounted) {
-        SnackbarHelper.showSuccess(context, 'Collaborator added successfully!');
-      }
+      SnackbarHelper.showSuccess(context, 'Collaborator added successfully!');
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, 'Error adding collaborator: $e');
@@ -162,6 +176,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
         title: Row(
           children: [
             Container(
@@ -348,7 +363,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
                             controller: _emailController,
                             focusNode: _emailFocus,
                             label: 'Collaborator Email',
-                            hint: 'user@email.com',
+                            hint: 'user@up.edu.ph',
                             prefixIcon: Icons.email_rounded,
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.done,

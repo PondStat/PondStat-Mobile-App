@@ -133,6 +133,8 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
         title: const Text('Discard changes?'),
         content: const Text(
           'You have unsaved changes. Are you sure you want to discard them?',

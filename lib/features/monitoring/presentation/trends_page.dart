@@ -71,16 +71,16 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
   }
 
   Future<void> _selectDateRange(BuildContext context) async {
-    if (widget.userRole != 'owner') {
-      SnackbarHelper.showInfo(context, "Only the owner can set the date range.");
+    if (widget.userRole != 'owner' && widget.userRole != 'editor') {
+      SnackbarHelper.showInfo(context, "Only owners and editors can set the date range.");
       return;
     }
 
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
       initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
       builder: (context, child) {
         final brightness = Theme.of(context).brightness;
         return Theme(
@@ -594,7 +594,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
   }
 
   Widget _buildDateRangeSelector(BuildContext context) {
-    final bool isOwner = widget.userRole == 'owner';
+    final bool hasAccess = widget.userRole == 'owner' || widget.userRole == 'editor';
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -609,7 +609,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
             color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isOwner
+              color: hasAccess
                   ? const Color(0xFF0A74DA).withValues(alpha: 0.3)
                   : Colors.grey.withValues(alpha: 0.2),
             ),
@@ -628,7 +628,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
             children: [
               Icon(
                 Icons.date_range_rounded,
-                color: isOwner ? const Color(0xFF0A74DA) : Colors.grey,
+                color: hasAccess ? const Color(0xFF0A74DA) : Colors.grey,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -637,12 +637,12 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
-                  color: isOwner
+                  color: hasAccess
                       ? (isDark ? Colors.white : Colors.black87)
                       : Colors.grey,
                 ),
               ),
-              if (!isOwner) ...[
+              if (!hasAccess) ...[
                 const SizedBox(width: 8),
                 const Icon(Icons.lock_rounded, size: 16, color: Colors.grey),
               ],
