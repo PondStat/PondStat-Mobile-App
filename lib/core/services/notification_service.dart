@@ -69,9 +69,11 @@ class NotificationService implements AppNotifier {
     // Foreground notification handling
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (message.notification != null) {
+        final route = message.data['route'] as String?;
         _showLocalNotification(
           title: message.notification!.title ?? '',
           body: message.notification!.body ?? '',
+          payload: route,
         );
       }
     });
@@ -121,12 +123,13 @@ class NotificationService implements AppNotifier {
     return status.isGranted;
   }
 
-  /// Gets the FCM device token (requests permission first if needed).
+  /// Gets the FCM device token.
+  ///
+  /// **Do NOT call requestPermission here.** This is decoupled to allow silent
+  /// token synchronization on startup without JIT permission bypass.
   Future<String?> getDeviceToken() async {
     if (kIsWeb) return null;
     try {
-      final hasPermission = await requestPermission();
-      if (!hasPermission) return null;
       return await _fcm.getToken();
     } catch (e, stackTrace) {
       _logger.error('Error getting device token', error: e, stackTrace: stackTrace, tag: 'FCM');
@@ -162,6 +165,7 @@ class NotificationService implements AppNotifier {
   Future<void> _showLocalNotification({
     required String title,
     required String body,
+    String? payload,
   }) async {
     final androidDetails = AndroidNotificationDetails(
       NotificationChannel.fcmAlerts.id,
@@ -187,6 +191,7 @@ class NotificationService implements AppNotifier {
       title,
       body,
       details,
+      payload: payload,
     );
   }
 

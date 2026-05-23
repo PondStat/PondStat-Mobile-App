@@ -28,6 +28,7 @@ class EditPondSheet extends ConsumerStatefulWidget {
 class _EditPondSheetState extends ConsumerState<EditPondSheet> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _forceClose = false;
 
   late final TextEditingController _pondNameController;
   late final TextEditingController _stockingQuantityController;
@@ -37,6 +38,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
   final List<String> _speciesOptions = ['Shrimp', 'Tilapia'];
 
   bool get _isDirty {
+    if (_forceClose) return false;
     final initialName = widget.initialData['name'] ?? '';
     final initialQuantity =
         widget.initialData['stockingQuantity']?.toString() ?? '';
@@ -119,6 +121,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
       await ref.read(pondRepositoryProvider).updatePond(updatedPond);
 
       if (!mounted) return;
+      setState(() => _forceClose = true);
       Navigator.of(context).pop();
       SnackbarHelper.showSuccess(context, 'Pond updated successfully!');
     } catch (e, stackTrace) {
@@ -166,6 +169,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
         if (didPop) return;
         final shouldDiscard = await _showDiscardDialog();
         if (shouldDiscard && context.mounted) {
+          setState(() => _forceClose = true);
           Navigator.of(context).pop();
         }
       },

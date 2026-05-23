@@ -36,6 +36,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
   late final Map<String, TextEditingController> notesControllers;
   bool _isSaving = false;
   bool _isDirty = false;
+  bool _forceClose = false;
 
   @override
   void initState() {
@@ -269,6 +270,7 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
           } else {
             SnackbarHelper.showSuccess(context, "Measurements updated");
           }
+          setState(() => _forceClose = true);
           Navigator.pop(context);
         }
       }
@@ -477,12 +479,13 @@ class _EditParameterSheetState extends State<EditParameterSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: PopScope(
-        canPop: !_isDirty,
+        canPop: !_isDirty || _forceClose,
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
           final shouldPop = await _showDiscardDialog();
           if (shouldPop == true) {
             if (context.mounted) {
+              setState(() => _forceClose = true);
               Navigator.pop(context);
             }
           }

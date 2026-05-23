@@ -25,6 +25,8 @@ import 'package:go_router/go_router.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/notification_badge.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_skeleton_loader.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/delete_pond_dialog.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/pond_filter_dropdown.dart';
 
 class DefaultDashboardScreen extends ConsumerStatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -193,131 +195,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     return '$timeGreeting! Ready to check your ponds?';
   }
 
-  Future<bool?> _confirmDelete(BuildContext context, String pondName) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    String typedName = '';
 
-    return showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final bool isMatch = typedName.trim().toUpperCase() == 'DELETE';
-            return AlertDialog(
-              backgroundColor: theme.scaffoldBackgroundColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.error.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.warning_amber_rounded,
-                      color: colorScheme.error,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Delete Pond?",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Are you sure you want to delete '$pondName'? This action is permanent and will erase all data, measurements, and history associated with it.",
-                    style: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      height: 1.5,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Type 'DELETE' to confirm:",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    autofocus: true,
-                    onChanged: (val) => setState(() => typedName = val),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: isDark ? Colors.white12 : Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(
-                    "Cancel",
-                    style: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.error,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: isDark
-                        ? Colors.white12
-                        : Colors.grey.shade300,
-                    disabledForegroundColor: isDark
-                        ? Colors.white38
-                        : Colors.grey.shade500,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: isMatch
-                      ? () => Navigator.pop(context, true)
-                      : null,
-                  child: const Text(
-                    "Delete Forever",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   Future<void> _deletePond(String pondId, String pondName) async {
     try {
@@ -712,7 +590,13 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                       const SizedBox(width: 12),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
-                        child: _buildFilterDropdown(uniqueSpecies, colorScheme),
+                        child: PondFilterDropdown(
+                          uniqueSpecies: uniqueSpecies,
+                          filterRole: _filterRole,
+                          filterSpecies: _filterSpecies,
+                          onRoleChanged: (role) => setState(() => _filterRole = role),
+                          onSpeciesChanged: (species) => setState(() => _filterSpecies = species),
+                        ),
                       ),
                     ],
                   ),
@@ -813,9 +697,9 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                       onPressed: (context) async {
                         HapticFeedback.mediumImpact();
                         bool confirm =
-                            await _confirmDelete(
-                              context,
-                              pondName,
+                            await showDialog<bool>(
+                              context: context,
+                              builder: (context) => DeletePondDialog(pondName: pondName),
                             ) ??
                             false;
                         if (confirm) {
@@ -873,143 +757,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
     );
   }
 
-  Widget _buildFilterDropdown(List<String> uniqueSpecies, ColorScheme colorScheme) {
-    int activeFiltersCount = 0;
-    if (_filterRole != null) activeFiltersCount++;
-    if (_filterSpecies != null) activeFiltersCount++;
 
-    return PopupMenuButton<String>(
-      offset: const Offset(0, 50),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      tooltip: 'Filter Ponds',
-      onSelected: (value) {
-        if (value.startsWith('role:')) {
-          final role = value.split(':')[1];
-          setState(() => _filterRole = role.isEmpty ? null : role);
-        } else if (value.startsWith('species:')) {
-          final species = value.split(':')[1];
-          setState(() => _filterSpecies = species.isEmpty ? null : species);
-        }
-      },
-      itemBuilder: (context) {
-        return [
-          PopupMenuItem(
-            enabled: false,
-            child: Text('Roles', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary)),
-          ),
-          PopupMenuItem(
-            value: 'role:',
-            child: Row(
-              children: [
-                Icon(Icons.check, color: _filterRole == null ? colorScheme.primary : Colors.transparent),
-                const SizedBox(width: 12),
-                const Text('All Roles'),
-              ],
-            ),
-          ),
-          PopupMenuItem(
-            value: 'role:owner',
-            child: Row(
-              children: [
-                Icon(Icons.check, color: _filterRole == 'owner' ? colorScheme.primary : Colors.transparent),
-                const SizedBox(width: 12),
-                const Text('Owner'),
-              ],
-            ),
-          ),
-          PopupMenuItem(
-            value: 'role:editor',
-            child: Row(
-              children: [
-                Icon(Icons.check, color: _filterRole == 'editor' ? colorScheme.primary : Colors.transparent),
-                const SizedBox(width: 12),
-                const Text('Editor'),
-              ],
-            ),
-          ),
-          PopupMenuItem(
-            value: 'role:viewer',
-            child: Row(
-              children: [
-                Icon(Icons.check, color: _filterRole == 'viewer' ? colorScheme.primary : Colors.transparent),
-                const SizedBox(width: 12),
-                const Text('Viewer'),
-              ],
-            ),
-          ),
-          if (uniqueSpecies.isNotEmpty) ...[
-            const PopupMenuDivider(),
-            PopupMenuItem(
-              enabled: false,
-              child: Text('Species', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary)),
-            ),
-            PopupMenuItem(
-              value: 'species:',
-              child: Row(
-                children: [
-                  Icon(Icons.check, color: _filterSpecies == null ? colorScheme.primary : Colors.transparent),
-                  const SizedBox(width: 12),
-                  const Text('All Species'),
-                ],
-              ),
-            ),
-            for (final species in uniqueSpecies)
-              PopupMenuItem(
-                value: 'species:$species',
-                child: Row(
-                  children: [
-                    Icon(Icons.check, color: _filterSpecies == species ? colorScheme.primary : Colors.transparent),
-                    const SizedBox(width: 12),
-                    Text(species),
-                  ],
-                ),
-              ),
-          ],
-        ];
-      },
-      child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: activeFiltersCount > 0 
-              ? colorScheme.primary.withValues(alpha: 0.1) 
-              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: activeFiltersCount > 0 ? colorScheme.primary : Colors.transparent,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.filter_list_rounded, 
-              size: 20, 
-              color: activeFiltersCount > 0 ? colorScheme.primary : colorScheme.onSurfaceVariant,
-            ),
-            if (activeFiltersCount > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '$activeFiltersCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildEmptyState(BuildContext context) {
     return RefreshIndicator(

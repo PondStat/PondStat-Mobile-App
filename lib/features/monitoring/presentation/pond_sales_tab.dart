@@ -77,15 +77,15 @@ class _PondSalesTabState extends ConsumerState<PondSalesTab> {
           });
 
         double totalRevenue = 0;
-        double totalVolume = 0;
-        String volumeUnit = 'kg';
+        final Map<String, double> volumesByUnit = {};
 
         for (var doc in docs) {
           final data = doc.data();
           totalRevenue += (data['totalAmount'] as num?)?.toDouble() ?? 0.0;
-          totalVolume += (data['quantity'] as num?)?.toDouble() ?? 0.0;
-          if (data['unit'] != null) {
-            volumeUnit = data['unit'];
+          final double qty = (data['quantity'] as num?)?.toDouble() ?? 0.0;
+          final String unit = data['unit']?.toString().trim() ?? 'kg';
+          if (qty > 0) {
+            volumesByUnit[unit] = (volumesByUnit[unit] ?? 0.0) + qty;
           }
         }
 
@@ -98,7 +98,7 @@ class _PondSalesTabState extends ConsumerState<PondSalesTab> {
               SliverPadding(
                 padding: const EdgeInsets.all(20),
                 sliver: SliverToBoxAdapter(
-                  child: _buildSummaryCard(totalRevenue, totalVolume, volumeUnit),
+                  child: _buildSummaryCard(totalRevenue, volumesByUnit),
                 ),
               ),
               if (docs.isEmpty)
@@ -124,8 +124,14 @@ class _PondSalesTabState extends ConsumerState<PondSalesTab> {
     );
   }
 
-  Widget _buildSummaryCard(double totalRevenue, double totalVolume, String unit) {
+  Widget _buildSummaryCard(double totalRevenue, Map<String, double> volumesByUnit) {
     final currencyFormat = NumberFormat.currency(symbol: '₱', decimalDigits: 2);
+
+    final List<String> volumeStrings = [];
+    volumesByUnit.forEach((unit, volume) {
+      volumeStrings.add("${volume.toStringAsFixed(1)} $unit");
+    });
+    final String volumeText = volumeStrings.isEmpty ? "0.0 kg" : volumeStrings.join(", ");
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -188,6 +194,7 @@ class _PondSalesTabState extends ConsumerState<PondSalesTab> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(
                       Icons.scale_rounded,
@@ -196,7 +203,7 @@ class _PondSalesTabState extends ConsumerState<PondSalesTab> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      "${totalVolume.toStringAsFixed(1)} $unit",
+                      volumeText,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

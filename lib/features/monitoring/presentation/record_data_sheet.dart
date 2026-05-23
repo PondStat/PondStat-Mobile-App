@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
-import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/record_form_fields.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/record_submit_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/core/widgets/primary_button.dart';
-import 'package:pondstat/features/monitoring/presentation/widgets/all_recorded_state_card.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/create_parameter_dialog.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/delete_parameter_dialog.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/time_picker_card.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/parameter_selection_grid.dart';
 
 class RecordDataSheet extends ConsumerStatefulWidget {
   final int tabIndex;
@@ -66,6 +64,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   final TextEditingController _notesController = TextEditingController();
 
   bool _isSaving = false;
+  bool _forceClose = false;
 
   Color get textDark => Theme.of(context).colorScheme.onSurface;
   Color get textMuted => Theme.of(context).colorScheme.onSurfaceVariant;
@@ -286,6 +285,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
             _closeForm();
           }
         } else {
+          setState(() => _forceClose = true);
           Navigator.pop(context);
         }
       }
@@ -334,336 +334,6 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   }
 
   // --- UI Helpers ---
-
-  Widget _buildParamTile({
-    required ParameterItem param,
-    String? docId,
-    required List<ParameterItem> allParams,
-    required int index,
-  }) {
-    bool isSelected = _wizardSequence.contains(param);
-
-    return InkWell(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        setState(() {
-          if (isSelected) {
-            final idx = _wizardSequence.indexOf(param);
-            _wizardSequence.removeAt(idx);
-            _wizardDocIds.removeAt(idx);
-          } else {
-            _wizardSequence.add(param);
-            _wizardDocIds.add(docId);
-          }
-        });
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? LinearGradient(
-                  colors: [
-                    param.getColor(context).withValues(alpha: 0.85),
-                    param.getColor(context),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: isSelected
-              ? null
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? param.getColor(context) : Colors.transparent,
-            width: 2,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: param.getColor(context).withValues(alpha: 0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : param.getColor(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    param.icon,
-                    color: isSelected ? Colors.white : param.getColor(context),
-                    size: 20,
-                  ),
-                ),
-                Text(
-                  param.label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    color: isSelected ? Colors.white : textDark,
-                    letterSpacing: -0.2,
-                    height: 1.1,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
-              ],
-            ),
-            if (isSelected)
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.check_rounded,
-                    size: 12,
-                    color: param.getColor(context),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddNewButton() {
-    return InkWell(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        _showCreateParameterDialog();
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant,
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.add_rounded,
-              color: Theme.of(context).colorScheme.outline,
-              size: 28,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              "Custom",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.outline,
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-
-  Widget _buildParameterGrid() {
-    List<ParameterItem> hardcodedParams =
-        widget.customParams ??
-        MonitoringParameters.getParametersByIndex(
-          widget.tabIndex,
-          widget.species,
-        );
-    String type =
-        widget.customType ?? ['daily', 'weekly', 'biweekly'][widget.tabIndex];
-
-    List<Widget> gridItems = [];
-
-    if (type == 'growth') {
-      gridItems = hardcodedParams.asMap().entries.map((e) {
-        return _buildParamTile(
-          param: e.value,
-          docId: null,
-          allParams: hardcodedParams,
-          index: e.key,
-        );
-      }).toList();
-      return _buildGridWithStartButton(gridItems);
-    }
-
-    final String dateKey =
-        "${widget.selectedDay.year}-${widget.selectedDay.month}-${widget.selectedDay.day}";
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: ref.read(monitoringRepositoryProvider).customParametersCollection
-          .where('type', isEqualTo: type)
-          .where('pondId', isEqualTo: widget.pondId)
-          .snapshots(),
-      builder: (context, customSnapshot) {
-        List<ParameterItem> allParams = List.from(hardcodedParams);
-        List<String?> docIds = List.filled(
-          hardcodedParams.length,
-          null,
-          growable: true,
-        );
-
-        if (customSnapshot.hasData) {
-          for (var doc in customSnapshot.data!.docs) {
-            final data = doc.data() as Map<String, dynamic>;
-            allParams.add(
-              ParameterItem(
-                label: data['label'],
-                unit: data['unit'] ?? '',
-                icon: Icons.dashboard_customize_rounded,
-                category: ParameterCategory.custom,
-                createdBy: data['createdBy'],
-              ),
-            );
-            docIds.add(doc.id);
-          }
-        }
-
-        return StreamBuilder<QuerySnapshot>(
-          stream: ref.read(monitoringRepositoryProvider).measurementsCollection
-              .where('pondId', isEqualTo: widget.pondId)
-              .where('type', isEqualTo: type)
-              .where('dateKey', isEqualTo: dateKey)
-              .snapshots(),
-          builder: (context, measurementsSnapshot) {
-            final Set<String> recordedLabels = {};
-            if (measurementsSnapshot.hasData) {
-              for (var doc in measurementsSnapshot.data!.docs) {
-                final data = doc.data() as Map<String, dynamic>;
-                if (data['parameter'] != null) {
-                  recordedLabels.add(data['parameter'] as String);
-                }
-              }
-            }
-
-            final List<ParameterItem> filteredParams = [];
-            final List<String?> filteredDocIds = [];
-
-            for (int i = 0; i < allParams.length; i++) {
-              if (!recordedLabels.contains(allParams[i].label)) {
-                filteredParams.add(allParams[i]);
-                filteredDocIds.add(docIds[i]);
-              }
-            }
-
-            if (filteredParams.isEmpty) {
-              return AllRecordedStateCard(
-                onAddCustomParameter: _showCreateParameterDialog,
-              );
-            }
-
-            List<Widget> items = [];
-            for (int i = 0; i < filteredParams.length; i++) {
-              items.add(
-                _buildParamTile(
-                  param: filteredParams[i],
-                  docId: filteredDocIds[i],
-                  allParams: filteredParams,
-                  index: i,
-                ),
-              );
-            }
-            items.add(_buildAddNewButton());
-            return _buildGridWithStartButton(items);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildGridWithStartButton(List<Widget> gridItems) {
-    return Column(
-      children: [
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.95,
-          ),
-          itemCount: gridItems.length,
-          itemBuilder: (context, i) => gridItems[i],
-        ),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(scale: animation, child: child),
-            );
-          },
-          child: _wizardSequence.isNotEmpty
-              ? Column(
-                  key: const ValueKey('start_button_area'),
-                  children: [
-                    const SizedBox(height: 32),
-                    PrimaryButton(
-                      text: "Start Recording (${_wizardSequence.length})",
-                      icon: Icons.play_arrow_rounded,
-                      onPressed: () {
-                        HapticFeedback.heavyImpact();
-                        setState(() {
-                          _isWizardStarted = true;
-                          _wizardStepIndex = 0;
-                          selectedParameter = _wizardSequence[_wizardStepIndex];
-                          selectedDocId = _wizardDocIds[_wizardStepIndex];
-                        });
-                        Future.delayed(const Duration(milliseconds: 300), () {
-                          if (mounted) focusNodes['A-1']?.requestFocus();
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          _wizardSequence.clear();
-                          _wizardDocIds.clear();
-                        });
-                      },
-                      child: Text(
-                        "Clear Selection",
-                        style: TextStyle(
-                          color: textMuted,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : const SizedBox.shrink(key: ValueKey('empty_start_button')),
-        ),
-      ],
-    );
-  }
 
   Widget _buildInputForm() {
     final Color themeColor = selectedParameter!.getColor(context);
@@ -786,7 +456,11 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
           ],
         ),
         const SizedBox(height: 28),
-        _buildTimePickerCard(themeColor),
+        TimePickerCard(
+          selectedTime: selectedTime,
+          themeColor: themeColor,
+          onTimeChanged: (time) => setState(() => selectedTime = time),
+        ),
         const SizedBox(height: 32),
         RecordFormFields(
           selectedParameter: selectedParameter!,
@@ -828,81 +502,17 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     );
   }
 
-  Widget _buildTimePickerCard(Color themeColor) {
-    return InkWell(
-      onTap: () async {
-        final picked = await showTimePicker(
-          context: context,
-          initialTime: selectedTime,
-        );
-        if (picked != null) {
-          HapticFeedback.selectionClick();
-          setState(() => selectedTime = picked);
-        }
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.access_time_filled_rounded,
-                    color: textMuted,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  selectedTime.format(context),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                    color: textDark,
-                  ),
-                ),
-              ],
-            ),
-            Text(
-              "Edit",
-              style: TextStyle(color: themeColor, fontWeight: FontWeight.w800),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: _forceClose,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final bool shouldPop = await _onWillPop();
         if (shouldPop && context.mounted) {
+          setState(() => _forceClose = true);
           Navigator.pop(context);
         }
       },
@@ -1081,7 +691,48 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
       child: selectedParameter == null
           ? KeyedSubtree(
               key: const ValueKey('grid'),
-              child: _buildParameterGrid(),
+              child: ParameterSelectionGrid(
+                tabIndex: widget.tabIndex,
+                species: widget.species,
+                pondId: widget.pondId,
+                selectedDay: widget.selectedDay,
+                customParams: widget.customParams,
+                customType: widget.customType,
+                wizardSequence: _wizardSequence,
+                wizardDocIds: _wizardDocIds,
+                onShowCreateDialog: _showCreateParameterDialog,
+                onParameterToggled: (param, docId) {
+                  setState(() {
+                    if (_wizardSequence.contains(param)) {
+                      final idx = _wizardSequence.indexOf(param);
+                      _wizardSequence.removeAt(idx);
+                      _wizardDocIds.removeAt(idx);
+                    } else {
+                      _wizardSequence.add(param);
+                      _wizardDocIds.add(docId);
+                    }
+                  });
+                },
+                onStartRecording: () {
+                  HapticFeedback.heavyImpact();
+                  setState(() {
+                    _isWizardStarted = true;
+                    _wizardStepIndex = 0;
+                    selectedParameter = _wizardSequence[_wizardStepIndex];
+                    selectedDocId = _wizardDocIds[_wizardStepIndex];
+                  });
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    if (mounted) focusNodes['A-1']?.requestFocus();
+                  });
+                },
+                onClearSelection: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _wizardSequence.clear();
+                    _wizardDocIds.clear();
+                  });
+                },
+              ),
             )
           : KeyedSubtree(key: const ValueKey('form'), child: _buildInputForm()),
     );

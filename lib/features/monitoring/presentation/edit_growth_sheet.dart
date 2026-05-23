@@ -140,6 +140,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
 
       if (!mounted) return;
       widget.onSave();
+      setState(() => _isDirty = false);
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
@@ -195,6 +196,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
           final shouldPop = await _showDiscardDialog();
           if (shouldPop == true) {
             if (context.mounted) {
+              setState(() => _isDirty = false);
               Navigator.pop(context);
             }
           }

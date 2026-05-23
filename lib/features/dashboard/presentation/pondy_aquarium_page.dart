@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'widgets/pondy_companion.dart';
 import 'widgets/aquarium_painters.dart';
+import 'widgets/aquarium_models.dart';
+import 'utils/aquarium_physics.dart';
 
 class PondyAquariumPage extends StatefulWidget {
   final String statusMood;
@@ -158,135 +160,21 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
     final double width = MediaQuery.of(context).size.width.clamp(200.0, 1000.0);
     final double height = MediaQuery.of(context).size.height.clamp(300.0, 2000.0);
 
-    // 1. Neon Schooling Fish Physics
-    double avgX = 0;
-    double avgY = 0;
-    if (_fishList.isNotEmpty) {
-      for (final fish in _fishList) {
-        avgX += fish.position.dx;
-        avgY += fish.position.dy;
-      }
-      avgX /= _fishList.length;
-      avgY /= _fishList.length;
-    }
-
-    for (final fish in _fishList) {
-      final double dx = avgX - fish.position.dx;
-      final double dy = avgY - fish.position.dy;
-      final double distToCenter = math.sqrt(dx * dx + dy * dy);
-      if (distToCenter > 15.0) {
-        final double targetAngle = math.atan2(dy, dx);
-        fish.angle = fish.angle * 0.96 + targetAngle * 0.04;
-      }
-      fish.angle += (_random.nextDouble() - 0.5) * 0.14;
-      fish.position += Offset(
-        math.cos(fish.angle) * fish.speed,
-        math.sin(fish.angle) * fish.speed,
-      );
-
-      final double margin = 40.0;
-      if (fish.position.dx < -margin) fish.position = Offset(width + margin, fish.position.dy);
-      if (fish.position.dx > width + margin) fish.position = Offset(-margin, fish.position.dy);
-      if (fish.position.dy < 60.0) fish.position = Offset(fish.position.dx, height - 120.0);
-      if (fish.position.dy > height - 100.0) fish.position = Offset(fish.position.dx, 100.0);
-    }
-
-    // 2. Food Pellets Sinking & Settling Gravity Physics
-    for (int i = _foodPellets.length - 1; i >= 0; i--) {
-      final pellet = _foodPellets[i];
-      if (pellet.settled) {
-        pellet.settleTicks++;
-        pellet.opacity = (1.0 - (pellet.settleTicks / 240.0)).clamp(0.0, 1.0);
-        if (pellet.settleTicks > 240) {
-          _foodPellets.removeAt(i);
-        }
-      } else {
-        // Sinks slowly with gentle diagonal sinus drift
-        final double drift = math.sin(_timePhase * 3.5 + pellet.driftPhase) * 0.35;
-        pellet.position += Offset(drift, pellet.speedY);
-
-        // Sand dune collision check (seabed settled bounds)
-        if (pellet.position.dy >= height - 32) {
-          pellet.position = Offset(pellet.position.dx, height - 32);
-          pellet.settled = true;
-        }
-      }
-    }
-
-    // 3. Floaty Algae Particles
-    for (final algae in _algaeParticles) {
-      algae.position += Offset(algae.speedX, algae.speedY);
-      algae.angle += 0.005;
-      if (algae.position.dx < -20) algae.position = Offset(width + 20, algae.position.dy);
-      if (algae.position.dx > width + 20) algae.position = Offset(-20, algae.position.dy);
-      if (algae.position.dy < 40) algae.position = Offset(algae.position.dx, height - 80);
-      if (algae.position.dy > height - 60) algae.position = Offset(algae.position.dx, 60);
-    }
-
-    // 4. Translucent Rising Plankton
-    for (final plankton in _planktonList) {
-      final double waveDrift = math.sin(_timePhase * 2.0 + plankton.phaseOffset) * 0.12;
-      plankton.position = Offset(
-        plankton.position.dx + waveDrift,
-        plankton.position.dy - plankton.speedY,
-      );
-      if (plankton.position.dy < 40) {
-        plankton.position = Offset(_random.nextDouble() * width, height - 40);
-      }
-    }
-
-    // 5. Bioluminescent Neon Jellyfish Pulsating Physics
-    if (_isNightMode) {
-      for (final jelly in _jellyfishList) {
-        // Bell contraction drives movement bursts
-        final double contraction = 1.0 + 0.16 * math.sin(_timePhase * 2.6 + jelly.phaseOffset);
-        final double effectiveSpeed = contraction < 0.95 ? jelly.speed * 2.0 : jelly.speed * 0.35;
-
-        // Propels upward and drifts slightly left/right
-        jelly.position = Offset(
-          jelly.position.dx + math.sin(_timePhase * 0.8 + jelly.phaseOffset) * 0.2,
-          jelly.position.dy - effectiveSpeed,
-        );
-
-        if (jelly.position.dy < -jelly.size * 2) {
-          jelly.position = Offset(_random.nextDouble() * width, height + jelly.size * 2);
-        }
-      }
-    }
-
-    // 6. Vibe Mode Bubbles Generator & Pop Haptics
-    if (_vibeMode) {
-      // Spawn bubble streams continuously
-      if (_random.nextDouble() < 0.08) {
-        _vibeBubbles.add(VibeBubble(
-          position: Offset(_random.nextDouble() * width, height + 10),
-          speedY: 1.5 + _random.nextDouble() * 2.0,
-          size: 3.0 + _random.nextDouble() * 5.0,
-          phaseOffset: _random.nextDouble() * 50.0,
-        ));
-      }
-
-      // Physics loop for vibe bubbles
-      _hapticCooldown -= 0.016;
-      for (int i = _vibeBubbles.length - 1; i >= 0; i--) {
-        final bubble = _vibeBubbles[i];
-        bubble.position = Offset(
-          bubble.position.dx + math.sin(_timePhase * 4.0 + bubble.phaseOffset) * 0.45,
-          bubble.position.dy - bubble.speedY,
-        );
-
-        // Popping haptics at surface check
-        if (bubble.position.dy < 80.0) {
-          _vibeBubbles.removeAt(i);
-          if (_hapticCooldown <= 0.0) {
-            HapticFeedback.selectionClick();
-            _hapticCooldown = 0.28; // avoid excessive haptic floods
-          }
-        }
-      }
-    } else {
-      _vibeBubbles.clear();
-    }
+    _hapticCooldown = AquariumPhysics.updateEcosystem(
+      fishList: _fishList,
+      foodPellets: _foodPellets,
+      algaeParticles: _algaeParticles,
+      planktonList: _planktonList,
+      jellyfishList: _jellyfishList,
+      vibeBubbles: _vibeBubbles,
+      timePhase: _timePhase,
+      width: width,
+      height: height,
+      isNightMode: _isNightMode,
+      vibeMode: _vibeMode,
+      hapticCooldown: _hapticCooldown,
+      random: _random,
+    );
   }
 
   void _spawnFoodPellet(Offset tapPos) {

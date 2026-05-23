@@ -43,8 +43,13 @@ class AuthRepository {
       (newToken) => _persistFcmToken(newToken),
     );
 
-    // Auto-heal/sync user Firestore document on state changes (login, app launch, etc.)
-    _authStateSub = _auth.authStateChanges().listen((user) => _ensureUserDocument(user));
+    // Auto-heal/sync user Firestore document and sync FCM token on state changes (login, app launch, etc.)
+    _authStateSub = _auth.authStateChanges().listen((user) {
+      if (user != null) {
+        _ensureUserDocument(user);
+        updateFcmToken();
+      }
+    });
   }
 
   /// Clean up listeners.

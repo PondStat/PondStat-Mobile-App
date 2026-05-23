@@ -59,7 +59,15 @@ service cloud.firestore {
           && request.resource.data.ownerId == uid()
           && request.resource.data.memberIds.hasOnly([uid()])
           && request.resource.data.roles[uid()] == 'owner';
-        allow update: if isAuthenticated() && (resource.data.ownerId == uid() || resource.data.roles[uid()] == 'editor');
+        allow update: if isAuthenticated() && (
+          resource.data.ownerId == uid() || 
+          (
+            resource.data.roles[uid()] == 'editor' &&
+            request.resource.data.ownerId == resource.data.ownerId &&
+            request.resource.data.memberIds == resource.data.memberIds &&
+            request.resource.data.roles == resource.data.roles
+          )
+        );
         allow delete: if isAuthenticated() && resource.data.ownerId == uid();
       }
 

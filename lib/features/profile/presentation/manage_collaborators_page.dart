@@ -118,6 +118,16 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
       final targetUserId = query.docs.first.id;
       final pondRef = pondRepo.pondsCollection.doc(widget.pondId);
 
+      final pondSnapshot = await pondRef.get();
+      if (pondSnapshot.exists && mounted) {
+        final roles = pondSnapshot.data()?.roles ?? {};
+        if (roles.containsKey(targetUserId)) {
+          SnackbarHelper.showInfo(context, 'This user is already a collaborator.');
+          setState(() => _isAdding = false);
+          return;
+        }
+      }
+
       await pondRef.update({
         'memberIds': FieldValue.arrayUnion([targetUserId]),
         'roles.$targetUserId': 'viewer',
@@ -247,6 +257,15 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
           'memberIds': FieldValue.arrayRemove([userId]),
           'roles.$userId': FieldValue.delete(),
         });
+      } else if (newRole == 'owner') {
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        if (currentUserId != null) {
+          await pondRef.update({
+            'ownerId': userId,
+            'roles.$userId': 'owner',
+            'roles.$currentUserId': 'editor', // Demote current owner to editor
+          });
+        }
       } else {
         await pondRef.update({'roles.$userId': newRole});
       }
@@ -262,13 +281,55 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: backgroundLight,
-        body: SafeArea(
-          child: Column(
-            children: [
+    return StreamBuilder<DocumentSnapshot<Pond>>(
+      stream: ref.read(pondRepositoryProvider).pondsCollection
+          .doc(widget.pondId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(child: Text("Error: ${snapshot.error}")),
+          );
+        }
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final pond = snapshot.data?.data();
+        final roles = pond?.roles ?? {};
+        final myRole = roles[currentUserId];
+
+        if (myRole != 'owner') {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text("Access Denied"),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Text(
+                  "Only the pond owner is authorized to manage collaborators.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Scaffold(
+            backgroundColor: backgroundLight,
+            body: SafeArea(
+              child: Column(
+                children: [
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20.0,
@@ -506,6 +567,8 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
           ),
         ),
       ),
+    );
+      },
     );
   }
 }

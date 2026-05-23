@@ -27,8 +27,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   final ValueNotifier<bool> _hasChanges = ValueNotifier(false);
 
-  bool _isFetching = true;
+   bool _isFetching = true;
   bool _isLoading = false;
+  bool _canPop = false;
 
   String _initialName = '';
   String _initialStudentNum = '';
@@ -107,6 +108,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     if (_hasChanges.value && !_isLoading) {
       await _showDiscardDialog();
     } else {
+      setState(() => _canPop = true);
       Navigator.pop(context);
     }
   }
@@ -178,6 +180,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     );
 
     if (shouldDiscard == true && mounted) {
+      setState(() => _canPop = true);
       Navigator.pop(context);
     }
   }
@@ -232,6 +235,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         HapticFeedback.heavyImpact();
 
         SnackbarHelper.showInfo(context, 'Profile updated successfully!');
+        setState(() => _canPop = true);
         Navigator.pop(context);
       }
     } catch (e) {
@@ -248,7 +252,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return Scaffold(
       backgroundColor: backgroundLight,
       body: PopScope(
-        canPop: false,
+        canPop: _canPop,
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
           await _handleBackNavigation();

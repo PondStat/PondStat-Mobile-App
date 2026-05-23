@@ -55,6 +55,7 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
   final TextEditingController _notesController = TextEditingController();
 
   bool _isSaving = false;
+  bool _forceClose = false;
 
   void _updateState() => setState(() {});
 
@@ -240,7 +241,10 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
         notes: _notesController.text.trim(),
       );
       HapticFeedback.heavyImpact();
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        setState(() => _forceClose = true);
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, "Failed to save: $e");
@@ -437,11 +441,12 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: _forceClose,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final bool shouldPop = await _onWillPop();
         if (shouldPop && context.mounted) {
+          setState(() => _forceClose = true);
           Navigator.pop(context);
         }
       },

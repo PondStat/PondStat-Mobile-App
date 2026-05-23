@@ -33,6 +33,7 @@ class _LoadingOverlayState extends ConsumerState<LoadingOverlay>
 
   late AnimationController _waveController;
   late LoadingOverlayArgs _args;
+  bool _canPop = false;
 
   @override
   void initState() {
@@ -120,7 +121,7 @@ class _LoadingOverlayState extends ConsumerState<LoadingOverlay>
         label: 'Loading PondStat app data, please wait.',
         liveRegion: true,
         child: PopScope(
-          canPop: false,
+          canPop: _canPop,
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
             final shouldCancel = await showDialog<bool>(
@@ -148,6 +149,7 @@ class _LoadingOverlayState extends ConsumerState<LoadingOverlay>
               if (widget.onCancel != null) {
                 widget.onCancel!();
               }
+              setState(() => _canPop = true);
               Navigator.of(context).pop();
             }
           },

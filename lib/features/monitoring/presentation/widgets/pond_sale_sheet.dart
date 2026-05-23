@@ -28,6 +28,7 @@ class _PondSaleSheetState extends ConsumerState<PondSaleSheet> {
   final TextEditingController _notesController = TextEditingController();
 
   bool _isSaving = false;
+  bool _forceClose = false;
 
   @override
   void initState() {
@@ -119,7 +120,10 @@ class _PondSaleSheetState extends ConsumerState<PondSaleSheet> {
           } else {
             SnackbarHelper.showSuccess(context, "Sale recorded successfully");
           }
-          Navigator.pop(context, true);
+          if (mounted) {
+            setState(() => _forceClose = true);
+            Navigator.pop(context, true);
+          }
         }
       }
     } catch (e) {
@@ -156,6 +160,7 @@ class _PondSaleSheetState extends ConsumerState<PondSaleSheet> {
       );
 
       if (shouldPop == true && mounted) {
+        setState(() => _forceClose = true);
         Navigator.pop(context);
       }
     }
@@ -167,7 +172,7 @@ class _PondSaleSheetState extends ConsumerState<PondSaleSheet> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return PopScope(
-      canPop: !_hasData,
+      canPop: !_hasData || _forceClose,
       onPopInvokedWithResult: (didPop, result) => _onPopInvoked(didPop),
       child: Container(
         decoration: BoxDecoration(

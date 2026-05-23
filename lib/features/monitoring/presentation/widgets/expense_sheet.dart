@@ -24,6 +24,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
   final TextEditingController _amountController = TextEditingController();
 
   bool _isSaving = false;
+  bool _forceClose = false;
 
   @override
   void dispose() {
@@ -73,7 +74,10 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
           } else {
             SnackbarHelper.showSuccess(context, "Expense recorded successfully");
           }
-          Navigator.pop(context, true);
+          if (mounted) {
+            setState(() => _forceClose = true);
+            Navigator.pop(context, true);
+          }
         }
       }
     } catch (e) {
@@ -110,6 +114,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
       );
 
       if (shouldPop == true && mounted) {
+        setState(() => _forceClose = true);
         Navigator.pop(context);
       }
     }
@@ -121,7 +126,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return PopScope(
-      canPop: !_hasData,
+      canPop: !_hasData || _forceClose,
       onPopInvokedWithResult: (didPop, result) => _onPopInvoked(didPop),
       child: Container(
         decoration: BoxDecoration(
