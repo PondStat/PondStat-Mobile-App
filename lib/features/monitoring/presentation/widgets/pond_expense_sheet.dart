@@ -70,12 +70,6 @@ class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
         _notesController.text.isNotEmpty;
   }
 
-  bool get _isValid {
-    return _itemController.text.trim().isNotEmpty &&
-        _selectedCategory.isNotEmpty &&
-        _quantity > 0 &&
-        _amountPerUnit > 0;
-  }
 
   Future<void> _saveExpense() async {
     if (!_formKey.currentState!.validate()) return;
@@ -332,7 +326,7 @@ class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
                       text: 'Save Pond Expense',
                       icon: Icons.check_circle_outline_rounded,
                       isLoading: _isSaving,
-                      onPressed: _isValid ? _saveExpense : null,
+                      onPressed: _isSaving ? null : _saveExpense,
                     ),
                   ),
                 ],

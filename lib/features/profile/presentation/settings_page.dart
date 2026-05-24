@@ -5,6 +5,9 @@ import 'package:pondstat/core/services/settings/settings_provider.dart';
 import 'package:pondstat/features/profile/presentation/widgets/settings_switch_tile.dart';
 import 'package:pondstat/features/profile/presentation/widgets/settings_list_tile.dart';
 
+import 'package:pondstat/core/services/notification_service.dart';
+import 'package:pondstat/core/utils/snackbar_helper.dart';
+
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
@@ -101,9 +104,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 title: 'Push Notifications',
                 subtitle: 'Receive general app notifications',
                 value: settings.pushNotifications,
-                onChanged: (val) {
+                onChanged: (val) async {
                   HapticFeedback.lightImpact();
-                  ref.read(settingsProvider.notifier).setPushNotifications(val);
+                  if (val) {
+                    final granted = await ref
+                        .read(notificationServiceProvider)
+                        .requestPermission();
+                    if (context.mounted) {
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setPushNotifications(granted);
+                      if (!granted) {
+                        SnackbarHelper.showError(
+                          context,
+                          'Permission denied. Please enable notifications in settings.',
+                        );
+                      }
+                    }
+                  } else {
+                    ref
+                        .read(settingsProvider.notifier)
+                        .setPushNotifications(false);
+                  }
                 },
               ),
               SettingsSwitchTile(

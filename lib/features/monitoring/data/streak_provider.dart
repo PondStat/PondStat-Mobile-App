@@ -8,7 +8,7 @@ final pondStreakProvider = StreamProvider.family<int, String>((ref, pondId) {
   return repository.measurementsCollection
       .where('pondId', isEqualTo: pondId)
       .orderBy('timestamp', descending: true)
-      .limit(200)
+      .limit(1000)
       .snapshots()
       .map((snapshot) {
     if (snapshot.docs.isEmpty) return 0;

@@ -192,7 +192,7 @@ class NotificationsRepository {
         'body': body,
         'timestamp': FieldValue.serverTimestamp(),
         'isRead': false,
-        'pondId':? pondId,
+        'pondId': pondId,
       });
       _log.info(
         'Sent notification to $recipientUserId: "$title"',
@@ -240,6 +240,33 @@ class NotificationsRepository {
         stackTrace: stackTrace,
         tag: 'NOTIFICATIONS',
       );
+    }
+  }
+
+  Future<void> restoreNotification(NotificationModel notification) async {
+    try {
+      final collection = _notificationsCollection;
+      if (collection == null) return;
+      await collection.doc(notification.id).set({
+        'title': notification.title,
+        'body': notification.body,
+        'timestamp': Timestamp.fromDate(notification.timestamp),
+        'isRead': notification.isRead,
+        'pondId': notification.pondId,
+        'measurementId': notification.measurementId,
+      });
+      _log.info(
+        'Restored notification: ${notification.id}',
+        tag: 'NOTIFICATIONS',
+      );
+    } catch (e, stackTrace) {
+      _log.error(
+        'Error restoring notification',
+        error: e,
+        stackTrace: stackTrace,
+        tag: 'NOTIFICATIONS',
+      );
+      rethrow;
     }
   }
 }

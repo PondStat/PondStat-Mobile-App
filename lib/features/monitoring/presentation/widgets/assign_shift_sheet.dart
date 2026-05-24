@@ -200,7 +200,6 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
             userName: user['name'],
             schedule: current,
           );
-          if (!mounted) return;
           updatedCount++;
         }
       }

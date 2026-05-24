@@ -94,34 +94,6 @@ class AuthRepository {
     final UserCredential userCredential = await _auth.signInWithCredential(
       credential,
     );
-    final user = userCredential.user;
-
-    if (user != null) {
-      final userDoc = await usersCollection.doc(user.uid).get();
-
-      if (!userDoc.exists) {
-        await usersCollection.doc(user.uid).set({
-          'fullName': user.displayName ?? 'New User',
-          'email': user.email?.toLowerCase() ?? '',
-          'role': 'member',
-          'assignedPond': null,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      } else {
-        // Migration: Ensure existing user emails are saved in lowercase.
-        final data = userDoc.data();
-        final currentEmail = data?['email'] as String?;
-        if (currentEmail != null && currentEmail != currentEmail.toLowerCase()) {
-          await usersCollection.doc(user.uid).update({
-            'email': currentEmail.toLowerCase(),
-          });
-        }
-      }
-
-      // Update FCM token on login
-      await updateFcmToken();
-    }
-
     return userCredential;
   }
 

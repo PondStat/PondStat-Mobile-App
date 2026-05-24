@@ -30,6 +30,7 @@ class _PondSaleSheetState extends ConsumerState<PondSaleSheet> {
 
   bool _isSaving = false;
   bool _forceClose = false;
+  String _initialProduct = '';
 
   @override
   void initState() {
@@ -48,6 +49,7 @@ class _PondSaleSheetState extends ConsumerState<PondSaleSheet> {
         if (species.isNotEmpty) {
           setState(() {
             _productController.text = species;
+            _initialProduct = species;
           });
         }
       }
@@ -79,17 +81,11 @@ class _PondSaleSheetState extends ConsumerState<PondSaleSheet> {
 
   bool get _hasData {
     return _buyerController.text.isNotEmpty ||
-        _productController.text.isNotEmpty ||
+        _productController.text != _initialProduct ||
         _priceController.text.isNotEmpty ||
         _notesController.text.isNotEmpty;
   }
 
-  bool get _isValid {
-    return _buyerController.text.trim().isNotEmpty &&
-        _productController.text.trim().isNotEmpty &&
-        _quantity > 0 &&
-        _pricePerUnit > 0;
-  }
 
   Future<void> _saveSale() async {
     if (!_formKey.currentState!.validate()) return;
@@ -336,7 +332,7 @@ class _PondSaleSheetState extends ConsumerState<PondSaleSheet> {
                       text: 'Save Pond Sale',
                       icon: Icons.check_circle_outline_rounded,
                       isLoading: _isSaving,
-                      onPressed: _isValid ? _saveSale : null,
+                      onPressed: _isSaving ? null : _saveSale,
                     ),
                   ),
                 ],

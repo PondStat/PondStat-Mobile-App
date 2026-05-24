@@ -75,7 +75,9 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final tourNotifier = ref.read(onboardingTourProvider);
-      if (widget.userRole == 'owner' && !tourNotifier.hasSeenCollaborators) {
+      if (widget.userRole == 'owner' &&
+          tourNotifier.hasSeenOverview &&
+          !tourNotifier.hasSeenCollaborators) {
         ShowcaseView.get().startShowCase([_profileKey]);
         ref.read(onboardingTourProvider.notifier).markCollaboratorsAsSeen();
       }

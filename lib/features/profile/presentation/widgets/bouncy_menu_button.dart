@@ -43,17 +43,18 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
     super.dispose();
   }
 
-  void _onTapDown(TapDownDetails details) {
+  void _handleTap() {
     HapticFeedback.lightImpact();
-    _controller.forward();
+    _controller.forward().then((_) {
+      if (mounted) {
+        _controller.reverse().then((_) {
+          if (mounted) {
+            widget.onTap();
+          }
+        });
+      }
+    });
   }
-
-  void _onTapUp(TapUpDetails details) {
-    _controller.reverse();
-    widget.onTap();
-  }
-
-  void _onTapCancel() => _controller.reverse();
 
   @override
   Widget build(BuildContext context) {
@@ -70,9 +71,7 @@ class _BouncyMenuButtonState extends State<BouncyMenuButton>
         : theme.colorScheme.onSurfaceVariant;
 
     return InkWell(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
+      onTap: _handleTap,
       borderRadius: BorderRadius.circular(16),
       child: ScaleTransition(
         scale: _scaleAnimation,

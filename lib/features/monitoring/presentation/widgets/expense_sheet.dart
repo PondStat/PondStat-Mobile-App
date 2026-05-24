@@ -45,9 +45,6 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
     return _itemController.text.isNotEmpty || _amountController.text.isNotEmpty;
   }
 
-  bool get _isValid {
-    return _itemController.text.trim().isNotEmpty && _totalAmount > 0;
-  }
 
   Future<void> _saveExpense() async {
     if (!_formKey.currentState!.validate()) return;
@@ -273,7 +270,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                       text: 'Save Expense',
                       icon: Icons.check_circle_outline_rounded,
                       isLoading: _isSaving,
-                      onPressed: _isValid ? _saveExpense : null,
+                      onPressed: _isSaving ? null : _saveExpense,
                     ),
                   ),
                 ],

@@ -238,9 +238,9 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
                           'Notification deleted',
                         );
                         if (shouldUndo) {
-                          // Re-create is not possible with Firestore, so this is a soft-delete pattern.
-                          // For now, the undo just shows the intent. A full implementation would
-                          // require a soft-delete field in the model.
+                          await ref
+                              .read(notificationsRepositoryProvider)
+                              .restoreNotification(n);
                           _retry();
                         }
                       }
