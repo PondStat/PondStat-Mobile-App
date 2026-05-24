@@ -14,6 +14,8 @@ import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
+import 'package:pondstat/features/notifications/data/notifications_repository.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 
 
 class GrowthPage extends ConsumerStatefulWidget {
@@ -110,6 +112,23 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                   selectedDay: now,
                   notes: notes,
                 );
+
+                final currentUserName = FirebaseAuth.instance.currentUser?.displayName ?? 'A collaborator';
+                try {
+                  await ref.read(notificationsRepositoryProvider).notifyPondMembers(
+                    pondId: widget.pondId,
+                    title: 'Growth Sampling Recorded in ${widget.pondName}',
+                    body: '$currentUserName recorded growth sampling ($label: $averageValue$unit).',
+                  );
+                } catch (e, stackTrace) {
+                  ref.read(appLoggerProvider).error(
+                    'Failed to send growth sampling notification',
+                    error: e,
+                    stackTrace: stackTrace,
+                    tag: 'COLLABORATORS',
+                  );
+                }
+
                 if (!sheetContext.mounted) return;
                 setState(() {
                   _refreshKey++;

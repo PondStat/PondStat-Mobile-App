@@ -4,6 +4,11 @@ import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/abw_form.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/adg_form.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/dfr_form.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/fcr_form.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
 
 class RecordGrowthSheet extends StatefulWidget {
   final String species;
@@ -32,25 +37,7 @@ class RecordGrowthSheet extends StatefulWidget {
 class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
   ParameterItem? selectedParameter;
   TimeOfDay selectedTime = TimeOfDay.now();
-
-  // ABW
-  final TextEditingController _abwWeightCtrl = TextEditingController();
-  final TextEditingController _abwCountCtrl = TextEditingController();
-
-  // ADG
-  final TextEditingController _adgCurrentCtrl = TextEditingController();
-  final TextEditingController _adgPreviousCtrl = TextEditingController();
-  final TextEditingController _adgDaysCtrl = TextEditingController();
-
-  // DFR
-  final TextEditingController _dfrStockedCtrl = TextEditingController();
-  final TextEditingController _dfrSurvivalCtrl = TextEditingController();
-  final TextEditingController _dfrCurrentAbwCtrl = TextEditingController();
-  final TextEditingController _dfrFeedingRateCtrl = TextEditingController();
-
-  // FCR
-  final TextEditingController _fcrFeedCtrl = TextEditingController();
-  final TextEditingController _fcrWeightGainedCtrl = TextEditingController();
+  double? _calculatedValue;
 
   final TextEditingController _notesController = TextEditingController();
 
@@ -62,163 +49,34 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
   @override
   void initState() {
     super.initState();
-
-    _abwWeightCtrl.addListener(_updateState);
-    _abwCountCtrl.addListener(_updateState);
-
-    _adgCurrentCtrl.addListener(_updateState);
-    _adgPreviousCtrl.addListener(_updateState);
-    _adgDaysCtrl.addListener(_updateState);
-
-    _dfrStockedCtrl.addListener(_updateState);
-    _dfrSurvivalCtrl.addListener(_updateState);
-    _dfrCurrentAbwCtrl.addListener(_updateState);
-    _dfrFeedingRateCtrl.addListener(_updateState);
-
-    _fcrFeedCtrl.addListener(_updateState);
-    _fcrWeightGainedCtrl.addListener(_updateState);
-
     _notesController.addListener(_updateState);
   }
 
   @override
   void dispose() {
-    _abwWeightCtrl.dispose();
-    _abwCountCtrl.dispose();
-
-    _adgCurrentCtrl.dispose();
-    _adgPreviousCtrl.dispose();
-    _adgDaysCtrl.dispose();
-
-    _dfrStockedCtrl.dispose();
-    _dfrSurvivalCtrl.dispose();
-    _dfrCurrentAbwCtrl.dispose();
-    _dfrFeedingRateCtrl.dispose();
-
-    _fcrFeedCtrl.dispose();
-    _fcrWeightGainedCtrl.dispose();
-
     _notesController.dispose();
     super.dispose();
   }
 
   bool _hasUnsavedData() {
     if (_notesController.text.isNotEmpty) return true;
-
-    if (selectedParameter?.label == 'ABW') {
-      return _abwWeightCtrl.text.isNotEmpty || _abwCountCtrl.text.isNotEmpty;
-    } else if (selectedParameter?.label == 'ADG') {
-      return _adgCurrentCtrl.text.isNotEmpty ||
-          _adgPreviousCtrl.text.isNotEmpty ||
-          _adgDaysCtrl.text.isNotEmpty;
-    } else if (selectedParameter?.label == 'DFR') {
-      return _dfrStockedCtrl.text.isNotEmpty ||
-          _dfrSurvivalCtrl.text.isNotEmpty ||
-          _dfrCurrentAbwCtrl.text.isNotEmpty ||
-          _dfrFeedingRateCtrl.text.isNotEmpty;
-    } else if (selectedParameter?.label == 'FCR') {
-      return _fcrFeedCtrl.text.isNotEmpty ||
-          _fcrWeightGainedCtrl.text.isNotEmpty;
-    }
-
+    if (_calculatedValue != null) return true;
     return false;
   }
 
-  double? _calculateABW() {
-    final w = double.tryParse(_abwWeightCtrl.text);
-    final c = double.tryParse(_abwCountCtrl.text);
-    if (w != null && c != null && w > 0 && c > 0) return w / c;
-    return null;
-  }
-
-  double? _calculateADG() {
-    final cur = double.tryParse(_adgCurrentCtrl.text);
-    final prev = double.tryParse(_adgPreviousCtrl.text);
-    final days = double.tryParse(_adgDaysCtrl.text);
-    if (cur != null && prev != null && days != null && cur > 0 && prev > 0 && days > 0) {
-      return (cur - prev) / days;
-    }
-    return null;
-  }
-
-  double? _calculateDFR() {
-    final stocked = double.tryParse(_dfrStockedCtrl.text);
-    final surv = double.tryParse(_dfrSurvivalCtrl.text);
-    final abw = double.tryParse(_dfrCurrentAbwCtrl.text);
-    final feedRate = double.tryParse(_dfrFeedingRateCtrl.text);
-    if (stocked != null &&
-        surv != null &&
-        abw != null &&
-        feedRate != null &&
-        stocked > 0 &&
-        surv >= 0 &&
-        surv <= 100 &&
-        abw > 0 &&
-        feedRate >= 0 &&
-        feedRate <= 100) {
-      return (stocked * (surv / 100.0) * abw * (feedRate / 100.0)) / 1000.0;
-    }
-    return null;
-  }
-
-  double? _calculateFCR() {
-    final feed = double.tryParse(_fcrFeedCtrl.text);
-    final gained = double.tryParse(_fcrWeightGainedCtrl.text);
-    if (feed != null && gained != null && feed > 0 && gained > 0) {
-      return feed / gained;
-    }
-    return null;
-  }
-
-  bool get _isFormValid {
-    if (selectedParameter == null) return false;
-
-    if (selectedParameter!.label == 'ABW') {
-      return _calculateABW() != null;
-    } else if (selectedParameter!.label == 'ADG') {
-      return _calculateADG() != null;
-    } else if (selectedParameter!.label == 'DFR') {
-      return _calculateDFR() != null;
-    } else if (selectedParameter!.label == 'FCR') {
-      return _calculateFCR() != null;
-    }
-
-    return false;
-  }
+  bool get _isFormValid => _calculatedValue != null;
 
   void _clearAllControllers() {
-    _abwWeightCtrl.clear();
-    _abwCountCtrl.clear();
-
-    _adgCurrentCtrl.clear();
-    _adgPreviousCtrl.clear();
-    _adgDaysCtrl.clear();
-
-    _dfrStockedCtrl.clear();
-    _dfrSurvivalCtrl.clear();
-    _dfrCurrentAbwCtrl.clear();
-    _dfrFeedingRateCtrl.clear();
-
-    _fcrFeedCtrl.clear();
-    _fcrWeightGainedCtrl.clear();
-
     _notesController.clear();
+    setState(() {
+      _calculatedValue = null;
+    });
   }
 
   void _processAndSave() async {
     if (selectedParameter == null || _isSaving || !_isFormValid) return;
 
-    double? finalValue;
-
-    if (selectedParameter!.label == 'ABW') {
-      finalValue = _calculateABW();
-    } else if (selectedParameter!.label == 'ADG') {
-      finalValue = _calculateADG();
-    } else if (selectedParameter!.label == 'DFR') {
-      finalValue = _calculateDFR();
-    } else if (selectedParameter!.label == 'FCR') {
-      finalValue = _calculateFCR();
-    }
+    final double? finalValue = _calculatedValue;
 
     if (finalValue == null) {
       SnackbarHelper.showInfo(context, "Please enter valid numbers in all fields.");
@@ -254,184 +112,14 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
     }
   }
 
-  Widget _buildAbwForm() {
-    return Column(
-      children: [
-        PondStatTextField(
-          controller: _abwWeightCtrl,
-          label: "Total weight of sampled fish (g)",
-          hint: "e.g., 500",
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 16),
-        PondStatTextField(
-          controller: _abwCountCtrl,
-          label: "Number of fish sampled",
-          hint: "e.g., 50",
-          keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: 24),
-        _buildResultBox("Calculated ABW:", _calculateABW(), "g", Colors.green),
-      ],
-    );
-  }
-
-  Widget _buildAdgForm() {
-    return Column(
-      children: [
-        PondStatTextField(
-          controller: _adgCurrentCtrl,
-          label: "Current ABW (g)",
-          hint: "e.g., 15",
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 16),
-        PondStatTextField(
-          controller: _adgPreviousCtrl,
-          label: "Previous ABW (g)",
-          hint: "e.g., 10",
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 16),
-        PondStatTextField(
-          controller: _adgDaysCtrl,
-          label: "Number of days between samples",
-          hint: "e.g., 7",
-          keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: 24),
-        _buildResultBox(
-          "Calculated ADG:",
-          _calculateADG(),
-          "g/day",
-          Colors.blue,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDfrForm() {
-    return Column(
-      children: [
-        PondStatTextField(
-          controller: _dfrStockedCtrl,
-          label: "Total fish stocked",
-          hint: "e.g., 10000",
-          keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: 16),
-        PondStatTextField(
-          controller: _dfrSurvivalCtrl,
-          label: "Estimated survival rate (%)",
-          hint: "e.g., 80",
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 16),
-        PondStatTextField(
-          controller: _dfrCurrentAbwCtrl,
-          label: "Current ABW (g)",
-          hint: "e.g., 15",
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 16),
-        PondStatTextField(
-          controller: _dfrFeedingRateCtrl,
-          label: "Feeding rate (%)",
-          hint: "e.g., 5",
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 24),
-        _buildResultBox(
-          "Calculated DFR:",
-          _calculateDFR(),
-          "kg/day",
-          Colors.brown,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFcrForm() {
-    return Column(
-      children: [
-        PondStatTextField(
-          controller: _fcrFeedCtrl,
-          label: "Total weight of feed given (g)",
-          hint: "e.g., 2000",
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 16),
-        PondStatTextField(
-          controller: _fcrWeightGainedCtrl,
-          label: "Total weight gained by fish (g)",
-          hint: "e.g., 1500",
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 24),
-        _buildResultBox("Calculated FCR:", _calculateFCR(), "", Colors.orange),
-      ],
-    );
-  }
-
-  Widget _buildResultBox(
-    String title,
-    double? value,
-    String unit,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: TextStyle(fontWeight: FontWeight.bold, color: color),
-          ),
-          Text(
-            value != null ? "${value.toStringAsFixed(2)} $unit" : "—",
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<bool> _onWillPop() async {
     if (!_hasUnsavedData()) return true;
 
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
-        title: const Text('Discard Unsaved Data?'),
-        content: const Text(
-          'You have entered data that has not been saved yet. Are you sure you want to close this sheet?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard'),
-          ),
-        ],
+      builder: (context) => const DiscardChangesDialog(
+        title: 'Discard Unsaved Data?',
+        content: 'You have entered data that has not been saved yet. Are you sure you want to close this sheet?',
       ),
     );
 
@@ -576,13 +264,13 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
                       const SizedBox(height: 24),
 
                       if (selectedParameter!.label == 'ABW')
-                        _buildAbwForm()
+                        AbwForm(onChanged: (val) => setState(() => _calculatedValue = val))
                       else if (selectedParameter!.label == 'ADG')
-                        _buildAdgForm()
+                        AdgForm(onChanged: (val) => setState(() => _calculatedValue = val))
                       else if (selectedParameter!.label == 'DFR')
-                        _buildDfrForm()
+                        DfrForm(onChanged: (val) => setState(() => _calculatedValue = val))
                       else if (selectedParameter!.label == 'FCR')
-                        _buildFcrForm(),
+                        FcrForm(onChanged: (val) => setState(() => _calculatedValue = val)),
 
                       const SizedBox(height: 24),
                       PondStatTextField(

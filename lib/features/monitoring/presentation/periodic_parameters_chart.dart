@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/telemetry_stat_row.dart';
 
 class _DailyRecord {
   final DateTime timestamp;
@@ -337,7 +338,11 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              _buildStatRow(records, param, theme, isDark),
+              TelemetryStatRow(
+                values: records.map((r) => r.averageValue).toList(),
+                unit: param.unit,
+                themeColor: param.getColor(context),
+              ),
               const SizedBox(height: 16),
               _buildCard(
                 isDark: isDark,
@@ -354,106 +359,6 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
           ),
         );
       },
-    );
-  }
-
-  Widget _buildStatRow(
-    List<_DailyRecord> records,
-    ParameterItem param,
-    ThemeData theme,
-    bool isDark,
-  ) {
-    final values = records.map((r) => r.averageValue).toList();
-    final latest = values.last;
-    final min = values.reduce((a, b) => a < b ? a : b);
-    final max = values.reduce((a, b) => a > b ? a : b);
-    final avg = values.reduce((a, b) => a + b) / values.length;
-    final unit = param.unit.isEmpty ? '' : ' ${param.unit}';
-    return Row(
-      children: [
-        _buildStatChip(
-          label: 'Latest',
-          value: '${latest.toStringAsFixed(2)}$unit',
-          color: param.getColor(context),
-          isDark: isDark,
-          theme: theme,
-          isHighlighted: true,
-        ),
-        const SizedBox(width: 8),
-        _buildStatChip(
-          label: 'Avg',
-          value: '${avg.toStringAsFixed(2)}$unit',
-          color: param.getColor(context),
-          isDark: isDark,
-          theme: theme,
-        ),
-        const SizedBox(width: 8),
-        _buildStatChip(
-          label: 'Min',
-          value: '${min.toStringAsFixed(2)}$unit',
-          color: param.getColor(context),
-          isDark: isDark,
-          theme: theme,
-        ),
-        const SizedBox(width: 8),
-        _buildStatChip(
-          label: 'Max',
-          value: '${max.toStringAsFixed(2)}$unit',
-          color: param.getColor(context),
-          isDark: isDark,
-          theme: theme,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatChip({
-    required String label,
-    required String value,
-    required Color color,
-    required bool isDark,
-    required ThemeData theme,
-    bool isHighlighted = false,
-  }) {
-    final colorScheme = theme.colorScheme;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isHighlighted
-              ? color.withValues(alpha: 0.12)
-              : colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(14),
-          border: isHighlighted
-              ? Border.all(color: color.withValues(alpha: 0.3), width: 1.5)
-              : null,
-        ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: isHighlighted ? color : colorScheme.onSurfaceVariant,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: isHighlighted ? color : colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

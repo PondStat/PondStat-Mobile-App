@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/pond_slidable_action_wrapper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
@@ -25,7 +24,6 @@ import 'package:go_router/go_router.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/notification_badge.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_skeleton_loader.dart';
-import 'package:pondstat/features/dashboard/presentation/widgets/delete_pond_dialog.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_filter_dropdown.dart';
 
 class DefaultDashboardScreen extends ConsumerStatefulWidget {
@@ -644,108 +642,22 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
               ),
             );
 
-            final Widget itemContent;
-            if (isOwner) {
-              itemContent = Slidable(
-                key: Key(pond.id),
-                endActionPane: ActionPane(
-                  motion: const ScrollMotion(),
-                  extentRatio: 0.50,
-                  children: [
-                    CustomSlidableAction(
-                      onPressed: (context) {
-                        _showEditPondSheet(
-                          context,
-                          pond.id,
-                          pond.toJson(),
-                        );
-                      },
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.zero,
-                      child: Container(
-                        margin: const EdgeInsets.only(
-                          bottom: 16,
-                          left: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          borderRadius:
-                              BorderRadius.circular(20),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Column(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.edit_rounded,
-                              size: 28,
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Edit',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    CustomSlidableAction(
-                      onPressed: (context) async {
-                        HapticFeedback.mediumImpact();
-                        bool confirm =
-                            await showDialog<bool>(
-                              context: context,
-                              builder: (context) => DeletePondDialog(pondName: pondName),
-                            ) ??
-                            false;
-                        if (confirm) {
-                          _deletePond(pond.id, pondName);
-                        }
-                      },
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.zero,
-                      child: Container(
-                        margin: const EdgeInsets.only(
-                          bottom: 16,
-                          left: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade400,
-                          borderRadius:
-                              BorderRadius.circular(20),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Column(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.delete_sweep_rounded,
-                              size: 28,
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Delete',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                child: card,
-              );
-            } else {
-              itemContent = card;
-            }
+            final Widget itemContent = PondSlidableActionWrapper(
+              pondId: pond.id,
+              pondName: pondName,
+              isOwner: isOwner,
+              onEdit: () {
+                _showEditPondSheet(
+                  context,
+                  pond.id,
+                  pond.toJson(),
+                );
+              },
+              onDelete: () {
+                _deletePond(pond.id, pondName);
+              },
+              child: card,
+            );
 
             return StaggeredListItem(
               index: index - 2,

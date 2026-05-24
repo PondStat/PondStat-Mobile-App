@@ -176,4 +176,70 @@ class NotificationsRepository {
       );
     }
   }
+
+  Future<void> sendNotification({
+    required String recipientUserId,
+    required String title,
+    required String body,
+    String? pondId,
+  }) async {
+    try {
+      await usersCollection
+          .doc(recipientUserId)
+          .collection('notifications')
+          .add({
+        'title': title,
+        'body': body,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'pondId':? pondId,
+      });
+      _log.info(
+        'Sent notification to $recipientUserId: "$title"',
+        tag: 'NOTIFICATIONS',
+      );
+    } catch (e, stackTrace) {
+      _log.error(
+        'Error sending notification to $recipientUserId',
+        error: e,
+        stackTrace: stackTrace,
+        tag: 'NOTIFICATIONS',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> notifyPondMembers({
+    required String pondId,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      final currentUserId = currentUser?.uid;
+      final pondDoc = await _baseRef.collection('ponds').doc(pondId).get();
+      if (!pondDoc.exists) return;
+
+      final data = pondDoc.data();
+      if (data == null) return;
+
+      final roles = data['roles'] as Map<String, dynamic>? ?? {};
+      final otherMemberIds = roles.keys.where((uid) => uid != currentUserId).toList();
+
+      for (final recipientUserId in otherMemberIds) {
+        await sendNotification(
+          recipientUserId: recipientUserId,
+          title: title,
+          body: body,
+          pondId: pondId,
+        );
+      }
+    } catch (e, stackTrace) {
+      _log.error(
+        'Error in notifyPondMembers for pond $pondId',
+        error: e,
+        stackTrace: stackTrace,
+        tag: 'NOTIFICATIONS',
+      );
+    }
+  }
 }

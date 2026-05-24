@@ -4,11 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
-import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/shift_member_tile.dart';
 
 class AssignShiftSheet extends ConsumerStatefulWidget {
   final String pondId;
@@ -533,70 +533,12 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
                           _allUserSchedules[userId]![_selectedDay][_selectedShift] ==
                           true;
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: isAssigned
-                              ? primaryBlue.withValues(alpha: 0.15)
-                              : (isDark
-                                    ? Colors.white.withValues(alpha: 0.05)
-                                    : Colors.white),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isAssigned
-                                ? primaryBlue.withValues(alpha: 0.3)
-                                : (isDark
-                                      ? Colors.white12
-                                      : Colors.grey.shade200),
-                          ),
-                        ),
-                        child: CheckboxListTile(
-                          value: isAssigned,
-                          onChanged: (val) {
-                            if (val != null) _toggleUserAssignment(userId, val);
-                          },
-                          activeColor: primaryBlue,
-                          checkColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          checkboxShape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          title: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 14,
-                                backgroundColor: isDark
-                                    ? Colors.white12
-                                    : Colors.grey.shade200,
-                                child: Text(
-                                  (user['name'] as String?).initials,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? Colors.white70
-                                        : Colors.grey.shade700,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  user['name'],
-                                  style: TextStyle(
-                                    fontWeight: isAssigned
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                    color: onSurface,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      return ShiftMemberTile(
+                        name: user['name'],
+                        isAssigned: isAssigned,
+                        onChanged: (val) {
+                          if (val != null) _toggleUserAssignment(userId, val);
+                        },
                       );
                     },
                   ),

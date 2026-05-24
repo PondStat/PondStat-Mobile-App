@@ -8,6 +8,7 @@ import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/pondstat_dropdown_field.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 // Removed dashboard_repository.dart
 
@@ -135,25 +136,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
   Future<bool> _showDiscardDialog() async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
-        title: const Text('Discard changes?'),
-        content: const Text(
-          'You have unsaved changes. Are you sure you want to discard them?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Discard'),
-          ),
-        ],
-      ),
+      builder: (context) => const DiscardChangesDialog(),
     );
     return result ?? false;
   }

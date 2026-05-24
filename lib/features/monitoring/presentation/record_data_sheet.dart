@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/recording_parameter_header.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/record_form_fields.dart';
@@ -11,6 +11,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/create_paramet
 import 'package:pondstat/features/monitoring/presentation/widgets/delete_parameter_dialog.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/time_picker_card.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/parameter_selection_grid.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
 
 class RecordDataSheet extends ConsumerStatefulWidget {
   final int tabIndex;
@@ -143,27 +144,9 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
 
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
-        title: const Text('Discard Unsaved Data?'),
-        content: const Text(
-          'You have entered data that has not been saved yet. Are you sure you want to close this sheet?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard'),
-          ),
-        ],
+      builder: (context) => const DiscardChangesDialog(
+        title: 'Discard Unsaved Data?',
+        content: 'You have entered data that has not been saved yet. Are you sure you want to close this sheet?',
       ),
     );
 
@@ -341,119 +324,15 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Progress Indicator
-        if (_isWizardStarted) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Step ${_wizardStepIndex + 1} of ${_wizardSequence.length}",
-                      style: TextStyle(
-                        color: themeColor,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      "${((_wizardStepIndex + 1) / _wizardSequence.length * 100).toInt()}%",
-                      style: TextStyle(
-                        color: themeColor.withValues(alpha: 0.6),
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: (_wizardStepIndex + 1) / _wizardSequence.length,
-                    backgroundColor: themeColor.withValues(alpha: 0.1),
-                    valueColor: AlwaysStoppedAnimation<Color>(themeColor),
-                    minHeight: 6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: themeColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      selectedParameter!.icon,
-                      color: themeColor,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "RECORDING",
-                          style: TextStyle(
-                            color: themeColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          child: Text(
-                            selectedParameter!.label,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 24,
-                              color: textDark,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (selectedDocId != null &&
-                selectedParameter?.createdBy ==
-                    FirebaseAuth.instance.currentUser?.uid)
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.errorContainer,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.delete_outline_rounded,
-                    color: Theme.of(context).colorScheme.error,
-                    size: 20,
-                  ),
-                ),
-                onPressed: _confirmDeleteParameter,
-              ),
-          ],
+        RecordingParameterHeader(
+          selectedParameter: selectedParameter!,
+          selectedDocId: selectedDocId,
+          themeColor: themeColor,
+          textDark: textDark,
+          isWizardStarted: _isWizardStarted,
+          wizardStepIndex: _wizardStepIndex,
+          wizardTotalSteps: _wizardSequence.length,
+          onDeletePressed: _confirmDeleteParameter,
         ),
         const SizedBox(height: 28),
         TimePickerCard(

@@ -13,6 +13,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pondstat/features/notifications/data/notifications_repository.dart';
+import 'package:pondstat/core/services/safety/alert_types.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 
 
 class WaterQualityPage extends ConsumerStatefulWidget {
@@ -94,8 +98,9 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
       );
 
       Map<String, dynamic>? alertMap;
+      AlertPayload? alertPayload;
       if (parameterItem != null) {
-        final alertPayload = ref.read(safetyServiceProvider).getAlertPayload(
+        alertPayload = ref.read(safetyServiceProvider).getAlertPayload(
           parameter: parameterItem,
           value: averageValue,
           pondId: widget.pondId,
@@ -123,6 +128,27 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
         notes: notes,
         alert: alertMap,
       );
+
+      final currentUserName = FirebaseAuth.instance.currentUser?.displayName ?? 'A collaborator';
+      try {
+        final hasAlert = alertPayload != null;
+        await ref.read(notificationsRepositoryProvider).notifyPondMembers(
+          pondId: widget.pondId,
+          title: hasAlert 
+              ? alertPayload.title 
+              : 'New Parameter Recorded in ${widget.pondName}',
+          body: hasAlert 
+              ? alertPayload.body 
+              : '$currentUserName recorded $label: $averageValue$unit.',
+        );
+      } catch (e, stackTrace) {
+        ref.read(appLoggerProvider).error(
+          'Failed to send parameter recording notification',
+          error: e,
+          stackTrace: stackTrace,
+          tag: 'COLLABORATORS',
+        );
+      }
 
       if (parameterItem != null) {
         await ref.read(safetyServiceProvider).checkAndNotify(

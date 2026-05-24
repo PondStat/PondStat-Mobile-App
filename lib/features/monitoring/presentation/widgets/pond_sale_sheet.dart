@@ -8,6 +8,7 @@ import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
 
 class PondSaleSheet extends ConsumerStatefulWidget {
   final String pondId;
@@ -141,21 +142,11 @@ class _PondSaleSheetState extends ConsumerState<PondSaleSheet> {
     if (_hasData) {
       final shouldPop = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
-          title: const Text('Discard unsaved changes?'),
-          content: const Text('Are you sure you want to discard your changes?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('CANCEL'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('DISCARD', style: TextStyle(color: Colors.red)),
-            ),
-          ],
+        builder: (context) => const DiscardChangesDialog(
+          title: 'Discard unsaved changes?',
+          content: 'Are you sure you want to discard your changes?',
+          cancelText: 'CANCEL',
+          confirmText: 'DISCARD',
         ),
       );
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
-import 'package:pondstat/core/widgets/pondstat_text_field.dart';
+import 'package:pondstat/features/profile/presentation/widgets/invite_collaborator_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +12,7 @@ import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/core/widgets/loading_placeholder.dart';
 import 'package:pondstat/core/widgets/error_state_card.dart';
 import 'package:pondstat/features/profile/presentation/widgets/collaborator_tile.dart';
+import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 
 class ManageCollaboratorsPage extends ConsumerStatefulWidget {
   final String pondId;
@@ -90,6 +91,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
     // Capture providers before any async gap to avoid Riverpod ref access after unmount.
     final authRepo = ref.read(authRepositoryProvider);
     final pondRepo = ref.read(pondRepositoryProvider);
+    final notificationsRepo = ref.read(notificationsRepositoryProvider);
 
     try {
       var query = await authRepo.usersCollection
@@ -132,6 +134,22 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
         'memberIds': FieldValue.arrayUnion([targetUserId]),
         'roles.$targetUserId': 'viewer',
       });
+
+      try {
+        await notificationsRepo.sendNotification(
+          recipientUserId: targetUserId,
+          title: 'Added to ${widget.pondName}',
+          body: 'You were added as a viewer to ${widget.pondName}.',
+          pondId: widget.pondId,
+        );
+      } catch (e, stackTrace) {
+        ref.read(appLoggerProvider).error(
+          'Failed to send collaborator invitation notification',
+          error: e,
+          stackTrace: stackTrace,
+          tag: 'COLLABORATORS',
+        );
+      }
 
       if (!mounted) return;
 
@@ -250,6 +268,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
 
   Future<void> _updateRole(String userId, String newRole) async {
     final pondRef = ref.read(pondRepositoryProvider).pondsCollection.doc(widget.pondId);
+    final notificationsRepo = ref.read(notificationsRepositoryProvider);
 
     try {
       if (newRole == 'remove') {
@@ -257,6 +276,22 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
           'memberIds': FieldValue.arrayRemove([userId]),
           'roles.$userId': FieldValue.delete(),
         });
+
+        try {
+          await notificationsRepo.sendNotification(
+            recipientUserId: userId,
+            title: 'Access removed from ${widget.pondName}',
+            body: 'Your access to ${widget.pondName} has been removed.',
+            pondId: widget.pondId,
+          );
+        } catch (e, stackTrace) {
+          ref.read(appLoggerProvider).error(
+            'Failed to send removal notification',
+            error: e,
+            stackTrace: stackTrace,
+            tag: 'COLLABORATORS',
+          );
+        }
       } else if (newRole == 'owner') {
         final currentUserId = FirebaseAuth.instance.currentUser?.uid;
         if (currentUserId != null) {
@@ -265,9 +300,41 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
             'roles.$userId': 'owner',
             'roles.$currentUserId': 'editor', // Demote current owner to editor
           });
+
+          try {
+            await notificationsRepo.sendNotification(
+              recipientUserId: userId,
+              title: 'Pond Ownership Transferred',
+              body: 'You are now the owner of ${widget.pondName}.',
+              pondId: widget.pondId,
+            );
+          } catch (e, stackTrace) {
+            ref.read(appLoggerProvider).error(
+              'Failed to send ownership transfer notification',
+              error: e,
+              stackTrace: stackTrace,
+              tag: 'COLLABORATORS',
+            );
+          }
         }
       } else {
         await pondRef.update({'roles.$userId': newRole});
+
+        try {
+          await notificationsRepo.sendNotification(
+            recipientUserId: userId,
+            title: 'Role updated in ${widget.pondName}',
+            body: 'Your role in ${widget.pondName} has been changed to $newRole.',
+            pondId: widget.pondId,
+          );
+        } catch (e, stackTrace) {
+          ref.read(appLoggerProvider).error(
+            'Failed to send role update notification',
+            error: e,
+            stackTrace: stackTrace,
+            tag: 'COLLABORATORS',
+          );
+        }
       }
       HapticFeedback.lightImpact();
     } catch (e) {
@@ -390,97 +457,11 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
                 ),
               ),
 
-              Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Invite Collaborator",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: textDark,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: PondStatTextField(
-                            controller: _emailController,
-                            focusNode: _emailFocus,
-                            label: 'Collaborator Email',
-                            hint: 'user@up.edu.ph',
-                            prefixIcon: Icons.email_rounded,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _inviteCollaborator(),
-                            suffixIcon: _emailController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade300,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.close_rounded,
-                                        size: 14,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      HapticFeedback.selectionClick();
-                                      _emailController.clear();
-                                    },
-                                  )
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: _isAdding ? null : _inviteCollaborator,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryBlue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 18,
-                              horizontal: 20,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: _isAdding
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.send_rounded, size: 20),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              InviteCollaboratorCard(
+                emailController: _emailController,
+                emailFocus: _emailFocus,
+                isAdding: _isAdding,
+                onInvite: _inviteCollaborator,
               ),
 
               Padding(

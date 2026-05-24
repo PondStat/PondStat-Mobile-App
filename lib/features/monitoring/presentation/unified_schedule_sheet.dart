@@ -12,6 +12,7 @@ import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
 
 class UnifiedScheduleSheet extends ConsumerStatefulWidget {
   final String pondId;
@@ -232,34 +233,9 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
   Future<bool?> _showDiscardDialog() {
     return showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
-        title: const Text("Discard Changes?"),
-        content: const Text(
-          "You have unsaved changes. Are you sure you want to discard them?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              "Keep Editing",
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Discard"),
-          ),
-        ],
+      builder: (context) => const DiscardChangesDialog(
+        title: 'Discard Changes?',
+        cancelText: 'Keep Editing',
       ),
     );
   }
