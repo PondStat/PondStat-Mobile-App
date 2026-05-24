@@ -232,7 +232,8 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.read(authRepositoryProvider).currentUser;
+    final userAsync = ref.watch(userChangesProvider);
+    final user = userAsync.value ?? ref.read(authRepositoryProvider).currentUser;
     if (user == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);

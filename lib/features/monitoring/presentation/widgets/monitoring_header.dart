@@ -7,6 +7,8 @@ import 'package:pondstat/features/monitoring/data/streak_provider.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/streak_flame.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 
+import 'package:pondstat/features/auth/data/auth_repository.dart';
+
 class MonitoringHeader extends ConsumerWidget {
   final String pondId;
   final String pondName;
@@ -31,7 +33,8 @@ class MonitoringHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = FirebaseAuth.instance.currentUser;
+    final userAsync = ref.watch(userChangesProvider);
+    final user = userAsync.value ?? FirebaseAuth.instance.currentUser;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;

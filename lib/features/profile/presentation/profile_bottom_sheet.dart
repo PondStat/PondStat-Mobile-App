@@ -118,7 +118,8 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
 
   @override
   Widget build(BuildContext context) {
-    final User? user = FirebaseAuth.instance.currentUser;
+    final userAsync = ref.watch(userChangesProvider);
+    final User? user = userAsync.value ?? FirebaseAuth.instance.currentUser;
     final theme = Theme.of(context);
 
     return Container(

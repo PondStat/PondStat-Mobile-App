@@ -68,6 +68,8 @@ dependencies:
   logger: ^2.7.0
   firebase_crashlytics: ^5.2.2
   audioplayers: ^6.6.0
+  image_picker: ^1.2.2
+  image_cropper: ^12.2.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
