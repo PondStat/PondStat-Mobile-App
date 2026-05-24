@@ -16,6 +16,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcas
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
+import 'package:pondstat/core/services/connectivity_provider.dart';
 
 
 class GrowthPage extends ConsumerStatefulWidget {
@@ -85,6 +86,9 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
               try {
                 final now = DateTime.now();
                 final sixDaysAgo = now.subtract(const Duration(days: 6));
+                final isOffline = ref.read(isOfflineProvider);
+                final source = isOffline ? Source.cache : Source.serverAndCache;
+                
                 final snapshot = await ref.read(monitoringRepositoryProvider).measurementsCollection
                      .where('pondId', isEqualTo: widget.pondId)
                      .where('parameter', isEqualTo: label)
@@ -92,7 +96,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                        'timestamp',
                        isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
                      )
-                     .get();
+                     .get(GetOptions(source: source));
 
                 if (snapshot.docs.isNotEmpty) {
                   throw Exception(

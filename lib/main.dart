@@ -94,7 +94,7 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
         try {
           FirebaseFirestore.instance.settings = const Settings(
             persistenceEnabled: true,
-            cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+            cacheSizeBytes: 104857600, // 100 MB limit
           );
           ref.read(appLoggerProvider).info('Offline persistence enabled', tag: 'FIREBASE');
         } catch (e) {

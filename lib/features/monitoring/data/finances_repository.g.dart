@@ -55,4 +55,4 @@ final class FinancesRepositoryProvider
 }
 
 String _$financesRepositoryHash() =>
-    r'160f3f02ef69bda09b13c8ae16562bc78ab24c8b';
+    r'5c06cc7dd38e964048d9cb084976cb1711fa312b';

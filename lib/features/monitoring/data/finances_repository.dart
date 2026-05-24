@@ -2,6 +2,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pondstat/core/services/connectivity_provider.dart';
+import 'package:pondstat/core/firebase/offline_repository_mixin.dart';
 
 part 'finances_repository.g.dart';
 
@@ -9,14 +11,24 @@ part 'finances_repository.g.dart';
 FinancesRepository financesRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
   final auth = ref.watch(firebaseAuthProvider);
-  return FinancesRepository(baseRef, auth);
+  return FinancesRepository(
+    baseRef,
+    auth,
+    isOffline: () => ref.read(isOfflineProvider),
+  );
 }
 
-class FinancesRepository {
+class FinancesRepository with OfflineRepositoryMixin {
   final DocumentReference<Map<String, dynamic>> _baseRef;
   final FirebaseAuth _auth;
+  @override
+  final bool Function() isOffline;
 
-  FinancesRepository(this._baseRef, this._auth);
+  FinancesRepository(
+    this._baseRef,
+    this._auth, {
+    required this.isOffline,
+  });
 
   User? get currentUser => _auth.currentUser;
 
@@ -43,7 +55,7 @@ class FinancesRepository {
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
-    await expensesCollection.add({
+    await runWrite(() => expensesCollection.add({
       'pondId': pondId,
       'item': item,
       'quantity': quantity,
@@ -52,13 +64,13 @@ class FinancesRepository {
       'buyerId': currentUser!.uid,
       'buyerName': currentUser!.displayName ?? 'Unknown',
       'timestamp': FieldValue.serverTimestamp(),
-    });
+    }));
   }
 
   /// Deletes an expense from Firestore.
   Future<void> deleteExpense(String expenseId) async {
     if (currentUser == null) throw Exception('User not authenticated');
-    await expensesCollection.doc(expenseId).delete();
+    await runWrite(() => expensesCollection.doc(expenseId).delete());
   }
 
   /// Stream of expenses for a pond.
@@ -83,7 +95,7 @@ class FinancesRepository {
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
-    await pondExpensesCollection.add({
+    await runWrite(() => pondExpensesCollection.add({
       'pondId': pondId,
       'category': category,
       'item': item,
@@ -95,13 +107,13 @@ class FinancesRepository {
       'recordedByName': currentUser!.displayName ?? 'Unknown',
       'timestamp': FieldValue.serverTimestamp(),
       'notes': notes,
-    });
+    }));
   }
 
   /// Deletes a direct pond expense.
   Future<void> deletePondExpense(String expenseId) async {
     if (currentUser == null) throw Exception('User not authenticated');
-    await pondExpensesCollection.doc(expenseId).delete();
+    await runWrite(() => pondExpensesCollection.doc(expenseId).delete());
   }
 
   /// Stream of direct pond expenses.
@@ -126,7 +138,7 @@ class FinancesRepository {
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
-    await pondSalesCollection.add({
+    await runWrite(() => pondSalesCollection.add({
       'pondId': pondId,
       'buyerName': buyerName,
       'productName': productName,
@@ -138,13 +150,13 @@ class FinancesRepository {
       'recordedByName': currentUser!.displayName ?? 'Unknown',
       'timestamp': FieldValue.serverTimestamp(),
       'notes': notes,
-    });
+    }));
   }
 
   /// Deletes a pond sale.
   Future<void> deletePondSale(String saleId) async {
     if (currentUser == null) throw Exception('User not authenticated');
-    await pondSalesCollection.doc(saleId).delete();
+    await runWrite(() => pondSalesCollection.doc(saleId).delete());
   }
 
   /// Stream of pond sales.

@@ -148,6 +148,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
                 ),
               ),
 
+              // User Info
               FadeTransition(
                 opacity: _fadeHeader,
                 child: SlideTransition(
@@ -162,6 +163,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
               ),
               const SizedBox(height: 24),
 
+              // Current Workspace / Pond info
               if (widget.currentPondId != null &&
                   widget.currentUserRole != null) ...[
                 FadeTransition(
@@ -196,6 +198,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
                 ),
               ],
 
+              // Menu Options
               FadeTransition(
                 opacity: _fadeButtons,
                 child: SlideTransition(

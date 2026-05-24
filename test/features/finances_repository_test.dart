@@ -24,7 +24,7 @@ void main() {
       when(() => mockAuth.currentUser).thenReturn(mockUser);
 
       final baseRef = fakeFirestore.doc('artifacts/test-app-id/public/data');
-      repository = FinancesRepository(baseRef, mockAuth);
+      repository = FinancesRepository(baseRef, mockAuth, isOffline: () => false);
     });
 
     test('addExpense saves correct data to Firestore', () async {

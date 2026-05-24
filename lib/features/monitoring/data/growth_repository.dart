@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+import 'package:pondstat/core/services/connectivity_provider.dart';
+
+import 'package:pondstat/core/firebase/offline_repository_mixin.dart';
 
 part 'growth_repository.g.dart';
 
@@ -51,13 +55,21 @@ class GrowthMetrics {
 @riverpod
 GrowthRepository growthRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
-  return GrowthRepository(baseRef);
+  return GrowthRepository(
+    baseRef,
+    isOffline: () => ref.read(isOfflineProvider),
+  );
 }
 
-class GrowthRepository {
+class GrowthRepository with OfflineRepositoryMixin {
   final DocumentReference<Map<String, dynamic>> _baseRef;
+  @override
+  final bool Function() isOffline;
 
-  GrowthRepository(this._baseRef);
+  GrowthRepository(
+    this._baseRef, {
+    required this.isOffline,
+  });
 
   // ─── Collection References ───────────────────────────────────────────
   CollectionReference<Map<String, dynamic>> get pondsCollection =>
@@ -72,7 +84,8 @@ class GrowthRepository {
   Future<List<GrowthMetrics>> calculateGrowthMetrics(
     String pondId,
   ) async {
-    final pondDoc = await pondsCollection.doc(pondId).get();
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
+    final pondDoc = await pondsCollection.doc(pondId).get(GetOptions(source: source));
     if (!pondDoc.exists) return [];
 
     final pondData = pondDoc.data() ?? {};
@@ -108,9 +121,10 @@ class GrowthRepository {
 
   Future<List<DocumentSnapshot<Map<String, dynamic>>>>
   _fetchRelevantMeasurements(String pondId, List<String> relevantParams) async {
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
     final measurementsSnapshot = await measurementsCollection
         .where('pondId', isEqualTo: pondId)
-        .get();
+        .get(GetOptions(source: source));
 
     return measurementsSnapshot.docs
         .where((doc) => relevantParams.contains(doc.data()['parameter']))
@@ -306,8 +320,9 @@ class GrowthRepository {
     if (docIds.isEmpty) return;
 
     // Fetch all docs in parallel
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
     final snapshots = await Future.wait(
-      docIds.map((id) => measurementsCollection.doc(id).get()),
+      docIds.map((id) => measurementsCollection.doc(id).get(GetOptions(source: source))),
     );
 
     final batch = _baseRef.firestore.batch();
@@ -333,7 +348,7 @@ class GrowthRepository {
 
       batch.delete(docSnap.reference);
     }
-    await _commitBatchWithTimeout(batch);
+    await commitBatchWithTimeout(batch);
   }
 
   /// Updates growth sampling metrics in a single batch and logs them to history.
@@ -357,8 +372,9 @@ class GrowthRepository {
     if (allDocIds.isEmpty) return;
 
     // Fetch all docs in parallel
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
     final snapshots = await Future.wait(
-      allDocIds.map((id) => measurementsCollection.doc(id).get()),
+      allDocIds.map((id) => measurementsCollection.doc(id).get(GetOptions(source: source))),
     );
 
     final batch = _baseRef.firestore.batch();
@@ -419,13 +435,7 @@ class GrowthRepository {
       });
     }
 
-    await _commitBatchWithTimeout(batch);
+    await commitBatchWithTimeout(batch);
   }
 
-  Future<void> _commitBatchWithTimeout(WriteBatch batch) async {
-    await batch.commit().timeout(
-      const Duration(seconds: 2),
-      onTimeout: () => null,
-    );
-  }
 }

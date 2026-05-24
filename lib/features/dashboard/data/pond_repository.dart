@@ -1,21 +1,30 @@
-// lib/features/dashboard/data/pond_repository_v2.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
+import 'package:pondstat/core/services/connectivity_provider.dart';
+import 'package:pondstat/core/firebase/offline_repository_mixin.dart';
 
 part 'pond_repository.g.dart';
 
 @riverpod
 PondRepository pondRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
-  return PondRepository(baseRef);
+  return PondRepository(
+    baseRef,
+    isOffline: () => ref.read(isOfflineProvider),
+  );
 }
 
-class PondRepository {
+class PondRepository with OfflineRepositoryMixin {
   final DocumentReference<Map<String, dynamic>> _baseRef;
+  @override
+  final bool Function() isOffline;
 
-  PondRepository(this._baseRef);
+  PondRepository(
+    this._baseRef, {
+    required this.isOffline,
+  });
 
   CollectionReference<Pond> get pondsCollection {
     return _baseRef
@@ -38,21 +47,23 @@ class PondRepository {
   }
 
   Future<void> createPond(Pond pond) async {
-    final newPondRef = pondsCollection.doc();
-    await newPondRef.set(pond);
-    await newPondRef.update({'createdAt': FieldValue.serverTimestamp()});
+    await runWrite(() async {
+      final newPondRef = pondsCollection.doc();
+      await newPondRef.set(pond);
+      await newPondRef.update({'createdAt': FieldValue.serverTimestamp()});
+    });
   }
 
   Future<void> updatePond(Pond pond) async {
-    await pondsCollection.doc(pond.id).update({
+    await runWrite(() => pondsCollection.doc(pond.id).update({
       'name': pond.name,
       'species': pond.species,
       'stockingQuantity': pond.stockingQuantity,
       'targetCulturePeriodDays': pond.targetCulturePeriodDays,
-    });
+    }));
   }
 
   Future<void> deletePond(String pondId) async {
-    await pondsCollection.doc(pondId).delete();
+    await runWrite(() => pondsCollection.doc(pondId).delete());
   }
 }
