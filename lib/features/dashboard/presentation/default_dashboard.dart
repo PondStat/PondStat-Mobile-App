@@ -25,6 +25,9 @@ import 'package:pondstat/core/widgets/staggered_list_item.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/notification_badge.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_skeleton_loader.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_filter_dropdown.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 class DefaultDashboardScreen extends ConsumerStatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -50,9 +53,14 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 
   late Stream<List<Pond>> _userPondsStream;
 
+  // Showcase global keys
+  final GlobalKey _aquariumKey = GlobalKey();
+  final GlobalKey _fabKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
+    ShowcaseView.register();
 
     final user = ref.read(authRepositoryProvider).currentUser;
     _userPondsStream = ref.read(pondRepositoryProvider).getUserPondsStream(
@@ -71,6 +79,19 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
       setState(() {
         _searchQuery = _searchController.text;
       });
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final tourNotifier = ref.read(onboardingTourProvider);
+      if (!tourNotifier.hasSeenDashboard) {
+        _userPondsStream.first.then((ponds) {
+          if (ponds.isNotEmpty && mounted) {
+            ShowcaseView.get().startShowCase([_aquariumKey, _fabKey]);
+            ref.read(onboardingTourProvider.notifier).markDashboardAsSeen();
+          }
+        }).catchError((_) {});
+      }
     });
   }
 
@@ -133,6 +154,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 
   @override
   void dispose() {
+    ShowcaseView.get().unregister();
     _connectivitySubscription?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -414,24 +436,29 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                           end: Alignment.bottomRight,
                         ),
                       ),
-                      child: FloatingActionButton.extended(
-                        heroTag: 'dashboard_fab',
-                        onPressed: () => _showCreatePondSheet(context),
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
-                        focusElevation: 0,
-                        hoverElevation: 0,
-                        highlightElevation: 0,
-                        icon: const Icon(Icons.add_rounded, color: Colors.white),
-                        label: const Text(
-                          "New Pond",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 16,
+                      child: CustomShowcase(
+                        showcaseKey: _fabKey,
+                        title: "Create a Pond Workspace",
+                        description: "Tap here to initialize a new pond workspace! Define your target culture period, species, and initial dimensions.",
+                        child: FloatingActionButton.extended(
+                          heroTag: 'dashboard_fab',
+                          onPressed: () => _showCreatePondSheet(context),
+                          backgroundColor: Colors.transparent,
+                          elevation: 0,
+                          focusElevation: 0,
+                          hoverElevation: 0,
+                          highlightElevation: 0,
+                          icon: const Icon(Icons.add_rounded, color: Colors.white),
+                          label: const Text(
+                            "New Pond",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
                           ),
+                          extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
                         ),
-                        extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
                       ),
                     ),
                   ),
@@ -515,7 +542,12 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
           itemCount: filteredPonds.isEmpty ? 3 : filteredPonds.length + 2,
           itemBuilder: (context, index) {
             if (index == 0) {
-              return const PondyAquariumCard();
+              return CustomShowcase(
+                showcaseKey: _aquariumKey,
+                title: "Pondy's Ecosystem & Streaks",
+                description: "This is Pondy, your smart farm companion! Tap on the tank to interact, drop feed, or view an immersive full-screen aquarium ecosystem. Recording parameters daily keeps Pondy happy and builds your consecutive monitoring streak! 🔥",
+                child: const PondyAquariumCard(),
+              );
             }
             if (index == 1) {
               return Column(

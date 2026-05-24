@@ -8,6 +8,8 @@ class OnboardingTourState {
   final bool hasSeenFinances;
   final bool hasSeenGrowth;
   final bool hasSeenParameter;
+  final bool hasSeenDashboard;
+  final bool hasSeenCollaborators;
 
   OnboardingTourState({
     required this.hasSeenOverview,
@@ -16,6 +18,8 @@ class OnboardingTourState {
     required this.hasSeenFinances,
     required this.hasSeenGrowth,
     required this.hasSeenParameter,
+    required this.hasSeenDashboard,
+    required this.hasSeenCollaborators,
   });
 
   OnboardingTourState copyWith({
@@ -25,6 +29,8 @@ class OnboardingTourState {
     bool? hasSeenFinances,
     bool? hasSeenGrowth,
     bool? hasSeenParameter,
+    bool? hasSeenDashboard,
+    bool? hasSeenCollaborators,
   }) {
     return OnboardingTourState(
       hasSeenOverview: hasSeenOverview ?? this.hasSeenOverview,
@@ -33,6 +39,8 @@ class OnboardingTourState {
       hasSeenFinances: hasSeenFinances ?? this.hasSeenFinances,
       hasSeenGrowth: hasSeenGrowth ?? this.hasSeenGrowth,
       hasSeenParameter: hasSeenParameter ?? this.hasSeenParameter,
+      hasSeenDashboard: hasSeenDashboard ?? this.hasSeenDashboard,
+      hasSeenCollaborators: hasSeenCollaborators ?? this.hasSeenCollaborators,
     );
   }
 }
@@ -44,6 +52,8 @@ class OnboardingTourNotifier extends Notifier<OnboardingTourState> {
   static const _keyFinances = 'onboarding_seen_finances';
   static const _keyGrowth = 'onboarding_seen_growth';
   static const _keyParameter = 'onboarding_seen_parameter';
+  static const _keyDashboard = 'onboarding_seen_dashboard';
+  static const _keyCollaborators = 'onboarding_seen_collaborators';
 
   @override
   OnboardingTourState build() {
@@ -55,6 +65,8 @@ class OnboardingTourNotifier extends Notifier<OnboardingTourState> {
       hasSeenFinances: prefs.getBool(_keyFinances) ?? false,
       hasSeenGrowth: prefs.getBool(_keyGrowth) ?? false,
       hasSeenParameter: prefs.getBool(_keyParameter) ?? false,
+      hasSeenDashboard: prefs.getBool(_keyDashboard) ?? false,
+      hasSeenCollaborators: prefs.getBool(_keyCollaborators) ?? false,
     );
   }
 
@@ -94,6 +106,18 @@ class OnboardingTourNotifier extends Notifier<OnboardingTourState> {
     state = state.copyWith(hasSeenParameter: true);
   }
 
+  Future<void> markDashboardAsSeen() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(_keyDashboard, true);
+    state = state.copyWith(hasSeenDashboard: true);
+  }
+
+  Future<void> markCollaboratorsAsSeen() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(_keyCollaborators, true);
+    state = state.copyWith(hasSeenCollaborators: true);
+  }
+
   Future<void> resetAll() async {
     final prefs = ref.read(sharedPreferencesProvider);
     await prefs.remove(_keyOverview);
@@ -102,6 +126,8 @@ class OnboardingTourNotifier extends Notifier<OnboardingTourState> {
     await prefs.remove(_keyFinances);
     await prefs.remove(_keyGrowth);
     await prefs.remove(_keyParameter);
+    await prefs.remove(_keyDashboard);
+    await prefs.remove(_keyCollaborators);
     state = OnboardingTourState(
       hasSeenOverview: false,
       hasSeenTrends: false,
@@ -109,6 +135,8 @@ class OnboardingTourNotifier extends Notifier<OnboardingTourState> {
       hasSeenFinances: false,
       hasSeenGrowth: false,
       hasSeenParameter: false,
+      hasSeenDashboard: false,
+      hasSeenCollaborators: false,
     );
   }
 }

@@ -45,6 +45,8 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
 
   bool get canEdit => widget.userRole == 'owner' || widget.userRole == 'editor';
 
+  final GlobalKey _profileKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +71,15 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
       initialFocus.month,
       initialFocus.day,
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final tourNotifier = ref.read(onboardingTourProvider);
+      if (widget.userRole == 'owner' && !tourNotifier.hasSeenCollaborators) {
+        ShowcaseView.get().startShowCase([_profileKey]);
+        ref.read(onboardingTourProvider.notifier).markCollaboratorsAsSeen();
+      }
+    });
   }
 
   @override
@@ -78,6 +89,9 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
   }
 
   void _showProfileSheet() {
+    final tourState = ref.read(onboardingTourProvider);
+    final shouldStartTour = widget.userRole == 'owner' && !tourState.hasSeenCollaborators;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -87,6 +101,7 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
         currentPondId: widget.pondId,
         currentPondName: widget.pondName,
         currentUserRole: widget.userRole,
+        startCollaboratorTour: shouldStartTour,
       ),
     );
   }
@@ -222,6 +237,7 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
                   onBackTap: () => context.pop(),
                   onHistoryTap: _showEditHistory,
                   onProfileTap: _showProfileSheet,
+                  profileKey: _profileKey,
                   onHelpTap: () {
                     ref.read(tourTriggerProvider.notifier).state = null;
                     WidgetsBinding.instance.addPostFrameCallback((_) {

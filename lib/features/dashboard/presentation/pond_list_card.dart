@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pondstat/core/router/route_names.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/streak_provider.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/streak_flame.dart';
 
-class PondListCard extends StatefulWidget {
+class PondListCard extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final String species;
@@ -23,10 +26,10 @@ class PondListCard extends StatefulWidget {
   });
 
   @override
-  State<PondListCard> createState() => _PondListCardState();
+  ConsumerState<PondListCard> createState() => _PondListCardState();
 }
 
-class _PondListCardState extends State<PondListCard>
+class _PondListCardState extends ConsumerState<PondListCard>
     with TickerProviderStateMixin {
   bool _isNavigating = false;
   late final AnimationController _waveController;
@@ -214,16 +217,28 @@ class _PondListCardState extends State<PondListCard>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                widget.pondName,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 18,
-                                  letterSpacing: -0.3,
-                                  color: colorScheme.onSurface,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      widget.pondName,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 18,
+                                        letterSpacing: -0.3,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ref.watch(pondStreakProvider(widget.pondId)).when(
+                                        data: (streak) => StreakFlame(streak: streak, size: 14),
+                                        error: (err, stack) => const SizedBox.shrink(),
+                                        loading: () => const SizedBox.shrink(),
+                                      ),
+                                ],
                               ),
                               const SizedBox(height: 6),
                               Row(

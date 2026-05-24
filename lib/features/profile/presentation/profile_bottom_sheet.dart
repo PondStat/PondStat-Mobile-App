@@ -8,17 +8,21 @@ import 'package:pondstat/core/router/route_names.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/profile/presentation/widgets/bouncy_menu_button.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 
 class ProfileBottomSheet extends ConsumerStatefulWidget {
   final String? currentPondId;
   final String? currentPondName;
   final String? currentUserRole;
+  final bool startCollaboratorTour;
 
   const ProfileBottomSheet({
     super.key,
     this.currentPondId,
     this.currentPondName,
     this.currentUserRole,
+    this.startCollaboratorTour = false,
   });
 
   @override
@@ -34,9 +38,13 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
   late Animation<double> _fadeButtons;
   late Animation<Offset> _slideUp;
 
+  final GlobalKey _collaboratorKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
+    ShowcaseView.register();
+
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -70,10 +78,23 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
         );
 
     _entranceController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.startCollaboratorTour && widget.currentUserRole == 'owner') {
+        // Wait slightly for the modal sheets entrance slide animation to complete
+        Future.delayed(const Duration(milliseconds: 650), () {
+          if (mounted) {
+            ShowcaseView.get().startShowCase([_collaboratorKey]);
+          }
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    ShowcaseView.get().unregister();
     _entranceController.dispose();
     super.dispose();
   }
@@ -192,18 +213,23 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
 
                       if (widget.currentPondId != null &&
                           widget.currentUserRole == 'owner')
-                        BouncyMenuButton(
-                          icon: Icons.group_add_outlined,
-                          text: 'Manage Collaborators',
-                          onTap: () {
-                            Navigator.pop(context);
-                            context.push(
-                              AppRoutes.collaboratorsPath(widget.currentPondId!),
-                              extra: <String, dynamic>{
-                                'pondName': widget.currentPondName ?? 'Pond',
-                              },
-                            );
-                          },
+                        CustomShowcase(
+                          showcaseKey: _collaboratorKey,
+                          title: "Manage Pond Collaborators",
+                          description: "Invite and manage farm hands, editors, or other viewers to help you monitor this pond's parameters together!",
+                          child: BouncyMenuButton(
+                            icon: Icons.group_add_outlined,
+                            text: 'Manage Collaborators',
+                            onTap: () {
+                              Navigator.pop(context);
+                              context.push(
+                                AppRoutes.collaboratorsPath(widget.currentPondId!),
+                                extra: <String, dynamic>{
+                                  'pondName': widget.currentPondName ?? 'Pond',
+                                },
+                              );
+                            },
+                          ),
                         ),
 
                       const SizedBox(height: 16),

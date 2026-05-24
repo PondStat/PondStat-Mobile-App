@@ -9,6 +9,7 @@ class CustomShowcase extends StatelessWidget {
   final ShapeBorder? targetShapeBorder;
   final BorderRadius? targetBorderRadius;
   final EdgeInsets? tooltipPadding;
+  final VoidCallback? onTargetClick;
 
   const CustomShowcase({
     super.key,
@@ -19,6 +20,7 @@ class CustomShowcase extends StatelessWidget {
     this.targetShapeBorder,
     this.targetBorderRadius,
     this.tooltipPadding,
+    this.onTargetClick,
   });
 
   @override
@@ -31,6 +33,7 @@ class CustomShowcase extends StatelessWidget {
       key: showcaseKey,
       title: title,
       description: description,
+      onTargetClick: onTargetClick,
       tooltipBackgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       textColor: isDark ? Colors.white : Colors.black87,
       titleTextStyle: TextStyle(

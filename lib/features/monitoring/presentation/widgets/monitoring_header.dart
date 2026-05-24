@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pondstat/features/monitoring/data/streak_provider.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/streak_flame.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 
-class MonitoringHeader extends StatelessWidget {
+class MonitoringHeader extends ConsumerWidget {
   final String pondId;
   final String pondName;
   final String species;
@@ -11,6 +15,7 @@ class MonitoringHeader extends StatelessWidget {
   final VoidCallback onHistoryTap;
   final VoidCallback onProfileTap;
   final VoidCallback? onHelpTap;
+  final GlobalKey? profileKey;
 
   const MonitoringHeader({
     super.key,
@@ -21,10 +26,11 @@ class MonitoringHeader extends StatelessWidget {
     required this.onHistoryTap,
     required this.onProfileTap,
     this.onHelpTap,
+    this.profileKey,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final user = FirebaseAuth.instance.currentUser;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -88,16 +94,29 @@ class MonitoringHeader extends StatelessWidget {
                     letterSpacing: 1.2,
                   ),
                 ),
-                Text(
-                  pondName,
-                  style: TextStyle(
-                    color: onSurface,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        pondName,
+                        style: TextStyle(
+                          color: onSurface,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ref.watch(pondStreakProvider(pondId)).when(
+                          data: (streak) => StreakFlame(streak: streak),
+                          error: (err, stack) => const SizedBox.shrink(),
+                          loading: () => const SizedBox.shrink(),
+                        ),
+                    const SizedBox(width: 12),
+                  ],
                 ),
               ],
             ),
@@ -126,42 +145,47 @@ class MonitoringHeader extends StatelessWidget {
             surfaceContainer: surfaceContainer,
           ),
           const SizedBox(width: 8),
-          Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                onProfileTap();
-              },
-              customBorder: const CircleBorder(),
-              child: _buildCircleContainer(
-                context: context,
-                surfaceContainer: surfaceContainer,
-                child: Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: isDark
-                        ? Colors.white12
-                        : Colors.grey.shade100,
-                    backgroundImage: user?.photoURL != null
-                        ? NetworkImage(user!.photoURL!)
-                        : null,
-                    onBackgroundImageError: user?.photoURL != null
-                        ? (exception, stackTrace) {}
-                        : null,
-                    child: user?.photoURL == null
-                        ? Text(
-                            user?.displayName?.isNotEmpty == true
-                                ? user!.displayName![0].toUpperCase()
-                                : 'U',
-                            style: TextStyle(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          )
-                        : null,
+          CustomShowcase(
+            showcaseKey: profileKey ?? GlobalKey(),
+            title: "Manage Pond Collaborators",
+            description: "Invite and manage farm hands, editors, or other viewers to help you monitor this pond's parameters! Tap your profile icon to configure.",
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onProfileTap();
+                },
+                customBorder: const CircleBorder(),
+                child: _buildCircleContainer(
+                  context: context,
+                  surfaceContainer: surfaceContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2.0),
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: isDark
+                          ? Colors.white12
+                          : Colors.grey.shade100,
+                      backgroundImage: user?.photoURL != null
+                          ? NetworkImage(user!.photoURL!)
+                          : null,
+                      onBackgroundImageError: user?.photoURL != null
+                          ? (exception, stackTrace) {}
+                          : null,
+                      child: user?.photoURL == null
+                          ? Text(
+                              user?.displayName?.isNotEmpty == true
+                                  ? user!.displayName![0].toUpperCase()
+                                  : 'U',
+                              style: TextStyle(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            )
+                          : null,
+                    ),
                   ),
                 ),
               ),
