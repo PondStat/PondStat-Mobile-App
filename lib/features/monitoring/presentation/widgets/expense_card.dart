@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'card_metric.dart';
 
 class ExpenseCard extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -115,61 +116,29 @@ class ExpenseCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMetric(context, "Qty", qty.toString()),
-              _buildMetric(
-                context,
-                "Unit Price",
-                compactCurrencyFormat.format(unitPrice),
+              CardMetric(
+                label: "Qty",
+                value: qty.toString(),
               ),
-              _buildMetric(
-                context,
-                "Total",
-                compactCurrencyFormat.format(total),
-                isBold: true,
+              CardMetric(
+                label: "Unit Price",
+                value: compactCurrencyFormat.format(unitPrice),
               ),
-              _buildMetric(
-                context,
-                "Share",
-                compactCurrencyFormat.format(share),
-                isPrimary: true,
+              CardMetric(
+                label: "Total",
+                value: compactCurrencyFormat.format(total),
+                isHighlighted: true,
+              ),
+              CardMetric(
+                label: "Share",
+                value: compactCurrencyFormat.format(share),
+                isHighlighted: true,
+                valueColor: Colors.teal,
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMetric(
-    BuildContext context,
-    String label,
-    String value, {
-    bool isBold = false,
-    bool isPrimary = false,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: colorScheme.onSurfaceVariant,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            color: isPrimary ? Colors.teal : colorScheme.onSurface,
-            fontWeight: isBold || isPrimary ? FontWeight.w900 : FontWeight.w700,
-            fontSize: 13,
-          ),
-        ),
-      ],
     );
   }
 }

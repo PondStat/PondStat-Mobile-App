@@ -6,7 +6,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/pond_expense_c
 import 'package:pondstat/features/monitoring/presentation/widgets/pond_financial_summary_card.dart';
 import 'package:pondstat/core/widgets/loading_placeholder.dart';
 import 'package:pondstat/core/widgets/error_state_card.dart';
-import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/data/finances_repository.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
@@ -26,7 +26,7 @@ class _PondExpensesTabState extends ConsumerState<PondExpensesTab> {
   late Stream<QuerySnapshot<Map<String, dynamic>>> _expensesStream;
 
   void _initStreams() {
-    _expensesStream = ref.read(monitoringRepositoryProvider).getPondExpensesStream(widget.pondId);
+    _expensesStream = ref.read(financesRepositoryProvider).getPondExpensesStream(widget.pondId);
   }
 
   Future<void> _refreshData() async {
@@ -164,7 +164,7 @@ class _PondExpensesTabState extends ConsumerState<PondExpensesTab> {
         title: "Delete Pond Expense?",
         content: "Are you sure you want to remove '$item'? This action cannot be undone.",
         onConfirm: () async {
-          await ref.read(monitoringRepositoryProvider).deletePondExpense(id);
+          await ref.read(financesRepositoryProvider).deletePondExpense(id);
           HapticFeedback.mediumImpact();
           if (context.mounted) {
             SnackbarHelper.showSuccess(context, "Pond expense deleted");

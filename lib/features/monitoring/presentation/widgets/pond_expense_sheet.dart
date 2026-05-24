@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
-import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/data/finances_repository.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/pondstat_dropdown_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
+import 'financial_total_card.dart';
 
 class PondExpenseSheet extends ConsumerStatefulWidget {
   final String pondId;
@@ -78,7 +78,7 @@ class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
     HapticFeedback.mediumImpact();
 
     try {
-      await ref.read(monitoringRepositoryProvider).addPondExpense(
+      await ref.read(financesRepositoryProvider).addPondExpense(
             pondId: widget.pondId,
             category: _selectedCategory,
             item: _itemController.text.trim(),
@@ -314,7 +314,17 @@ class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 24),
-                  _buildTotalCard(isDark),
+                  FinancialTotalCard(
+                    label: "Total Amount",
+                    amount: _totalAmount,
+                    textColor: Colors.indigo,
+                    backgroundColor: isDark
+                        ? Colors.indigo.withValues(alpha: 0.1)
+                        : Colors.indigo.shade50.withValues(alpha: 0.5),
+                    borderColor: isDark
+                        ? Colors.indigo.withValues(alpha: 0.3)
+                        : Colors.indigo.shade100,
+                  ),
                   const SizedBox(height: 32),
                   Theme(
                     data: Theme.of(context).copyWith(
@@ -334,48 +344,6 @@ class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTotalCard(bool isDark) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.indigo.withValues(alpha: 0.1)
-            : Colors.indigo.shade50.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark
-              ? Colors.indigo.withValues(alpha: 0.3)
-              : Colors.indigo.shade100,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            "Total Amount",
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: Colors.indigo,
-              fontSize: 16,
-            ),
-          ),
-          Text(
-            NumberFormat.currency(
-              symbol: '₱',
-              decimalDigits: 2,
-            ).format(_totalAmount),
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              color: Colors.indigo,
-              fontSize: 24,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -79,7 +79,6 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
           tourNotifier.hasSeenOverview &&
           !tourNotifier.hasSeenCollaborators) {
         ShowcaseView.get().startShowCase([_profileKey]);
-        ref.read(onboardingTourProvider.notifier).markCollaboratorsAsSeen();
       }
     });
   }

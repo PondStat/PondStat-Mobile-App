@@ -6,7 +6,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/pond_sale_card
 import 'package:pondstat/features/monitoring/presentation/widgets/pond_financial_summary_card.dart';
 import 'package:pondstat/core/widgets/loading_placeholder.dart';
 import 'package:pondstat/core/widgets/error_state_card.dart';
-import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/data/finances_repository.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
@@ -26,7 +26,7 @@ class _PondSalesTabState extends ConsumerState<PondSalesTab> {
   late Stream<QuerySnapshot<Map<String, dynamic>>> _salesStream;
 
   void _initStreams() {
-    _salesStream = ref.read(monitoringRepositoryProvider).getPondSalesStream(widget.pondId);
+    _salesStream = ref.read(financesRepositoryProvider).getPondSalesStream(widget.pondId);
   }
 
   Future<void> _refreshData() async {
@@ -176,7 +176,7 @@ class _PondSalesTabState extends ConsumerState<PondSalesTab> {
         title: "Delete Sales Record?",
         content: "Are you sure you want to remove the sale to '$buyer'? This action cannot be undone.",
         onConfirm: () async {
-          await ref.read(monitoringRepositoryProvider).deletePondSale(id);
+          await ref.read(financesRepositoryProvider).deletePondSale(id);
           HapticFeedback.mediumImpact();
           if (context.mounted) {
             SnackbarHelper.showSuccess(context, "Sales record deleted");

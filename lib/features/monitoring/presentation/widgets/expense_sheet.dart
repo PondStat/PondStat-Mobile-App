@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
-import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/data/finances_repository.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
+import 'financial_total_card.dart';
 
 class ExpenseSheet extends ConsumerStatefulWidget {
   final String pondId;
@@ -53,7 +53,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
     HapticFeedback.mediumImpact();
 
     try {
-      await ref.read(monitoringRepositoryProvider).addExpense(
+      await ref.read(financesRepositoryProvider).addExpense(
         pondId: widget.pondId,
         item: _itemController.text.trim(),
         quantity: int.parse(_quantityController.text),
@@ -256,7 +256,17 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                   ),
 
                   const SizedBox(height: 24),
-                  _buildTotalCard(isDark),
+                  FinancialTotalCard(
+                    label: "Total Amount",
+                    amount: _totalAmount,
+                    textColor: Colors.teal,
+                    backgroundColor: isDark
+                        ? Colors.teal.withValues(alpha: 0.1)
+                        : Colors.teal.shade50.withValues(alpha: 0.5),
+                    borderColor: isDark
+                        ? Colors.teal.withValues(alpha: 0.3)
+                        : Colors.teal.shade100,
+                  ),
 
                   const SizedBox(height: 32),
 
@@ -278,48 +288,6 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTotalCard(bool isDark) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.teal.withValues(alpha: 0.1)
-            : Colors.teal.shade50.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark
-              ? Colors.teal.withValues(alpha: 0.3)
-              : Colors.teal.shade100,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            "Total Amount",
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: Colors.teal,
-              fontSize: 16,
-            ),
-          ),
-          Text(
-            NumberFormat.currency(
-              symbol: '₱',
-              decimalDigits: 2,
-            ).format(_totalAmount),
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              color: Colors.teal,
-              fontSize: 24,
-            ),
-          ),
-        ],
       ),
     );
   }

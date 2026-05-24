@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/expense_card.dart';
 import 'package:pondstat/core/widgets/loading_placeholder.dart';
 import 'package:pondstat/core/widgets/error_state_card.dart';
-import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/data/finances_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
@@ -32,7 +32,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
     _pondStream = ref.read(pondRepositoryProvider).pondsCollection
         .doc(widget.pondId)
         .snapshots();
-    _expensesStream = ref.read(monitoringRepositoryProvider).getExpensesStream(widget.pondId);
+    _expensesStream = ref.read(financesRepositoryProvider).getExpensesStream(widget.pondId);
   }
 
   Future<void> _refreshData() async {
@@ -198,7 +198,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
         title: "Delete Expense?",
         content: "Are you sure you want to remove '$item'? This action cannot be undone.",
         onConfirm: () async {
-          await ref.read(monitoringRepositoryProvider).deleteExpense(id);
+          await ref.read(financesRepositoryProvider).deleteExpense(id);
           HapticFeedback.mediumImpact();
           if (context.mounted) {
             SnackbarHelper.showSuccess(context, "Expense deleted");

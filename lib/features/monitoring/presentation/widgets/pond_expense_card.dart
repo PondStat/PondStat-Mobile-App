@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'card_metric.dart';
 
 class PondExpenseCard extends StatelessWidget {
   final String id;
@@ -158,52 +159,24 @@ class PondExpenseCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMetric(context, "Quantity", "$quantity $unit"),
-              _buildMetric(context, "Unit Price", compactCurrencyFormat.format(amountPerUnit)),
-              _buildMetric(
-                context,
-                "Total Cost",
-                compactCurrencyFormat.format(totalAmount),
-                isBold: true,
-                isPrimary: true,
+              CardMetric(
+                label: "Quantity",
+                value: "$quantity $unit",
+              ),
+              CardMetric(
+                label: "Unit Price",
+                value: compactCurrencyFormat.format(amountPerUnit),
+              ),
+              CardMetric(
+                label: "Total Cost",
+                value: compactCurrencyFormat.format(totalAmount),
+                isHighlighted: true,
+                valueColor: Colors.indigo,
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMetric(
-    BuildContext context,
-    String label,
-    String value, {
-    bool isBold = false,
-    bool isPrimary = false,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: colorScheme.onSurfaceVariant,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            color: isPrimary ? Colors.indigo : colorScheme.onSurface,
-            fontWeight: isBold || isPrimary ? FontWeight.w900 : FontWeight.w700,
-            fontSize: 13,
-          ),
-        ),
-      ],
     );
   }
 }

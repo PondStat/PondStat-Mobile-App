@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/core/router/route_names.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
+import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 import 'package:pondstat/features/profile/presentation/widgets/bouncy_menu_button.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
@@ -86,6 +87,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
         Future.delayed(const Duration(milliseconds: 650), () {
           if (mounted) {
             ShowcaseView.get().startShowCase([_collaboratorKey]);
+            ref.read(onboardingTourProvider.notifier).markCollaboratorsAsSeen();
           }
         });
       }
@@ -557,8 +559,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
       final logger = ref.read(appLoggerProvider);
       if (context.mounted) Navigator.of(context).pop();
       try {
-        await FirebaseAuth.instance.signOut();
-        await GoogleSignIn().signOut();
+        await ref.read(authRepositoryProvider).signOut();
       } catch (e, stackTrace) {
         logger.error("Sign out error", error: e, stackTrace: stackTrace, tag: 'AUTH');
       }
