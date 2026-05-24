@@ -46,7 +46,7 @@ service cloud.firestore {
         // ── NOTIFICATIONS (IN-APP INBOX) ──
         match /notifications/{notificationId} {
           allow read: if isAuthenticated() && uid() == userId;
-          allow create: if false; // Only Cloud Function writes
+          allow create: if isAuthenticated();
           allow update: if isAuthenticated() && uid() == userId;
           allow delete: if isAuthenticated() && uid() == userId;
         }
@@ -124,7 +124,7 @@ service cloud.firestore {
 
       // ── CUSTOM PARAMETERS ──
       match /custom_parameters/{paramId} {
-        allow read: if isAuthenticated();
+        allow read: if isPondMember(resource.data.pondId);
         allow create: if isAuthenticated()
           && request.resource.data.createdBy == uid()
           && isPondMember(request.resource.data.pondId);
