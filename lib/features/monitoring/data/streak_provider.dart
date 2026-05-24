@@ -31,7 +31,7 @@ final pondStreakProvider = StreamProvider.family<int, String>((ref, pondId) {
     
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
+    final yesterday = DateTime(today.year, today.month, today.day - 1);
     
     // 3. Determine if streak is active (must have recorded today or yesterday)
     final hasToday = sortedDates.contains(today);
@@ -47,7 +47,7 @@ final pondStreakProvider = StreamProvider.family<int, String>((ref, pondId) {
     
     while (uniqueDates.contains(currentCheckDay)) {
       streakCount++;
-      currentCheckDay = currentCheckDay.subtract(const Duration(days: 1));
+      currentCheckDay = DateTime(currentCheckDay.year, currentCheckDay.month, currentCheckDay.day - 1);
     }
     
     return streakCount;

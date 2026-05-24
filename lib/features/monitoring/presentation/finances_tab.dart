@@ -38,7 +38,7 @@ class _FinancesTabState extends ConsumerState<FinancesTab>
     if (widget.canEdit && _selectedFilterIndex == 0) {
       keys.add(_addExpensesKey);
     }
-    ShowcaseView.get().startShowCase(keys);
+    ShowcaseView.getNamed('pond_monitoring').startShowCase(keys);
   }
 
   @override
@@ -107,6 +107,7 @@ class _FinancesTabState extends ConsumerState<FinancesTab>
           // Filter Chips
           CustomShowcase(
             showcaseKey: _financesChipsKey,
+            scope: 'pond_monitoring',
             title: 'Financial Filters',
             description: 'Filter transaction history between combined group expenses, direct pond expenses, and sales.',
             child: SingleChildScrollView(
@@ -175,6 +176,7 @@ class _FinancesTabState extends ConsumerState<FinancesTab>
     if (index == 0) {
       return CustomShowcase(
         showcaseKey: _addExpensesKey,
+        scope: 'pond_monitoring',
         title: 'Add Expenses',
         description: 'Log new financial expenditures like feed purchases, labor, or equipment for this pond.',
         child: Semantics(

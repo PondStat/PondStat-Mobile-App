@@ -10,6 +10,7 @@ class CustomShowcase extends StatelessWidget {
   final BorderRadius? targetBorderRadius;
   final EdgeInsets? tooltipPadding;
   final VoidCallback? onTargetClick;
+  final String? scope;
 
   const CustomShowcase({
     super.key,
@@ -21,6 +22,7 @@ class CustomShowcase extends StatelessWidget {
     this.targetBorderRadius,
     this.tooltipPadding,
     this.onTargetClick,
+    this.scope,
   });
 
   @override
@@ -31,6 +33,7 @@ class CustomShowcase extends StatelessWidget {
 
     return Showcase(
       key: showcaseKey,
+      scope: scope,
       title: title,
       description: description,
       onTargetClick: onTargetClick,

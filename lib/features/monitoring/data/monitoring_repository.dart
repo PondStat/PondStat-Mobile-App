@@ -142,7 +142,8 @@ class MonitoringRepository with OfflineRepositoryMixin {
     }
 
     final batch = _firestore.batch();
-    final measurementRef = measurementsCollection.doc();
+    final String docId = "${pondId}_${label.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}_${dateKey}_$type";
+    final measurementRef = measurementsCollection.doc(docId);
 
     final measurementData = {
       'pondId': pondId,

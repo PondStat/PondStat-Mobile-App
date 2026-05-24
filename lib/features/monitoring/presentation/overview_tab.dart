@@ -54,7 +54,7 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
     if (widget.userRole == 'owner' || widget.userRole == 'editor') {
       keys.add(_recordButtonKey);
     }
-    ShowcaseView.get().startShowCase(keys);
+    ShowcaseView.getNamed('pond_monitoring').startShowCase(keys);
   }
 
   @override
@@ -98,6 +98,7 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
                 Expanded(
                   child: CustomShowcase(
                     showcaseKey: _overviewHeaderKey,
+                    scope: 'pond_monitoring',
                     title: 'Pond Details',
                     description: 'View the active pond name and the target species currently being cultured.',
                     child: Column(
@@ -130,6 +131,7 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
           ),
           CustomShowcase(
             showcaseKey: _progressCardKey,
+            scope: 'pond_monitoring',
             title: 'Culture Progress',
             description: 'Track the current day of culture, target period, and overall progress metrics of this culture cycle.',
             child: CultureProgressCard(
@@ -141,6 +143,7 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
             padding: const EdgeInsets.all(20.0),
             child: CustomShowcase(
               showcaseKey: _calendarKey,
+              scope: 'pond_monitoring',
               title: 'Monitoring Calendar',
               description: 'Select a day to view historical records, trends, or log daily parameters.',
               child: Container(
@@ -179,6 +182,7 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
                 width: double.infinity,
                 child: CustomShowcase(
                   showcaseKey: _recordButtonKey,
+                  scope: 'pond_monitoring',
                   title: 'Record Parameters',
                   description: 'Tap here to enter daily water quality data such as temperature, pH, and dissolved oxygen.',
                   child: ElevatedButton.icon(

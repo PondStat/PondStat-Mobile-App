@@ -48,7 +48,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
     if (widget.canEdit) {
       keys.add(_recordGrowthKey);
     }
-    ShowcaseView.get().startShowCase(keys);
+    ShowcaseView.getNamed('pond_monitoring').startShowCase(keys);
   }
 
   @override
@@ -237,6 +237,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
       backgroundColor: Colors.transparent,
       body: CustomShowcase(
         showcaseKey: _growthListKey,
+        scope: 'pond_monitoring',
         title: 'Growth Performance & Records',
         description: 'Track growth sampling indices like Average Body Weight (ABW), Average Daily Growth (ADG), Feed Conversion Ratio (FCR), and more over time.',
         child: GrowthTab(
@@ -250,6 +251,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
       floatingActionButton: widget.canEdit
           ? CustomShowcase(
               showcaseKey: _recordGrowthKey,
+              scope: 'pond_monitoring',
               title: 'Record Sampling',
               description: 'Tap here to log a new periodic fish growth sampling session (ABW, replicates, etc.).',
               child: Semantics(

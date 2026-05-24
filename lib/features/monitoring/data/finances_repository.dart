@@ -43,6 +43,35 @@ class FinancesRepository with OfflineRepositoryMixin {
   CollectionReference<Map<String, dynamic>> get pondSalesCollection =>
       _baseRef.collection('pond_sales');
 
+  CollectionReference<Map<String, dynamic>> get measurementHistoryCollection =>
+      _baseRef.collection('measurement_history');
+
+  void _logHistory({
+    required String pondId,
+    required String action,
+    required String itemType,
+    required Map<String, dynamic>? before,
+    required Map<String, dynamic>? after,
+  }) {
+    if (currentUser == null) return;
+    measurementHistoryCollection.add({
+      'pondId': pondId,
+      'parameter': itemType,
+      'action': action,
+      'editedAt': FieldValue.serverTimestamp(),
+      'editedBy': currentUser!.uid,
+      'editorName': currentUser!.displayName ?? 'Unknown',
+      'before': before,
+      'after': after,
+    });
+  }
+
+  void _validatePositive(String fieldName, num value) {
+    if (value <= 0) {
+      throw ArgumentError('$fieldName must be greater than 0');
+    }
+  }
+
   // ─── Group Expenses CRUD ──────────────────────────────────────────────
 
   /// Adds a new expense to Firestore.
@@ -54,22 +83,57 @@ class FinancesRepository with OfflineRepositoryMixin {
     required double totalAmount,
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
+    _validatePositive('Quantity', quantity);
+    _validatePositive('Amount per item', amountPerItem);
 
-    await runWrite(() => expensesCollection.add({
-      'pondId': pondId,
-      'item': item,
-      'quantity': quantity,
-      'amountPerItem': amountPerItem,
-      'totalAmount': totalAmount,
-      'buyerId': currentUser!.uid,
-      'buyerName': currentUser!.displayName ?? 'Unknown',
-      'timestamp': FieldValue.serverTimestamp(),
-    }));
+    final verifiedTotalAmount = double.parse((quantity * amountPerItem).toStringAsFixed(2));
+
+    await runWrite(() async {
+      await expensesCollection.add({
+        'pondId': pondId,
+        'item': item,
+        'quantity': quantity,
+        'amountPerItem': amountPerItem,
+        'totalAmount': verifiedTotalAmount,
+        'buyerId': currentUser!.uid,
+        'buyerName': currentUser!.displayName ?? 'Unknown',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      _logHistory(
+        pondId: pondId,
+        action: 'create',
+        itemType: 'Group Expense',
+        before: null,
+        after: {'value': '\$$verifiedTotalAmount ($item, qty: $quantity)'},
+      );
+    });
   }
 
   /// Deletes an expense from Firestore.
   Future<void> deleteExpense(String expenseId) async {
     if (currentUser == null) throw Exception('User not authenticated');
+    
+    // Fetch document details before deleting for history logging
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
+    try {
+      final doc = await expensesCollection.doc(expenseId).get(GetOptions(source: source));
+      if (doc.exists) {
+        final data = doc.data()!;
+        final pondId = data['pondId'] as String;
+        final item = data['item'] as String? ?? 'Item';
+        final totalAmount = data['totalAmount'] as double? ?? 0.0;
+        
+        _logHistory(
+          pondId: pondId,
+          action: 'delete',
+          itemType: 'Group Expense',
+          before: {'value': '\$$totalAmount ($item)'},
+          after: null,
+        );
+      }
+    } catch (_) {}
+
     await runWrite(() => expensesCollection.doc(expenseId).delete());
   }
 
@@ -77,6 +141,7 @@ class FinancesRepository with OfflineRepositoryMixin {
   Stream<QuerySnapshot<Map<String, dynamic>>> getExpensesStream(String pondId) {
     return expensesCollection
         .where('pondId', isEqualTo: pondId)
+        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 
@@ -94,25 +159,59 @@ class FinancesRepository with OfflineRepositoryMixin {
     String notes = '',
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
+    _validatePositive('Quantity', quantity);
+    _validatePositive('Amount per unit', amountPerUnit);
 
-    await runWrite(() => pondExpensesCollection.add({
-      'pondId': pondId,
-      'category': category,
-      'item': item,
-      'quantity': quantity,
-      'unit': unit,
-      'amountPerUnit': amountPerUnit,
-      'totalAmount': totalAmount,
-      'recordedById': currentUser!.uid,
-      'recordedByName': currentUser!.displayName ?? 'Unknown',
-      'timestamp': FieldValue.serverTimestamp(),
-      'notes': notes,
-    }));
+    final verifiedTotalAmount = double.parse((quantity * amountPerUnit).toStringAsFixed(2));
+
+    await runWrite(() async {
+      await pondExpensesCollection.add({
+        'pondId': pondId,
+        'category': category,
+        'item': item,
+        'quantity': quantity,
+        'unit': unit,
+        'amountPerUnit': amountPerUnit,
+        'totalAmount': verifiedTotalAmount,
+        'recordedById': currentUser!.uid,
+        'recordedByName': currentUser!.displayName ?? 'Unknown',
+        'timestamp': FieldValue.serverTimestamp(),
+        'notes': notes,
+      });
+
+      _logHistory(
+        pondId: pondId,
+        action: 'create',
+        itemType: 'Pond Expense',
+        before: null,
+        after: {'value': '\$$verifiedTotalAmount ($item, qty: $quantity $unit)'},
+      );
+    });
   }
 
   /// Deletes a direct pond expense.
   Future<void> deletePondExpense(String expenseId) async {
     if (currentUser == null) throw Exception('User not authenticated');
+
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
+    try {
+      final doc = await pondExpensesCollection.doc(expenseId).get(GetOptions(source: source));
+      if (doc.exists) {
+        final data = doc.data()!;
+        final pondId = data['pondId'] as String;
+        final item = data['item'] as String? ?? 'Item';
+        final totalAmount = data['totalAmount'] as double? ?? 0.0;
+        
+        _logHistory(
+          pondId: pondId,
+          action: 'delete',
+          itemType: 'Pond Expense',
+          before: {'value': '\$$totalAmount ($item)'},
+          after: null,
+        );
+      }
+    } catch (_) {}
+
     await runWrite(() => pondExpensesCollection.doc(expenseId).delete());
   }
 
@@ -120,6 +219,7 @@ class FinancesRepository with OfflineRepositoryMixin {
   Stream<QuerySnapshot<Map<String, dynamic>>> getPondExpensesStream(String pondId) {
     return pondExpensesCollection
         .where('pondId', isEqualTo: pondId)
+        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 
@@ -137,25 +237,59 @@ class FinancesRepository with OfflineRepositoryMixin {
     String notes = '',
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
+    _validatePositive('Quantity', quantity);
+    _validatePositive('Price per unit', pricePerUnit);
 
-    await runWrite(() => pondSalesCollection.add({
-      'pondId': pondId,
-      'buyerName': buyerName,
-      'productName': productName,
-      'quantity': quantity,
-      'unit': unit,
-      'pricePerUnit': pricePerUnit,
-      'totalAmount': totalAmount,
-      'recordedById': currentUser!.uid,
-      'recordedByName': currentUser!.displayName ?? 'Unknown',
-      'timestamp': FieldValue.serverTimestamp(),
-      'notes': notes,
-    }));
+    final verifiedTotalAmount = double.parse((quantity * pricePerUnit).toStringAsFixed(2));
+
+    await runWrite(() async {
+      await pondSalesCollection.add({
+        'pondId': pondId,
+        'buyerName': buyerName,
+        'productName': productName,
+        'quantity': quantity,
+        'unit': unit,
+        'pricePerUnit': pricePerUnit,
+        'totalAmount': verifiedTotalAmount,
+        'recordedById': currentUser!.uid,
+        'recordedByName': currentUser!.displayName ?? 'Unknown',
+        'timestamp': FieldValue.serverTimestamp(),
+        'notes': notes,
+      });
+
+      _logHistory(
+        pondId: pondId,
+        action: 'create',
+        itemType: 'Pond Sale',
+        before: null,
+        after: {'value': '\$$verifiedTotalAmount ($productName to $buyerName, qty: $quantity $unit)'},
+      );
+    });
   }
 
   /// Deletes a pond sale.
   Future<void> deletePondSale(String saleId) async {
     if (currentUser == null) throw Exception('User not authenticated');
+
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
+    try {
+      final doc = await pondSalesCollection.doc(saleId).get(GetOptions(source: source));
+      if (doc.exists) {
+        final data = doc.data()!;
+        final pondId = data['pondId'] as String;
+        final productName = data['productName'] as String? ?? 'Product';
+        final totalAmount = data['totalAmount'] as double? ?? 0.0;
+        
+        _logHistory(
+          pondId: pondId,
+          action: 'delete',
+          itemType: 'Pond Sale',
+          before: {'value': '\$$totalAmount ($productName)'},
+          after: null,
+        );
+      }
+    } catch (_) {}
+
     await runWrite(() => pondSalesCollection.doc(saleId).delete());
   }
 
@@ -163,6 +297,7 @@ class FinancesRepository with OfflineRepositoryMixin {
   Stream<QuerySnapshot<Map<String, dynamic>>> getPondSalesStream(String pondId) {
     return pondSalesCollection
         .where('pondId', isEqualTo: pondId)
+        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 }

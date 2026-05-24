@@ -110,8 +110,8 @@ class GrowthRepository with OfflineRepositoryMixin {
     if (pondData['createdAt'] != null) {
       pondStartDate = (pondData['createdAt'] as Timestamp).toDate();
     } else {
-      pondStartDate = (allDocs.first.data()!['timestamp'] as Timestamp)
-          .toDate();
+      final fallbackTimestamp = allDocs.first.data()!['timestamp'] as Timestamp?;
+      pondStartDate = fallbackTimestamp?.toDate() ?? DateTime.now();
     }
 
     final weeklyBuckets = _bucketizeByWeek(allDocs, pondStartDate);
@@ -173,8 +173,7 @@ class GrowthRepository with OfflineRepositoryMixin {
       );
 
       weeklyBuckets[displayWeek]!['date'] = date;
-      weeklyBuckets[displayWeek]![param] =
-          (weeklyBuckets[displayWeek]![param] as double) + val;
+      weeklyBuckets[displayWeek]![param] = val;
 
       final note = data['notes'] as String?;
       if (note != null && note.trim().isNotEmpty) {
@@ -240,7 +239,7 @@ class GrowthRepository with OfflineRepositoryMixin {
       double? adg = explicitAdg > 0 ? explicitAdg : null;
       double? dfr = explicitDfr > 0
           ? explicitDfr
-          : (currentAbw != null && feedingRate > 0
+          : (currentAbw != null && feedingRate > 0 && fishCount > 0
               ? (currentAbw * fishCount * feedingRate / 100.0)
               : null);
       double? fcr = explicitFcr > 0

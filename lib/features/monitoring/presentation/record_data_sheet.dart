@@ -180,7 +180,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
 
 
 
-    // Validate that all entered values are valid numbers (typo safety)
+    // Validate that all entered values are valid numbers and within allowed absolute ranges
     for (var p in points) {
       for (var r in replicates) {
         final key = '$p-$r';
@@ -191,6 +191,21 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
             SnackbarHelper.showError(
               context,
               "Invalid value at Point $p, Replicate $r: '$textVal' is not a valid number",
+            );
+            return;
+          }
+          
+          if (selectedParameter!.absoluteMin != null && val < selectedParameter!.absoluteMin!) {
+            SnackbarHelper.showError(
+              context,
+              "Value at Point $p, Replicate $r ($val) is below the minimum allowed limit of ${selectedParameter!.absoluteMin}",
+            );
+            return;
+          }
+          if (selectedParameter!.absoluteMax != null && val > selectedParameter!.absoluteMax!) {
+            SnackbarHelper.showError(
+              context,
+              "Value at Point $p, Replicate $r ($val) exceeds the maximum allowed limit of ${selectedParameter!.absoluteMax}",
             );
             return;
           }

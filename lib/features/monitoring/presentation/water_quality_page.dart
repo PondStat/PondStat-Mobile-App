@@ -52,7 +52,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
     if (widget.canEdit) {
       keys.add(_recordParamsKey);
     }
-    ShowcaseView.get().startShowCase(keys);
+    ShowcaseView.getNamed('pond_monitoring').startShowCase(keys);
   }
 
   @override
@@ -264,6 +264,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
         children: [
           CustomShowcase(
             showcaseKey: _qualityTabsKey,
+            scope: 'pond_monitoring',
             title: 'Parameter Schedules',
             description: 'Switch between parameters grouped by sampling frequency: Daily (pH, Temp, DO), Weekly (Alkalinity, Salinity), or Biweekly.',
             child: PreferredSize(
@@ -285,6 +286,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
           Expanded(
             child: CustomShowcase(
               showcaseKey: _measurementsListKey,
+              scope: 'pond_monitoring',
               title: 'Water Quality Records',
               description: 'View recorded measurements for the selected day. Tap any card to edit details if permissions allow.',
               child: TabBarView(
@@ -302,6 +304,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
       floatingActionButton: widget.canEdit
           ? CustomShowcase(
               showcaseKey: _recordParamsKey,
+              scope: 'pond_monitoring',
               title: 'Record Parameter Data',
               description: 'Tap here to log a new water quality parameter reading for the selected date.',
               child: Semantics(

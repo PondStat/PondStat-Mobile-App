@@ -37,7 +37,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
   final GlobalKey _exportReportKey = GlobalKey();
 
   void _startTour() {
-    ShowcaseView.get().startShowCase([
+    ShowcaseView.getNamed('pond_monitoring').startShowCase([
       _trendsTabsKey,
       _dateRangeKey,
       _exportReportKey,
@@ -389,6 +389,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
           preferredSize: const Size.fromHeight(80.0),
           child: CustomShowcase(
             showcaseKey: _trendsTabsKey,
+            scope: 'pond_monitoring',
             title: 'Periodic Filters',
             description: 'Switch between Daily, Weekly, Biweekly, and Final analysis views of your pond parameters.',
             child: Padding(
@@ -415,6 +416,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
             children: [
               CustomShowcase(
                 showcaseKey: _dateRangeKey,
+                scope: 'pond_monitoring',
                 title: 'Date Range Selector',
                 description: 'Filter parameters over custom historical durations (Only editable by the Pond Owner).',
                 child: _buildDateRangeSelector(context),
@@ -481,6 +483,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
         ),
         floatingActionButton: CustomShowcase(
           showcaseKey: _exportReportKey,
+          scope: 'pond_monitoring',
           title: 'Export Report',
           description: 'Generate high-resolution PNG charts, raw CSV data, or styled PDF reports to share with your team.',
           child: FloatingActionButton.extended(

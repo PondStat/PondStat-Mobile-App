@@ -296,7 +296,7 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                     focusNode: widget.focusNodes[key],
                     keyboardType: widget.selectedParameter.keyboardType,
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]')),
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.\-]')),
                     ],
                     textInputAction: isLast
                         ? TextInputAction.done

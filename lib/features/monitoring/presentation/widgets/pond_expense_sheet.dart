@@ -272,8 +272,12 @@ class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
                             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                           ],
                           onChanged: (_) => setState(() {}),
-                          validator: (v) =>
-                              double.tryParse(v ?? '') == null ? "Invalid" : null,
+                          validator: (v) {
+                            final parsed = double.tryParse(v ?? '');
+                            if (parsed == null) return "Invalid";
+                            if (parsed <= 0) return "Must be > 0";
+                            return null;
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -301,8 +305,12 @@ class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                     ],
                     onChanged: (_) => setState(() {}),
-                    validator: (v) =>
-                        double.tryParse(v ?? '') == null ? "Invalid" : null,
+                    validator: (v) {
+                      final parsed = double.tryParse(v ?? '');
+                      if (parsed == null) return "Invalid";
+                      if (parsed <= 0) return "Must be > 0";
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   PondStatTextField(

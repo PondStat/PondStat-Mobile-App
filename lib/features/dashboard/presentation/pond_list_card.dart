@@ -1,4 +1,4 @@
-import 'dart:math' show sin, pi;
+import 'dart:math' show sin, pi, min;
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +6,8 @@ import 'package:pondstat/core/router/route_names.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/streak_provider.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/streak_flame.dart';
+import 'package:pondstat/features/monitoring/data/pond_health_provider.dart';
+import 'package:pondstat/core/theme/pond_status_colors.dart';
 
 class PondListCard extends ConsumerStatefulWidget {
   final String pondId;
@@ -278,6 +280,32 @@ class _PondListCardState extends ConsumerState<PondListCard>
                           ),
                         ),
                         const SizedBox(width: 12),
+                        ref.watch(pondHealthScoreProvider(PondHealthParam(
+                          pondId: widget.pondId,
+                          species: widget.species,
+                        ))).when(
+                              data: (health) => _buildHealthGauge(
+                                context,
+                                health.score,
+                                health,
+                                colorScheme,
+                                isDark,
+                              ),
+                              error: (err, stack) => _buildHealthGauge(
+                                context,
+                                100.0,
+                                null,
+                                colorScheme,
+                                isDark,
+                                hasError: true,
+                              ),
+                              loading: () => _buildHealthGaugeLoading(
+                                context,
+                                colorScheme,
+                                isDark,
+                              ),
+                            ),
+                        const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -386,6 +414,138 @@ class _PondListCardState extends ConsumerState<PondListCard>
       return FontAwesomeIcons.shrimp;
     }
     return FontAwesomeIcons.droplet;
+  }
+
+  Color _getHealthColor(double score, BuildContext context) {
+    if (score < 0) return Colors.grey;
+    if (score >= 80) return context.pondColors.healthy;
+    if (score >= 50) return context.pondColors.warning;
+    return context.pondColors.critical;
+  }
+
+  String _getTooltipMessage(double score, PondHealthScore? health, bool hasError) {
+    if (hasError) return "Error loading health score";
+    if (score < 0 || health == null) return "No parameters recorded yet";
+
+    final warningCount = health.warningParameters.length;
+    final criticalCount = health.criticalParameters.length;
+
+    if (warningCount == 0 && criticalCount == 0) {
+      return "All parameters are safe ($score%)";
+    }
+
+    final List<String> issues = [];
+    if (criticalCount > 0) {
+      issues.add("$criticalCount CRITICAL (${health.criticalParameters.join(', ')})");
+    }
+    if (warningCount > 0) {
+      issues.add("$warningCount WARNING (${health.warningParameters.join(', ')})");
+    }
+    return "Health Score: ${score.toInt()}%\nIssues:\n• ${issues.join('\n• ')}";
+  }
+
+  Widget _buildHealthGauge(
+    BuildContext context,
+    double score,
+    PondHealthScore? healthScoreData,
+    ColorScheme colorScheme,
+    bool isDark, {
+    bool hasError = false,
+  }) {
+    final statusColor = hasError ? colorScheme.error : _getHealthColor(score, context);
+
+    return Tooltip(
+      message: _getTooltipMessage(score, healthScoreData, hasError),
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 4),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade900 : Colors.grey.shade800,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      textStyle: const TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: statusColor.withValues(alpha: isDark ? 0.12 : 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: CustomPaint(
+          painter: HealthGaugePainter(
+            score: score,
+            color: statusColor,
+            isDark: isDark,
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  hasError ? "N/A" : (score < 0 ? "—" : "${score.toInt()}"),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: colorScheme.onSurface,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  "HEALTH",
+                  style: TextStyle(
+                    fontSize: 7,
+                    fontWeight: FontWeight.w900,
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    letterSpacing: 0.2,
+                    height: 1.0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHealthGaugeLoading(
+    BuildContext context,
+    ColorScheme colorScheme,
+    bool isDark,
+  ) {
+    return SizedBox(
+      width: 50,
+      height: 50,
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              colorScheme.primary.withValues(alpha: 0.3),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -512,6 +672,63 @@ class _PondWaterPainter extends CustomPainter {
         oldDelegate.wavePhase != wavePhase ||
         oldDelegate.primaryColor != primaryColor ||
         oldDelegate.secondaryColor != secondaryColor ||
+        oldDelegate.isDark != isDark;
+  }
+}
+
+class HealthGaugePainter extends CustomPainter {
+  final double score;
+  final Color color;
+  final bool isDark;
+
+  HealthGaugePainter({
+    required this.score,
+    required this.color,
+    required this.isDark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = min(size.width / 2, size.height / 2) - 4;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    // Track Paint
+    final trackPaint = Paint()
+      ..color = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.5;
+
+    // Progress Paint
+    final progressPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.5
+      ..strokeCap = StrokeCap.round;
+
+    // Glow Paint
+    final glowPaint = Paint()
+      ..color = color.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 8.0
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+
+    // Draw track
+    canvas.drawCircle(center, radius, trackPaint);
+
+    if (score > 0) {
+      // Draw progress arc (start from top: -pi/2)
+      final double sweepAngle = (score / 100.0) * 2 * pi;
+      canvas.drawArc(rect, -pi / 2, sweepAngle, false, glowPaint);
+      canvas.drawArc(rect, -pi / 2, sweepAngle, false, progressPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant HealthGaugePainter oldDelegate) {
+    return oldDelegate.score != score ||
+        oldDelegate.color != color ||
         oldDelegate.isDark != isDark;
   }
 }

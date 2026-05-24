@@ -50,7 +50,7 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
   @override
   void initState() {
     super.initState();
-    ShowcaseView.register();
+    ShowcaseView.register(scope: 'pond_monitoring');
     final now = DateTime.now();
 
     final firstDay = widget.createdAt;
@@ -78,16 +78,12 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
       if (widget.userRole == 'owner' &&
           tourNotifier.hasSeenOverview &&
           !tourNotifier.hasSeenCollaborators) {
-        ShowcaseView.get().startShowCase([_profileKey]);
+        ShowcaseView.getNamed('pond_monitoring').startShowCase([_profileKey]);
       }
     });
   }
 
-  @override
-  void dispose() {
-    ShowcaseView.get().unregister();
-    super.dispose();
-  }
+
 
   void _showProfileSheet() {
     final tourState = ref.read(onboardingTourProvider);
@@ -124,6 +120,12 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    ShowcaseView.getNamed('pond_monitoring').unregister();
+    super.dispose();
   }
 
   @override

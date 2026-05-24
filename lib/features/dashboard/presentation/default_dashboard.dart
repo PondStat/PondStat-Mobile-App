@@ -60,7 +60,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   @override
   void initState() {
     super.initState();
-    ShowcaseView.register();
+    ShowcaseView.register(scope: 'dashboard');
 
     final user = ref.read(authRepositoryProvider).currentUser;
     _userPondsStream = ref.read(pondRepositoryProvider).getUserPondsStream(
@@ -87,7 +87,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
       if (!tourNotifier.hasSeenDashboard) {
         _userPondsStream.first.then((ponds) {
           if (ponds.isNotEmpty && mounted) {
-            ShowcaseView.get().startShowCase([_aquariumKey, _fabKey]);
+            ShowcaseView.getNamed('dashboard').startShowCase([_aquariumKey, _fabKey]);
             ref.read(onboardingTourProvider.notifier).markDashboardAsSeen();
           }
         }).catchError((_) {});
@@ -154,7 +154,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 
   @override
   void dispose() {
-    ShowcaseView.get().unregister();
+    ShowcaseView.getNamed('dashboard').unregister();
     _connectivitySubscription?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -439,6 +439,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                       ),
                       child: CustomShowcase(
                         showcaseKey: _fabKey,
+                        scope: 'dashboard',
                         title: "Create a Pond Workspace",
                         description: "Tap here to initialize a new pond workspace! Define your target culture period, species, and initial dimensions.",
                         child: FloatingActionButton.extended(
@@ -545,6 +546,7 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
             if (index == 0) {
               return CustomShowcase(
                 showcaseKey: _aquariumKey,
+                scope: 'dashboard',
                 title: "Pondy's Ecosystem & Streaks",
                 description: "This is Pondy, your smart farm companion! Tap on the tank to interact, drop feed, or view an immersive full-screen aquarium ecosystem. Recording parameters daily keeps Pondy happy and builds your consecutive monitoring streak! 🔥",
                 child: const PondyAquariumCard(),

@@ -49,8 +49,13 @@ class PondRepository with OfflineRepositoryMixin {
   Future<void> createPond(Pond pond) async {
     await runWrite(() async {
       final newPondRef = pondsCollection.doc();
-      await newPondRef.set(pond);
-      await newPondRef.update({'createdAt': FieldValue.serverTimestamp()});
+      final updatedPond = pond.copyWith(id: newPondRef.id);
+      
+      // Write atomically in a single set with createdAt serverTimestamp
+      final rawRef = _baseRef.collection('ponds').doc(newPondRef.id);
+      final json = updatedPond.toJson();
+      json['createdAt'] = FieldValue.serverTimestamp();
+      await rawRef.set(json);
     });
   }
 
@@ -60,10 +65,54 @@ class PondRepository with OfflineRepositoryMixin {
       'species': pond.species,
       'stockingQuantity': pond.stockingQuantity,
       'targetCulturePeriodDays': pond.targetCulturePeriodDays,
+      'updatedAt': FieldValue.serverTimestamp(),
     }));
   }
 
   Future<void> deletePond(String pondId) async {
-    await runWrite(() => pondsCollection.doc(pondId).delete());
+    final firestore = _baseRef.firestore;
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
+
+    final collectionsToClean = [
+      _baseRef.collection('measurements'),
+      _baseRef.collection('measurement_history'),
+      _baseRef.collection('expenses'),
+      _baseRef.collection('pond_expenses'),
+      _baseRef.collection('pond_sales'),
+      _baseRef.collection('custom_parameters'),
+      _baseRef.collection('schedules'),
+    ];
+
+    final List<DocumentReference> docsToDelete = [];
+
+    for (final col in collectionsToClean) {
+      try {
+        final snapshot = await col
+            .where('pondId', isEqualTo: pondId)
+            .get(GetOptions(source: source));
+        for (final doc in snapshot.docs) {
+          docsToDelete.add(doc.reference);
+        }
+      } catch (e) {
+        // Silently catch query errors if offline cache has no record of the collection
+      }
+    }
+
+    // Also delete the pond itself
+    docsToDelete.add(pondsCollection.doc(pondId));
+
+    // Delete in chunks of 450 to avoid Firestore's 500-write-batch limit
+    const int chunkSize = 450;
+    for (int i = 0; i < docsToDelete.length; i += chunkSize) {
+      final chunk = docsToDelete.sublist(
+        i,
+        i + chunkSize > docsToDelete.length ? docsToDelete.length : i + chunkSize,
+      );
+      final batch = firestore.batch();
+      for (final docRef in chunk) {
+        batch.delete(docRef);
+      }
+      await commitBatchWithTimeout(batch);
+    }
   }
 }

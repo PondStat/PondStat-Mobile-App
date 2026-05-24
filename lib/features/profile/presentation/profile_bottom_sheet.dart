@@ -44,7 +44,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
   @override
   void initState() {
     super.initState();
-    ShowcaseView.register();
+    ShowcaseView.register(scope: 'profile_sheet');
 
     _entranceController = AnimationController(
       vsync: this,
@@ -86,7 +86,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
         // Wait slightly for the modal sheets entrance slide animation to complete
         Future.delayed(const Duration(milliseconds: 650), () {
           if (mounted) {
-            ShowcaseView.get().startShowCase([_collaboratorKey]);
+            ShowcaseView.getNamed('profile_sheet').startShowCase([_collaboratorKey]);
             ref.read(onboardingTourProvider.notifier).markCollaboratorsAsSeen();
           }
         });
@@ -96,7 +96,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
 
   @override
   void dispose() {
-    ShowcaseView.get().unregister();
+    ShowcaseView.getNamed('profile_sheet').unregister();
     _entranceController.dispose();
     super.dispose();
   }
@@ -221,6 +221,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
                           widget.currentUserRole == 'owner')
                         CustomShowcase(
                           showcaseKey: _collaboratorKey,
+                          scope: 'profile_sheet',
                           title: "Manage Pond Collaborators",
                           description: "Invite and manage farm hands, editors, or other viewers to help you monitor this pond's parameters together!",
                           child: BouncyMenuButton(

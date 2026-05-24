@@ -52,7 +52,7 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
     if (widget.canEdit) {
       keys.add(_assignShiftsKey);
     }
-    ShowcaseView.get().startShowCase(keys);
+    ShowcaseView.getNamed('pond_monitoring').startShowCase(keys);
   }
 
   void _initStream() {
@@ -200,6 +200,7 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
                     padding: const EdgeInsets.all(24.0),
                     child: CustomShowcase(
                       showcaseKey: _shiftsListKey,
+                      scope: 'pond_monitoring',
                       title: 'Shift Schedules',
                       description: 'View the assigned morning and afternoon shifts for each day of the week.',
                       child: EmptyStateCard(
@@ -238,6 +239,7 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
                         didShowcaseShiftCard = true;
                         dayCard = CustomShowcase(
                           showcaseKey: _shiftsListKey,
+                          scope: 'pond_monitoring',
                           title: 'Shift Schedules',
                           description: 'View the assigned morning and afternoon shifts for each day of the week.',
                           child: dayCard,
@@ -256,6 +258,7 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
       floatingActionButton: widget.canEdit
           ? CustomShowcase(
               showcaseKey: _assignShiftsKey,
+              scope: 'pond_monitoring',
               title: 'Assign Shifts',
               description: 'Assign or modify shifts for team members and coordinators.',
               child: Semantics(

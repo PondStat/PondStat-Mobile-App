@@ -226,8 +226,12 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                             FilteringTextInputFormatter.digitsOnly,
                           ],
                           onChanged: (_) => setState(() {}),
-                          validator: (v) =>
-                              int.tryParse(v ?? '') == null ? "Invalid" : null,
+                          validator: (v) {
+                            final parsed = int.tryParse(v ?? '');
+                            if (parsed == null) return "Invalid";
+                            if (parsed <= 0) return "Must be > 0";
+                            return null;
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -247,9 +251,12 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                             ),
                           ],
                           onChanged: (_) => setState(() {}),
-                          validator: (v) => double.tryParse(v ?? '') == null
-                              ? "Invalid"
-                              : null,
+                          validator: (v) {
+                            final parsed = double.tryParse(v ?? '');
+                            if (parsed == null) return "Invalid";
+                            if (parsed <= 0) return "Must be > 0";
+                            return null;
+                          },
                         ),
                       ),
                     ],

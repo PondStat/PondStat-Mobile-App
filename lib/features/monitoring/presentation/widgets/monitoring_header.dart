@@ -150,6 +150,7 @@ class MonitoringHeader extends ConsumerWidget {
           const SizedBox(width: 8),
           CustomShowcase(
             showcaseKey: profileKey ?? GlobalKey(),
+            scope: 'pond_monitoring',
             title: "Manage Pond Collaborators",
             description: "Invite and manage farm hands, editors, or other viewers to help you monitor this pond's parameters! Tap your profile icon to configure.",
             child: Material(
