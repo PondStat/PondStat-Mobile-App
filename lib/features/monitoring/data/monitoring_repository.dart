@@ -166,12 +166,14 @@ class MonitoringRepository with OfflineRepositoryMixin {
 
     batch.set(measurementRef, measurementData);
 
+    final String historyAction = (type == 'growth') ? 'growth_create' : 'create';
+
     _logHistory(
       batch: batch,
       pondId: pondId,
       measurementId: measurementRef.id,
       parameter: label,
-      action: 'create',
+      action: historyAction,
       before: null,
       after: {
         'value': averageValue,
@@ -180,6 +182,23 @@ class MonitoringRepository with OfflineRepositoryMixin {
         if (notes != null && notes.isNotEmpty) 'notes': notes,
       },
     );
+
+    if (alert != null) {
+      _logHistory(
+        batch: batch,
+        pondId: pondId,
+        measurementId: measurementRef.id,
+        parameter: label,
+        action: 'alert',
+        before: null,
+        after: {
+          'tier': alert['tier'],
+          'title': alert['title'],
+          'body': alert['body'],
+          'value': averageValue,
+        },
+      );
+    }
 
     await commitBatchWithTimeout(batch);
     return measurementRef.id;
@@ -314,12 +333,15 @@ class MonitoringRepository with OfflineRepositoryMixin {
 
       batch.update(doc.reference, {'pointValues': newPoints, 'value': avg});
 
+      final isGrowth = data['type'] == 'growth';
+      final historyAction = isGrowth ? 'growth_update' : 'update';
+
       _logHistory(
         batch: batch,
         pondId: pondId,
         measurementId: doc.id,
         parameter: data['parameter'],
-        action: 'update',
+        action: historyAction,
         before: {'value': data['value'], 'pointValues': data['pointValues']},
         after: {'value': avg, 'pointValues': newPoints},
       );
@@ -369,24 +391,23 @@ class MonitoringRepository with OfflineRepositoryMixin {
 
       batch.update(doc.reference, updateData);
 
-      // History logging
-      final historyRef = measurementHistoryCollection.doc();
-      batch.set(historyRef, {
-        'pondId': pondId,
-        'measurementId': doc.id,
-        'parameter': data['parameter'],
-        'action': 'update',
-        'editedAt': FieldValue.serverTimestamp(),
-        'editedBy': currentUser?.uid,
-        'editorName': currentUser?.displayName ?? 'Unknown',
-        'before': {
+      final isGrowth = data['type'] == 'growth';
+      final historyAction = isGrowth ? 'growth_update' : 'update';
+
+      _logHistory(
+        batch: batch,
+        pondId: pondId,
+        measurementId: doc.id,
+        parameter: data['parameter'],
+        action: historyAction,
+        before: {
           'value': data['value'],
           'pointValues': data['pointValues'],
           'replicateValues': data['replicateValues'],
           'notes': data['notes'],
         },
-        'after': updateData,
-      });
+        after: updateData,
+      );
     }
 
     await commitBatchWithTimeout(batch);

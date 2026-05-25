@@ -40,7 +40,11 @@ class _EditHistorySheetState extends ConsumerState<EditHistorySheet> {
         .measurementHistoryCollection
         .where('pondId', isEqualTo: widget.pondId);
 
-    if (selectedFilter != 'all') {
+    if (selectedFilter == 'create') {
+      query = query.where('action', whereIn: const ['create', 'growth_create']);
+    } else if (selectedFilter == 'update') {
+      query = query.where('action', whereIn: const ['update', 'growth_update']);
+    } else if (selectedFilter != 'all') {
       query = query.where('action', isEqualTo: selectedFilter);
     }
 
@@ -134,6 +138,8 @@ class _EditHistorySheetState extends ConsumerState<EditHistorySheet> {
                         _buildFilterChip("Added", "create", colorScheme),
                         const SizedBox(width: 8),
                         _buildFilterChip("Edited", "update", colorScheme),
+                        const SizedBox(width: 8),
+                        _buildFilterChip("Alerts", "alert", colorScheme),
                         const SizedBox(width: 8),
                         _buildFilterChip("Deleted", "delete", colorScheme),
                       ],
