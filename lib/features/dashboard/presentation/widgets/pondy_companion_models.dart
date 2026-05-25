@@ -51,3 +51,40 @@ class SwimRipple {
     required this.initialRadius,
   });
 }
+
+/// Representation of Pondy's evolution level, vibrancy, neglect, and achievements.
+class PondyEvolutionState {
+  final int level; // 1 (Standard), 2 (Hat), 3 (Crown)
+  final bool isVibrant;
+  final bool isNeglected;
+  final String statusMood; // 'stable', 'warning', 'critical'
+  final int streakDays;
+  final bool hasFirstWeekStreak;
+  final bool hasPerfectPhMonth;
+  final bool hasZeroAlertsWeek;
+  final bool hasAnyPond;
+
+  const PondyEvolutionState({
+    required this.level,
+    required this.isVibrant,
+    required this.isNeglected,
+    required this.statusMood,
+    required this.streakDays,
+    required this.hasFirstWeekStreak,
+    required this.hasPerfectPhMonth,
+    required this.hasZeroAlertsWeek,
+    required this.hasAnyPond,
+  });
+
+  const PondyEvolutionState.empty()
+      : level = 1,
+        isVibrant = false,
+        isNeglected = false,
+        statusMood = 'stable',
+        streakDays = 0,
+        hasFirstWeekStreak = false,
+        hasPerfectPhMonth = false,
+        hasZeroAlertsWeek = false,
+        hasAnyPond = false;
+}
+

@@ -14,6 +14,9 @@ class PondyPainter extends CustomPainter {
   final double timePhase;
   final double tiltAngle;
   final List<SwimRipple> swimRipples;
+  final int level;
+  final bool isNeglected;
+  final bool isVibrant;
 
   PondyPainter({
     required this.pondyPosition,
@@ -27,6 +30,9 @@ class PondyPainter extends CustomPainter {
     required this.timePhase,
     required this.tiltAngle,
     required this.swimRipples,
+    this.level = 1,
+    this.isNeglected = false,
+    this.isVibrant = false,
   });
 
   @override
@@ -99,6 +105,35 @@ class PondyPainter extends CustomPainter {
 
     // 4. Render Pondy the Turtle!
     _drawTurtle(canvas, paint);
+
+    // 5. Draw Vibrancy Sparkles if active
+    if (isVibrant) {
+      _drawSparkle(canvas, pondyPosition + const Offset(35, -35), timePhase);
+      _drawSparkle(canvas, pondyPosition + const Offset(-45, -20), timePhase + 2.0);
+      _drawSparkle(canvas, pondyPosition + const Offset(15, 30), timePhase + 4.0);
+    }
+  }
+
+  void _drawSparkle(Canvas canvas, Offset center, double phase) {
+    final double scale = 0.4 + 0.3 * math.sin(phase * 4.0);
+    if (scale <= 0.1) return;
+
+    final paint = Paint()
+      ..color = const Color(0xFFFFD54F).withValues(alpha: 0.8 * (0.5 + 0.5 * math.sin(phase * 2.0)))
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final path = Path();
+    final double size = 10.0 * scale;
+
+    path.moveTo(center.dx, center.dy - size);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx + size, center.dy);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx, center.dy + size);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx - size, center.dy);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx, center.dy - size);
+    path.close();
+
+    canvas.drawPath(path, paint);
   }
 
   void _drawTurtle(Canvas canvas, Paint paint) {
@@ -113,8 +148,18 @@ class PondyPainter extends CustomPainter {
     // Apply smooth lean/tilt angle for biological pitch/yaw rotation!
     canvas.rotate(tiltAngle);
 
-    // Continuous slow breathing expansion (2% scale change)
-    final double breath = 1.0 + 0.02 * math.sin(timePhase * 2.2);
+    // Apply scale according to evolution level
+    double levelScale = 1.0;
+    if (level == 2) {
+      levelScale = 1.15;
+    } else if (level == 3) {
+      levelScale = 1.3;
+    }
+    canvas.scale(levelScale, levelScale);
+
+    // Continuous slow breathing expansion (2% scale change, slowed down if neglected)
+    final double breathSpeed = isNeglected ? 1.1 : 2.2;
+    final double breath = 1.0 + 0.02 * math.sin(timePhase * breathSpeed);
     canvas.scale(breath, breath);
 
     // If tickled, apply high-speed joyful wiggling and squeezing scale effects
@@ -132,14 +177,24 @@ class PondyPainter extends CustomPainter {
 
     // Rowing animation cycles for limbs
     final bool isSwim = activeState == 'swimming';
-    final double cycleSpeed = isSwim ? 12.0 : 5.0;
+    double cycleSpeed = isSwim ? 12.0 : 5.0;
+    if (isNeglected) {
+      cycleSpeed *= 0.5;
+    } else if (isVibrant) {
+      cycleSpeed *= 1.3;
+    }
     
     // Wave phase driving flipper rowing
     final double rowPhase = timePhase * cycleSpeed;
     final double flipperRow = math.sin(rowPhase) * 0.35;
 
     // Tail wiggle speed factor (wiggles much faster when swimming quickly)
-    final double tailSpeedFactor = isSwim ? (pellets.isNotEmpty ? 1.6 : 0.8) : 0.35;
+    double tailSpeedFactor = isSwim ? (pellets.isNotEmpty ? 1.6 : 0.8) : 0.35;
+    if (isNeglected) {
+      tailSpeedFactor *= 0.5;
+    } else if (isVibrant) {
+      tailSpeedFactor *= 1.3;
+    }
     final double tailWiggle = math.sin(timePhase * 12.0 * tailSpeedFactor) * 0.22 * tailSpeedFactor;
 
     // 3D Foreshortening scales (scaling local axes as limbs flap forward/closer & sweep back/away)
@@ -241,6 +296,14 @@ class PondyPainter extends CustomPainter {
     
     // Draw cute rounded neck/head protrusion
     canvas.drawOval(Rect.fromCenter(center: const Offset(25, -3), width: 22, height: 18), headPaint);
+
+    // Draw Evolution Accessories on the head
+    if (level == 2) {
+      _drawCowboyHat(canvas);
+    } else if (level == 3) {
+      _drawCrown(canvas);
+    }
+
     canvas.restore();
 
     // D. Draw FOREGROUND Upper Limbs (on top of carapace)
@@ -418,6 +481,19 @@ class PondyPainter extends CustomPainter {
         Offset(eyeCenter.dx + 4.0, eyeCenter.dy),
         paint,
       );
+    } else if (isNeglected) {
+      // Draw sad droopy eyes (downward slanting straight line)
+      paint.shader = null;
+      paint.color = const Color(0xFF0F3810);
+      paint.style = PaintingStyle.stroke;
+      paint.strokeWidth = 2.2;
+      paint.strokeCap = StrokeCap.round;
+
+      canvas.drawLine(
+        Offset(eyeCenter.dx - 4.0, eyeCenter.dy - 1.0),
+        Offset(eyeCenter.dx + 4.0, eyeCenter.dy + 1.0),
+        paint,
+      );
     } else {
       // Normal dynamic pupil tracking eye
       // White sclera
@@ -460,10 +536,10 @@ class PondyPainter extends CustomPainter {
       mouthPaint.style = PaintingStyle.fill;
       mouthPaint.color = const Color(0xFF0F3810);
       canvas.drawCircle(const Offset(33.0, 1.0), 3.0, mouthPaint);
-    } else if (statusMood == 'critical') {
-      // Worried flat wiggly line
-      mouthPath.moveTo(30, 1);
-      mouthPath.quadraticBezierTo(32, -1, 35, 2);
+    } else if (isNeglected || statusMood == 'critical') {
+      // Sad downward curve (frown)
+      mouthPath.moveTo(30, 2);
+      mouthPath.quadraticBezierTo(32, 0, 35, 2);
       canvas.drawPath(mouthPath, mouthPaint);
     } else if (statusMood == 'warning') {
       // Flat line mouth
@@ -486,6 +562,84 @@ class PondyPainter extends CustomPainter {
     canvas.restore();
   }
 
+  void _drawCowboyHat(Canvas canvas) {
+    final hatPaint = Paint()
+      ..color = const Color(0xFF8D6E63) // brown leather hat
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final bandPaint = Paint()
+      ..color = const Color(0xFFFF3D00) // red band
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    // Brim of cowboy hat
+    final brimPath = Path()
+      ..moveTo(10, -8)
+      ..quadraticBezierTo(25, -13, 40, -8)
+      ..quadraticBezierTo(25, -9, 10, -8)
+      ..close();
+    canvas.drawPath(brimPath, hatPaint);
+
+    // Crown of cowboy hat (curved indented top)
+    final crownPath = Path()
+      ..moveTo(17, -10)
+      ..lineTo(18, -20)
+      ..quadraticBezierTo(25, -23, 32, -20)
+      ..lineTo(33, -10)
+      ..close();
+    canvas.drawPath(crownPath, hatPaint);
+
+    // Hat band
+    final bandPath = Path()
+      ..moveTo(17.5, -10)
+      ..lineTo(17.8, -13)
+      ..quadraticBezierTo(25, -15, 32.2, -13)
+      ..lineTo(32.5, -10)
+      ..close();
+    canvas.drawPath(bandPath, bandPaint);
+  }
+
+  void _drawCrown(Canvas canvas) {
+    final crownPaint = Paint()
+      ..color = const Color(0xFFFFD54F) // golden crown
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final outlinePaint = Paint()
+      ..color = const Color(0xFFFFA000) // dark gold outline
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..isAntiAlias = true;
+
+    final rubyPaint = Paint()
+      ..color = const Color(0xFFD50000) // ruby red gems
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final crownPath = Path()
+      ..moveTo(16, -11)
+      ..lineTo(15, -21) // left peak tip
+      ..lineTo(20, -16) // left dip
+      ..lineTo(25, -25) // center peak tip
+      ..lineTo(30, -16) // right dip
+      ..lineTo(35, -21) // right peak tip
+      ..lineTo(34, -11)
+      ..close();
+
+    canvas.drawPath(crownPath, crownPaint);
+    canvas.drawPath(crownPath, outlinePaint);
+
+    // Crown base line highlight
+    canvas.drawRect(Rect.fromLTRB(16, -11, 34, -9), crownPaint);
+    canvas.drawRect(Rect.fromLTRB(16, -11, 34, -9), outlinePaint);
+
+    // Gem rubies on peak tips
+    canvas.drawCircle(const Offset(15, -21), 2.0, rubyPaint);
+    canvas.drawCircle(const Offset(25, -25), 2.5, rubyPaint);
+    canvas.drawCircle(const Offset(35, -21), 2.0, rubyPaint);
+  }
+
   @override
   bool shouldRepaint(covariant PondyPainter oldDelegate) {
     return oldDelegate.pondyPosition != pondyPosition ||
@@ -498,6 +652,9 @@ class PondyPainter extends CustomPainter {
         oldDelegate.lookTarget != lookTarget ||
         oldDelegate.timePhase != timePhase ||
         oldDelegate.tiltAngle != tiltAngle ||
-        oldDelegate.swimRipples.length != swimRipples.length;
+        oldDelegate.swimRipples.length != swimRipples.length ||
+        oldDelegate.level != level ||
+        oldDelegate.isNeglected != isNeglected ||
+        oldDelegate.isVibrant != isVibrant;
   }
 }

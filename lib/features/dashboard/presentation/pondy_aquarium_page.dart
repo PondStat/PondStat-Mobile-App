@@ -2,13 +2,16 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:pondstat/features/dashboard/data/pondy_evolution_provider.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/pondy_companion_models.dart';
 import 'widgets/pondy_companion.dart';
 import 'widgets/aquarium_painters.dart';
 import 'widgets/aquarium_models.dart';
 import 'utils/aquarium_physics.dart';
 
-class PondyAquariumPage extends StatefulWidget {
+class PondyAquariumPage extends ConsumerStatefulWidget {
   final String statusMood;
 
   const PondyAquariumPage({
@@ -17,10 +20,10 @@ class PondyAquariumPage extends StatefulWidget {
   });
 
   @override
-  State<PondyAquariumPage> createState() => _PondyAquariumPageState();
+  ConsumerState<PondyAquariumPage> createState() => _PondyAquariumPageState();
 }
 
-class _PondyAquariumPageState extends State<PondyAquariumPage>
+class _PondyAquariumPageState extends ConsumerState<PondyAquariumPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ticker;
   double _timePhase = 0.0;
@@ -208,9 +211,9 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
   @override
   Widget build(BuildContext context) {
     final double height = MediaQuery.of(context).size.height;
-
-    // Water gradients changing dynamically to status mood parameter health conditions!
-    final String mood = widget.statusMood;
+    final evolutionAsync = ref.watch(pondyEvolutionProvider);
+    final evolution = evolutionAsync.value ?? const PondyEvolutionState.empty();
+    final String mood = widget.statusMood == 'stable' ? evolution.statusMood : widget.statusMood;
     final List<Color> backgroundColors;
     if (mood == 'critical') {
       backgroundColors = _isNightMode
@@ -536,6 +539,17 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
                           },
                         ),
 
+                        // Achievements Button
+                        _buildControlItem(
+                          icon: Icons.emoji_events_rounded,
+                          label: "Achievements",
+                          glowColor: Colors.amber,
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            _showAchievementsDialog(context, ref);
+                          },
+                        ),
+
                         // Day/Night Mode Switch
                         _buildControlItem(
                           icon: _isNightMode ? Icons.nights_stay_rounded : Icons.wb_sunny_rounded,
@@ -602,6 +616,343 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
               fontSize: 10,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAchievementsDialog(BuildContext context, WidgetRef ref) {
+    final evolution = ref.read(pondyEvolutionProvider).value ?? const PondyEvolutionState.empty();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Container(
+              width: double.infinity,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.85)
+                    : Colors.white.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : colorScheme.primary.withValues(alpha: 0.15),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.emoji_events_rounded,
+                              color: Colors.amber,
+                              size: 28,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Achievements",
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                          style: IconButton.styleFrom(
+                            backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 32, thickness: 1),
+
+                    // Pondy's Current Level Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: evolution.level == 3
+                              ? [Colors.amber.shade700.withValues(alpha: 0.25), Colors.amber.shade900.withValues(alpha: 0.1)]
+                              : evolution.level == 2
+                                  ? [colorScheme.primary.withValues(alpha: 0.2), colorScheme.primary.withValues(alpha: 0.05)]
+                                  : [colorScheme.surfaceContainerHighest, colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: evolution.level == 3
+                              ? Colors.amber.withValues(alpha: 0.4)
+                              : evolution.level == 2
+                                  ? colorScheme.primary.withValues(alpha: 0.3)
+                                  : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.black26 : Colors.white60,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              evolution.level == 3
+                                  ? "👑"
+                                  : evolution.level == 2
+                                      ? "🤠"
+                                      : "🐢",
+                              style: const TextStyle(fontSize: 32),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Pondy Evolution: Level ${evolution.level}",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: evolution.level == 3
+                                        ? Colors.amber.shade800
+                                        : evolution.level == 2
+                                            ? colorScheme.primary
+                                            : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  evolution.level == 3
+                                      ? "Monarch: Pondy is wearing the Golden Crown! Keep up the brilliant monitoring streak."
+                                      : evolution.level == 2
+                                          ? "Cowboy Scout: Pondy wears a cool Cowboy Hat. Active monitoring is going great!"
+                                          : "Hatchling: Standard form. Monitored less than 3 days in the past week.",
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontSize: 12,
+                                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Streak Activity Progress
+                    Text(
+                      "Monitoring Activity",
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.02),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Active Days (Past 30d)",
+                                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                "${evolution.streakDays} / 30 days",
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: (evolution.streakDays / 30).clamp(0.0, 1.0),
+                              minHeight: 8,
+                              backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Badges Section
+                    Text(
+                      "Badges & Streaks",
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+
+                    _buildBadgeTile(
+                      context,
+                      title: "First Week Streak",
+                      description: "Record measurements on 7 distinct days in the last 30 days.",
+                      icon: Icons.calendar_month_rounded,
+                      unlocked: evolution.hasFirstWeekStreak,
+                      badgeColor: Colors.purple,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildBadgeTile(
+                      context,
+                      title: "Perfect pH Month",
+                      description: "Record pH values and keep them within safe levels with zero pH alerts for 30 days.",
+                      icon: Icons.opacity_rounded,
+                      unlocked: evolution.hasPerfectPhMonth,
+                      badgeColor: Colors.blue,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildBadgeTile(
+                      context,
+                      title: "Zero Alerts Week",
+                      description: "No warnings or critical alerts triggered across all ponds in the past 7 days.",
+                      icon: Icons.verified_user_rounded,
+                      unlocked: evolution.hasZeroAlertsWeek,
+                      badgeColor: Colors.green,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBadgeTile(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required IconData icon,
+    required bool unlocked,
+    required Color badgeColor,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.01),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: unlocked
+              ? badgeColor.withValues(alpha: 0.3)
+              : Colors.grey.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: unlocked
+                  ? badgeColor.withValues(alpha: 0.15)
+                  : Colors.grey.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: unlocked ? badgeColor : Colors.grey.shade500,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: unlocked ? null : Colors.grey.shade500,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: unlocked
+                            ? Colors.green.withValues(alpha: 0.15)
+                            : Colors.grey.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            unlocked ? Icons.lock_open_rounded : Icons.lock_rounded,
+                            size: 10,
+                            color: unlocked ? Colors.green : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            unlocked ? "Unlocked" : "Locked",
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: unlocked ? Colors.green : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

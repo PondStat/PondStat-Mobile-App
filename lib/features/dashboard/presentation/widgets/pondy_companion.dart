@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'pondy_companion_models.dart';
 import 'pondy_painter.dart';
+import 'package:pondstat/features/dashboard/data/pondy_evolution_provider.dart';
 
-class PondyCompanion extends StatefulWidget {
-  final String statusMood; // 'stable', 'warning', 'critical'
+class PondyCompanion extends ConsumerStatefulWidget {
+  final String? statusMood; // 'stable', 'warning', 'critical'
   final Function(String message)? onEat;
   final bool isFullScreen;
   final bool isNightMode;
@@ -14,7 +16,7 @@ class PondyCompanion extends StatefulWidget {
 
   const PondyCompanion({
     super.key,
-    this.statusMood = 'stable',
+    this.statusMood,
     this.onEat,
     this.isFullScreen = false,
     this.isNightMode = false,
@@ -23,10 +25,10 @@ class PondyCompanion extends StatefulWidget {
   });
 
   @override
-  State<PondyCompanion> createState() => _PondyCompanionState();
+  ConsumerState<PondyCompanion> createState() => _PondyCompanionState();
 }
 
-class _PondyCompanionState extends State<PondyCompanion>
+class _PondyCompanionState extends ConsumerState<PondyCompanion>
     with SingleTickerProviderStateMixin {
   late final AnimationController _tickController;
 
@@ -104,6 +106,8 @@ class _PondyCompanionState extends State<PondyCompanion>
   void _onTick() {
     if (!mounted) return;
 
+    final evolution = ref.read(pondyEvolutionProvider).value ?? const PondyEvolutionState.empty();
+
     setState(() {
       final double progress = _tickController.value;
 
@@ -180,7 +184,8 @@ class _PondyCompanionState extends State<PondyCompanion>
 
           if (distance > 6.0) {
             _facingLeft = dx < 0;
-            final double ratio = _swimSpeed / distance;
+            final double currentSwimSpeed = evolution.isNeglected ? _swimSpeed * 0.5 : _swimSpeed;
+            final double ratio = currentSwimSpeed / distance;
             _pondyPosition = Offset(
               _pondyPosition.dx + dx * ratio.clamp(0.0, 1.0),
               _pondyPosition.dy + dy * ratio.clamp(0.0, 1.0),
@@ -243,9 +248,10 @@ class _PondyCompanionState extends State<PondyCompanion>
             // Sleep drifting slowly downwards in full screen
             final double homeDx = (_width / 2.0) - _pondyPosition.dx;
             final double homeDy = (_height - 65.0) - _pondyPosition.dy;
+            final double driftFactor = evolution.isNeglected ? 0.01 : 0.02;
             _pondyPosition = Offset(
-              _pondyPosition.dx + homeDx * 0.02,
-              _pondyPosition.dy + homeDy * 0.02,
+              _pondyPosition.dx + homeDx * driftFactor,
+              _pondyPosition.dy + homeDy * driftFactor,
             );
             _lookTarget = const Offset(0.5, 0.6);
           } else if (widget.isFullScreen && widget.targetFoodPosition != null) {
@@ -272,7 +278,7 @@ class _PondyCompanionState extends State<PondyCompanion>
             // Swim excited/faster towards active food pellet
             if (distance > 2.0) {
               _facingLeft = dx < 0;
-              const double pursuitSpeed = 3.2; // faster speed for target chase
+              final double pursuitSpeed = evolution.isNeglected ? 1.6 : 3.2;
               final double ratio = pursuitSpeed / distance;
               _pondyPosition = Offset(
                 _pondyPosition.dx + dx * ratio.clamp(0.0, 1.0),
@@ -311,7 +317,7 @@ class _PondyCompanionState extends State<PondyCompanion>
             // Swim smoothly towards wandering target (relaxed ambient speed)
             if (distance > 2.0) {
               _facingLeft = dx < 0;
-              const double ambientSpeed = 1.0;
+              final double ambientSpeed = evolution.isNeglected ? 0.5 : 1.0;
               final double ratio = ambientSpeed / distance;
               _pondyPosition = Offset(
                 _pondyPosition.dx + dx * ratio.clamp(0.0, 1.0),
@@ -339,9 +345,10 @@ class _PondyCompanionState extends State<PondyCompanion>
               // Sleep drifting slowly downwards
               final double homeDx = (_width / 2.0) - _pondyPosition.dx;
               final double homeDy = (_height - 35.0) - _pondyPosition.dy;
+              final double driftFactor = evolution.isNeglected ? 0.01 : 0.02;
               _pondyPosition = Offset(
-                _pondyPosition.dx + homeDx * 0.02,
-                _pondyPosition.dy + homeDy * 0.02,
+                _pondyPosition.dx + homeDx * driftFactor,
+                _pondyPosition.dy + homeDy * driftFactor,
               );
               _lookTarget = const Offset(0.5, 0.6);
             } else {
@@ -517,6 +524,13 @@ class _PondyCompanionState extends State<PondyCompanion>
 
   @override
   Widget build(BuildContext context) {
+    final evolutionAsync = ref.watch(pondyEvolutionProvider);
+    final evolution = evolutionAsync.value ?? const PondyEvolutionState.empty();
+
+    final mood = (widget.statusMood == null || widget.statusMood == 'stable')
+        ? evolution.statusMood
+        : widget.statusMood!;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         _width = constraints.maxWidth;
@@ -529,7 +543,7 @@ class _PondyCompanionState extends State<PondyCompanion>
               pondyPosition: _pondyPosition,
               facingLeft: _facingLeft,
               activeState: _activeState,
-              statusMood: widget.statusMood,
+              statusMood: mood,
               pellets: _pellets,
               bubbles: _bubbles,
               happyEmojis: _happyEmojis,
@@ -537,6 +551,9 @@ class _PondyCompanionState extends State<PondyCompanion>
               timePhase: DateTime.now().millisecondsSinceEpoch / 1000.0,
               tiltAngle: _tiltAngle,
               swimRipples: _swimRipples,
+              level: evolution.level,
+              isNeglected: evolution.isNeglected,
+              isVibrant: evolution.isVibrant,
             ),
             child: const SizedBox.expand(),
           ),
