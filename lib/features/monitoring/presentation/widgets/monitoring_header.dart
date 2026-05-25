@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/features/monitoring/data/streak_provider.dart';
-import 'package:pondstat/features/monitoring/presentation/widgets/streak_flame.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 
 import 'package:pondstat/features/auth/data/auth_repository.dart';
@@ -112,13 +110,6 @@ class MonitoringHeader extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    ref.watch(pondStreakProvider(pondId)).when(
-                          data: (streak) => StreakFlame(streak: streak),
-                          error: (err, stack) => const SizedBox.shrink(),
-                          loading: () => const SizedBox.shrink(),
-                        ),
-                    const SizedBox(width: 12),
                   ],
                 ),
               ],

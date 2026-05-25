@@ -86,7 +86,7 @@ class _FishGainsChartState extends State<FishGainsChart> {
                   Text(
                     widget.metrics.first.abw != null
                         ? '${widget.metrics.first.abw!.toStringAsFixed(1)} g'
-                        : 'n/a',
+                        : 'NA',
                     style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.w900,

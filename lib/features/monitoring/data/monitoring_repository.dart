@@ -16,11 +16,12 @@ MonitoringRepository monitoringRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
+  final isOffline = ref.watch(isOfflineProvider);
   return MonitoringRepository(
     baseRef,
     firestore,
     auth,
-    isOffline: () => ref.read(isOfflineProvider),
+    isOffline: () => isOffline,
   );
 }
 

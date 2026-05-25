@@ -71,9 +71,9 @@ class TrendsExporter {
         final isoStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(ts);
         final dateStr = DateFormat('yyyy-MM-dd').format(ts);
         final timeStr = DateFormat('HH:mm').format(ts);
-        final type = data['type']?.toString() ?? 'N/A';
-        final parameter = data['parameter']?.toString() ?? 'N/A';
-        final value = data['value']?.toString() ?? 'N/A';
+        final type = data['type']?.toString() ?? 'NA';
+        final parameter = data['parameter']?.toString() ?? 'NA';
+        final value = data['value']?.toString() ?? 'NA';
         final unit = data['unit']?.toString() ?? '';
 
         rows.add([isoStr, dateStr, timeStr, type, parameter, value, unit]);
@@ -135,9 +135,9 @@ class TrendsExporter {
         final ts = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
         final dateStr = DateFormat('yyyy-MM-dd').format(ts);
         final timeStr = DateFormat('HH:mm').format(ts);
-        final type = data['type']?.toString() ?? 'N/A';
-        final parameter = data['parameter']?.toString() ?? 'N/A';
-        final value = data['value']?.toString() ?? 'N/A';
+        final type = data['type']?.toString() ?? 'NA';
+        final parameter = data['parameter']?.toString() ?? 'NA';
+        final value = data['value']?.toString() ?? 'NA';
         final unit = data['unit']?.toString() ?? '';
 
         tableData.add([dateStr, timeStr, type, parameter, value, unit]);

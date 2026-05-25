@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
@@ -10,8 +13,10 @@ import 'package:pondstat/features/monitoring/presentation/widgets/dfr_form.dart'
 import 'package:pondstat/features/monitoring/presentation/widgets/fcr_form.dart';
 import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
 
-class RecordGrowthSheet extends StatefulWidget {
+class RecordGrowthSheet extends ConsumerStatefulWidget {
   final String species;
+  final String pondId;
+  final DateTime selectedDay;
   final Future<void> Function({
     required String label,
     required String unit,
@@ -27,14 +32,16 @@ class RecordGrowthSheet extends StatefulWidget {
   const RecordGrowthSheet({
     super.key,
     required this.species,
+    required this.pondId,
+    required this.selectedDay,
     required this.onSave,
   });
 
   @override
-  State<RecordGrowthSheet> createState() => _RecordGrowthSheetState();
+  ConsumerState<RecordGrowthSheet> createState() => _RecordGrowthSheetState();
 }
 
-class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
+class _RecordGrowthSheetState extends ConsumerState<RecordGrowthSheet> {
   ParameterItem? selectedParameter;
   TimeOfDay selectedTime = TimeOfDay.now();
   double? _calculatedValue;
@@ -201,51 +208,121 @@ class _RecordGrowthSheetState extends State<RecordGrowthSheet> {
                 ),
                 const SizedBox(height: 16),
                 if (selectedParameter == null)
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.5,
-                        ),
-                    itemCount: MonitoringParameters.samplingParameters.length,
-                    itemBuilder: (context, i) {
-                      final p = MonitoringParameters.samplingParameters[i];
-                      return InkWell(
-                        onTap: () => setState(() {
-                          selectedParameter = p;
-                          _clearAllControllers();
-                        }),
-                        child: Container(
+                  StreamBuilder<QuerySnapshot>(
+                    stream: ref.watch(monitoringRepositoryProvider)
+                        .measurementsCollection
+                        .where('pondId', isEqualTo: widget.pondId)
+                        .where('type', isEqualTo: 'growth')
+                        .where('dateKey', isEqualTo: "${widget.selectedDay.year}-${widget.selectedDay.month}-${widget.selectedDay.day}")
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      final Set<String> recordedLabels = {};
+                      if (snapshot.hasData) {
+                        for (var doc in snapshot.data!.docs) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          if (data['parameter'] != null) {
+                            recordedLabels.add(data['parameter'] as String);
+                          }
+                        }
+                      }
+
+                      final filteredParams = MonitoringParameters.samplingParameters
+                          .where((p) => !recordedLabels.contains(p.label))
+                          .toList();
+
+                      if (filteredParams.isEmpty) {
+                        final theme = Theme.of(context);
+                        return Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(vertical: 24),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
                           decoration: BoxDecoration(
-                            color: p.getColor(context).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(28),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.05),
                             border: Border.all(
-                              color: p.getColor(context).withValues(alpha: 0.3),
+                              color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                              width: 1.5,
                             ),
                           ),
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                p.icon,
-                                color: p.getColor(context),
-                                size: 32,
+                                Icons.verified_rounded,
+                                color: theme.colorScheme.primary,
+                                size: 48,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                "All Samplings Recorded!",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                p.label,
+                                "All growth sampling parameters for the selected date have already been recorded.",
                                 style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: p.getColor(context),
+                                  fontSize: 14,
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
-                        ),
+                        );
+                      }
+
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1.5,
+                            ),
+                        itemCount: filteredParams.length,
+                        itemBuilder: (context, i) {
+                          final p = filteredParams[i];
+                          return InkWell(
+                            onTap: () => setState(() {
+                              selectedParameter = p;
+                              _clearAllControllers();
+                            }),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: p.getColor(context).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: p.getColor(context).withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    p.icon,
+                                    color: p.getColor(context),
+                                    size: 32,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    p.label,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: p.getColor(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   )

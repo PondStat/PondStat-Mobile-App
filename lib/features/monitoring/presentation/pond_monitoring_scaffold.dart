@@ -50,7 +50,21 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
   @override
   void initState() {
     super.initState();
-    ShowcaseView.register(scope: 'pond_monitoring');
+    ShowcaseView.register(
+      scope: 'pond_monitoring',
+      onFinish: () {
+        if (!mounted) return;
+        final tourNotifier = ref.read(onboardingTourProvider);
+        if (widget.userRole == 'owner' &&
+            !tourNotifier.hasSeenCollaborators) {
+          Future.delayed(const Duration(milliseconds: 400), () {
+            if (!mounted) return;
+            ShowcaseView.getNamed('pond_monitoring').startShowCase([_profileKey]);
+            ref.read(onboardingTourProvider.notifier).markCollaboratorsAsSeen();
+          });
+        }
+      },
+    );
     final now = DateTime.now();
 
     final firstDay = widget.createdAt;
@@ -183,12 +197,16 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
             },
           );
         case 3:
-          return GrowthPage(
-            pondId: widget.pondId,
-            pondName: widget.pondName,
-            species: widget.species,
-            canEdit: canEdit,
-          );
+          if (_selectedDay != null) {
+            return GrowthPage(
+              pondId: widget.pondId,
+              pondName: widget.pondName,
+              species: widget.species,
+              canEdit: canEdit,
+              selectedDay: _selectedDay!,
+            );
+          }
+          return const SizedBox.shrink();
         case 4:
           if (_selectedDay != null) {
             return WaterQualityPage(

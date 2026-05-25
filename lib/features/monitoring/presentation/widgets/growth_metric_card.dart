@@ -215,25 +215,25 @@ class GrowthMetricCard extends StatelessWidget {
               children: [
                 _buildMiniMetric(
                   "ABW",
-                  current.abw != null ? "${current.abw}g" : "n/a",
+                  current.abw != null ? "${current.abw}g" : "NA",
                   isDark ? Colors.green.shade300 : Colors.green.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "ADG",
-                  current.adg != null ? "${current.adg!.toStringAsFixed(2)}g" : "n/a",
+                  current.adg != null ? "${current.adg!.toStringAsFixed(2)}g" : "NA",
                   isDark ? Colors.green.shade300 : Colors.green.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "FCR",
-                  current.fcr != null ? current.fcr!.toStringAsFixed(2) : "n/a",
+                  current.fcr != null ? current.fcr!.toStringAsFixed(2) : "NA",
                   isDark ? Colors.orange.shade300 : Colors.orange.shade700,
                   colorScheme,
                 ),
                 _buildMiniMetric(
                   "DFR",
-                  current.dfr != null ? current.dfr!.toStringAsFixed(2) : "n/a",
+                  current.dfr != null ? current.dfr!.toStringAsFixed(2) : "NA",
                   isDark ? Colors.purple.shade300 : Colors.purple.shade700,
                   colorScheme,
                 ),

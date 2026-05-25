@@ -11,10 +11,11 @@ part 'finances_repository.g.dart';
 FinancesRepository financesRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
   final auth = ref.watch(firebaseAuthProvider);
+  final isOffline = ref.watch(isOfflineProvider);
   return FinancesRepository(
     baseRef,
     auth,
-    isOffline: () => ref.read(isOfflineProvider),
+    isOffline: () => isOffline,
   );
 }
 

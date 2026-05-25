@@ -48,12 +48,13 @@ NotificationsRepository notificationsRepository(Ref ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
   final logger = ref.watch(appLoggerProvider);
+  final isOffline = ref.watch(isOfflineProvider);
   return NotificationsRepository(
     baseRef,
     firestore,
     auth,
     logger,
-    isOffline: () => ref.read(isOfflineProvider),
+    isOffline: () => isOffline,
   );
 }
 

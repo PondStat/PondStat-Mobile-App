@@ -10,9 +10,10 @@ part 'pond_repository.g.dart';
 @riverpod
 PondRepository pondRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
+  final isOffline = ref.watch(isOfflineProvider);
   return PondRepository(
     baseRef,
-    isOffline: () => ref.read(isOfflineProvider),
+    isOffline: () => isOffline,
   );
 }
 

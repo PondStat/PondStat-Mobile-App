@@ -53,4 +53,4 @@ final class GrowthRepositoryProvider
   }
 }
 
-String _$growthRepositoryHash() => r'715b9d9d816a2446c58a05a8eda84f2c64eb89b4';
+String _$growthRepositoryHash() => r'61ec2f7462b41995a570ab3d44cbc80a914ae5a7';

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
@@ -16,7 +15,6 @@ import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcas
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
-import 'package:pondstat/core/services/connectivity_provider.dart';
 
 
 class GrowthPage extends ConsumerStatefulWidget {
@@ -24,6 +22,7 @@ class GrowthPage extends ConsumerStatefulWidget {
   final String pondName;
   final String species;
   final bool canEdit;
+  final DateTime selectedDay;
 
   const GrowthPage({
     super.key,
@@ -31,6 +30,7 @@ class GrowthPage extends ConsumerStatefulWidget {
     required this.pondName,
     required this.species,
     required this.canEdit,
+    required this.selectedDay,
   });
 
   @override
@@ -72,6 +72,8 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => RecordGrowthSheet(
         species: widget.species,
+        pondId: widget.pondId,
+        selectedDay: widget.selectedDay,
         onSave:
             ({
               required String label,
@@ -84,26 +86,6 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
               String? notes,
             }) async {
               try {
-                final now = DateTime.now();
-                final sixDaysAgo = now.subtract(const Duration(days: 6));
-                final isOffline = ref.read(isOfflineProvider);
-                final source = isOffline ? Source.cache : Source.serverAndCache;
-                
-                final snapshot = await ref.read(monitoringRepositoryProvider).measurementsCollection
-                     .where('pondId', isEqualTo: widget.pondId)
-                     .where('parameter', isEqualTo: label)
-                     .where(
-                       'timestamp',
-                       isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
-                     )
-                     .get(GetOptions(source: source));
-
-                if (snapshot.docs.isNotEmpty) {
-                  throw Exception(
-                    "You have already recorded $label within the last 7 days.",
-                  );
-                }
-
                 await ref.read(monitoringRepositoryProvider).saveMeasurement(
                   pondId: widget.pondId,
                   label: label,
@@ -113,7 +95,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                   type: type,
                   pointValues: pointValues,
                   replicateValues: replicateValues,
-                  selectedDay: now,
+                  selectedDay: widget.selectedDay,
                   notes: notes,
                 );
 

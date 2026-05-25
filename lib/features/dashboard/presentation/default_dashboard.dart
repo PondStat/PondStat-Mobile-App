@@ -547,8 +547,8 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
               return CustomShowcase(
                 showcaseKey: _aquariumKey,
                 scope: 'dashboard',
-                title: "Pondy's Ecosystem & Streaks",
-                description: "This is Pondy, your smart farm companion! Tap on the tank to interact, drop feed, or view an immersive full-screen aquarium ecosystem. Recording parameters daily keeps Pondy happy and builds your consecutive monitoring streak! 🔥",
+                title: "Pondy's Ecosystem",
+                description: "This is Pondy, your smart farm companion! Tap on the tank to interact, drop feed, or view an immersive full-screen aquarium ecosystem. Keep Pondy happy by interacting with the tank!",
                 child: const PondyAquariumCard(),
               );
             }

@@ -55,9 +55,10 @@ class GrowthMetrics {
 @riverpod
 GrowthRepository growthRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
+  final isOffline = ref.watch(isOfflineProvider);
   return GrowthRepository(
     baseRef,
-    isOffline: () => ref.read(isOfflineProvider),
+    isOffline: () => isOffline,
   );
 }
 
