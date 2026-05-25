@@ -541,4 +541,42 @@ class NotificationService implements AppNotifier {
     }
     return scheduledDate;
   }
+
+  @override
+  Future<void> dispatchWeatherAlert({
+    required String pondId,
+    required String pondName,
+    required String title,
+    required String body,
+  }) async {
+    if (kIsWeb) return;
+
+    final androidDetails = AndroidNotificationDetails(
+      NotificationChannel.weatherAlerts.id,
+      NotificationChannel.weatherAlerts.name,
+      channelDescription: NotificationChannel.weatherAlerts.description,
+      importance: Importance.high,
+      priority: Priority.high,
+      color: const Color(0xFF107C41),
+    );
+
+    final iosDetails = const DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _localNotifications.show(
+      pondId.hashCode.abs() % 10000 + 60000,
+      title,
+      body,
+      details,
+      payload: '/pond/$pondId',
+    );
+  }
 }

@@ -34,6 +34,8 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
   late final TextEditingController _pondNameController;
   late final TextEditingController _stockingQuantityController;
   late final TextEditingController _culturePeriodController;
+  late final TextEditingController _latitudeController;
+  late final TextEditingController _longitudeController;
 
   String? _selectedSpecies;
   final List<String> _speciesOptions = ['Shrimp', 'Tilapia'];
@@ -46,11 +48,15 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     final initialPeriod =
         widget.initialData['targetCulturePeriodDays']?.toString() ?? '';
     final initialSpecies = widget.initialData['species'];
+    final initialLat = widget.initialData['latitude']?.toString() ?? '';
+    final initialLon = widget.initialData['longitude']?.toString() ?? '';
 
     return _pondNameController.text != initialName ||
         _stockingQuantityController.text != initialQuantity ||
         _culturePeriodController.text != initialPeriod ||
-        _selectedSpecies != initialSpecies;
+        _selectedSpecies != initialSpecies ||
+        _latitudeController.text != initialLat ||
+        _longitudeController.text != initialLon;
   }
 
   void _onFieldChanged() {
@@ -69,6 +75,12 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     _culturePeriodController = TextEditingController(
       text: widget.initialData['targetCulturePeriodDays']?.toString() ?? '',
     );
+    _latitudeController = TextEditingController(
+      text: widget.initialData['latitude']?.toString() ?? '',
+    );
+    _longitudeController = TextEditingController(
+      text: widget.initialData['longitude']?.toString() ?? '',
+    );
 
     final species = widget.initialData['species'];
     if (_speciesOptions.contains(species)) {
@@ -78,6 +90,8 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     _pondNameController.addListener(_onFieldChanged);
     _stockingQuantityController.addListener(_onFieldChanged);
     _culturePeriodController.addListener(_onFieldChanged);
+    _latitudeController.addListener(_onFieldChanged);
+    _longitudeController.addListener(_onFieldChanged);
   }
 
   @override
@@ -85,10 +99,14 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     _pondNameController.removeListener(_onFieldChanged);
     _stockingQuantityController.removeListener(_onFieldChanged);
     _culturePeriodController.removeListener(_onFieldChanged);
+    _latitudeController.removeListener(_onFieldChanged);
+    _longitudeController.removeListener(_onFieldChanged);
 
     _pondNameController.dispose();
     _stockingQuantityController.dispose();
     _culturePeriodController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -108,6 +126,8 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     final quantity = int.tryParse(_stockingQuantityController.text.trim()) ?? 0;
     final culturePeriod =
         int.tryParse(_culturePeriodController.text.trim()) ?? 0;
+    final lat = double.tryParse(_latitudeController.text.trim());
+    final lon = double.tryParse(_longitudeController.text.trim());
 
     try {
       final updatedPond = Pond.fromJson({
@@ -117,6 +137,8 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
         'species': species,
         'stockingQuantity': quantity,
         'targetCulturePeriodDays': culturePeriod,
+        'latitude': lat,
+        'longitude': lon,
       });
 
       await ref.read(pondRepositoryProvider).updatePond(updatedPond);
@@ -287,6 +309,45 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
                           validator: (val) {
                             if (val == null || val.isEmpty) return 'Required';
                             if ((int.tryParse(val) ?? 0) <= 0) return 'Invalid';
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: PondStatTextField(
+                          controller: _latitudeController,
+                          label: 'Latitude',
+                          hint: '10.6389',
+                          prefixIcon: Icons.explore_outlined,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                          textInputAction: TextInputAction.next,
+                          validator: (val) {
+                            if (val == null || val.isEmpty) return null;
+                            if (double.tryParse(val) == null) return 'Invalid';
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: PondStatTextField(
+                          controller: _longitudeController,
+                          label: 'Longitude',
+                          hint: '122.2353',
+                          prefixIcon: Icons.explore_outlined,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) =>
+                              _isLoading || !_isDirty ? null : _updatePond(),
+                          validator: (val) {
+                            if (val == null || val.isEmpty) return null;
+                            if (double.tryParse(val) == null) return 'Invalid';
                             return null;
                           },
                         ),

@@ -18,6 +18,8 @@ abstract class Pond with _$Pond {
     @Default([]) List<String> memberIds,
     @Default({}) Map<String, String> roles,
     @TimestampConverter() DateTime? createdAt,
+    double? latitude,
+    double? longitude,
   }) = _Pond;
 
   factory Pond.fromJson(Map<String, dynamic> json) => _$PondFromJson(json);

@@ -52,6 +52,13 @@ enum NotificationChannel {
     id: 'pond_shift_reminders',
     name: 'Shift Reminders',
     description: 'Reminders for your assigned shifts and due parameters',
+  ),
+
+  /// Proactive weather alerts.
+  weatherAlerts(
+    id: 'pond_weather_alerts',
+    name: 'Weather Alerts',
+    description: 'Proactive warnings and recommendations based on weather forecast',
   );
 
   const NotificationChannel({

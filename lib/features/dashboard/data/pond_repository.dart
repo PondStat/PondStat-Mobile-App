@@ -47,6 +47,13 @@ class PondRepository with OfflineRepositoryMixin {
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
+  Stream<Pond> getPondStream(String pondId) {
+    return pondsCollection.doc(pondId).snapshots().map((doc) {
+      if (!doc.exists) throw Exception('Pond not found');
+      return doc.data()!;
+    });
+  }
+
   Future<void> createPond(Pond pond) async {
     await runWrite(() async {
       final newPondRef = pondsCollection.doc();
@@ -66,6 +73,8 @@ class PondRepository with OfflineRepositoryMixin {
       'species': pond.species,
       'stockingQuantity': pond.stockingQuantity,
       'targetCulturePeriodDays': pond.targetCulturePeriodDays,
+      'latitude': pond.latitude,
+      'longitude': pond.longitude,
       'updatedAt': FieldValue.serverTimestamp(),
     }));
   }

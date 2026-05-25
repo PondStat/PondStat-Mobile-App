@@ -10,4 +10,11 @@ abstract class AppNotifier {
     required String routePayload,
     required bool isCritical,
   });
+
+  Future<void> dispatchWeatherAlert({
+    required String pondId,
+    required String pondName,
+    required String title,
+    required String body,
+  });
 }
