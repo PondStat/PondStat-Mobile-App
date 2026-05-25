@@ -32,6 +32,9 @@ class GrowthTab extends ConsumerStatefulWidget {
 class _GrowthTabState extends ConsumerState<GrowthTab> {
   late Future<List<GrowthMetrics>> _growthMetricsFuture;
   late Stream<DocumentSnapshot<Pond>> _pondStream;
+  double? _customTargetAbw;
+  double? _customSurvivalRate;
+  bool _showProjectionSettings = false;
 
   @override
   void initState() {
@@ -48,6 +51,9 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
   void didUpdateWidget(covariant GrowthTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pondId != widget.pondId) {
+      _customTargetAbw = null;
+      _customSurvivalRate = null;
+      _showProjectionSettings = false;
       _growthMetricsFuture = ref.read(growthRepositoryProvider).calculateGrowthMetrics(
         widget.pondId,
       );
@@ -442,6 +448,470 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
     );
   }
 
+  Widget _buildHarvestProjectionCard(BuildContext context, Pond pond, List<GrowthMetrics> metrics) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    if (metrics.isEmpty) return const SizedBox.shrink();
+    final latestMetric = metrics.first;
+    final abw = latestMetric.abw;
+    if (abw == null || abw <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final species = pond.species.trim().toLowerCase();
+    double defaultTargetAbw = 300.0;
+    double defaultSurvivalRate = 0.80;
+    double defaultAdg = 1.5;
+
+    if (species == 'tilapia') {
+      defaultTargetAbw = 450.0;
+      defaultSurvivalRate = 0.85;
+      defaultAdg = 2.5;
+    } else if (species == 'shrimp') {
+      defaultTargetAbw = 25.0;
+      defaultSurvivalRate = 0.75;
+      defaultAdg = 0.3;
+    }
+
+    final targetAbw = _customTargetAbw ?? defaultTargetAbw;
+    final survivalRate = _customSurvivalRate ?? defaultSurvivalRate;
+
+    // Get rolling ADG trend (average of last 3 positive recorded ADGs)
+    final validAdgs = metrics
+        .map((m) => m.adg)
+        .whereType<double>()
+        .where((val) => val > 0)
+        .toList();
+
+    double adgTrend;
+    bool isFallbackAdg = false;
+
+    if (validAdgs.isEmpty) {
+      adgTrend = defaultAdg;
+      isFallbackAdg = true;
+    } else {
+      final recent = validAdgs.take(3).toList();
+      adgTrend = recent.reduce((a, b) => a + b) / recent.length;
+    }
+
+    final double currentAbw = abw;
+    DateTime predictedDate;
+    int remainingDays = 0;
+    bool isReadyForHarvest = currentAbw >= targetAbw;
+
+    if (isReadyForHarvest) {
+      predictedDate = latestMetric.date;
+      remainingDays = 0;
+    } else {
+      final double weightNeeded = targetAbw - currentAbw;
+      final double daysNeeded = weightNeeded / adgTrend;
+      predictedDate = latestMetric.date.add(Duration(days: daysNeeded.round()));
+      remainingDays = predictedDate.difference(DateTime.now()).inDays;
+      if (remainingDays < 0) {
+        remainingDays = 0;
+        isReadyForHarvest = true;
+      }
+    }
+
+    final stockingQuantity = pond.stockingQuantity;
+    final double estimatedSurvivalCount = stockingQuantity * survivalRate;
+    final double estimatedYieldKg = (targetAbw * estimatedSurvivalCount) / 1000.0;
+    final String yieldDisplay = stockingQuantity > 0 
+        ? "${NumberFormat('#,###').format(estimatedYieldKg.round())} kg" 
+        : "N/A (Set Stocking Qty)";
+
+    final double progress = (currentAbw / targetAbw).clamp(0.0, 1.0);
+    final String progressPercentStr = (progress * 100).toStringAsFixed(0);
+
+    String statusTitle = "Growing";
+    Color statusColor = colorScheme.primary;
+    Color statusBg = colorScheme.primary.withValues(alpha: 0.1);
+    IconData statusIcon = Icons.trending_up_rounded;
+
+    if (isReadyForHarvest) {
+      statusTitle = "Ready for Harvest";
+      statusColor = isDark ? Colors.green.shade300 : Colors.green.shade700;
+      statusBg = isDark ? Colors.green.withValues(alpha: 0.15) : Colors.green.shade50;
+      statusIcon = Icons.check_circle_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 4,
+              color: statusColor,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_month_rounded, color: colorScheme.primary, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Harvest & Yield Projection",
+                            style: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: statusBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(statusIcon, color: statusColor, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              statusTitle,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "OPTIMAL HARVEST DATE",
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isReadyForHarvest ? "READY TO HARVEST" : DateFormat('MMM d, yyyy').format(predictedDate),
+                              style: TextStyle(
+                                color: isReadyForHarvest ? statusColor : colorScheme.onSurface,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 20,
+                              ),
+                            ),
+                            if (!isReadyForHarvest) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                "in $remainingDays days",
+                                style: TextStyle(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        height: 50,
+                        width: 1,
+                        color: colorScheme.outlineVariant,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildInfoRow("Target ABW", "${targetAbw.toStringAsFixed(0)} g", colorScheme),
+                            const SizedBox(height: 4),
+                            _buildInfoRow("Assumed Survival", "${(survivalRate * 100).toStringAsFixed(0)}%", colorScheme),
+                            const SizedBox(height: 4),
+                            _buildInfoRow("Estimated Yield", yieldDisplay, colorScheme),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Progress Bar
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Growth Progress to Target",
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            "$progressPercentStr%",
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 8,
+                          backgroundColor: colorScheme.outlineVariant,
+                          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Current: ${currentAbw.toStringAsFixed(1)}g",
+                            style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            "Target: ${targetAbw.toStringAsFixed(0)}g",
+                            style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // ADG Trend Info banner
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isFallbackAdg ? Icons.info_outline_rounded : Icons.trending_up_rounded,
+                          size: 14,
+                          color: isFallbackAdg ? colorScheme.secondary : colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isFallbackAdg
+                                ? "No recent growth rate (ADG). Projecting using default: ${adgTrend.toStringAsFixed(2)} g/day."
+                                : "Growth Rate (ADG) Trend: ${adgTrend.toStringAsFixed(2)} g/day (based on last 3 samples).",
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Settings Toggle Button
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _showProjectionSettings = !_showProjectionSettings;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _showProjectionSettings ? "Hide Projection Settings" : "Configure Projection Settings",
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            _showProjectionSettings ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: colorScheme.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (_showProjectionSettings) ...[
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "PROJECTION SETTINGS",
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _customTargetAbw = null;
+                              _customSurvivalRate = null;
+                            });
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            "Reset Defaults",
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Target ABW Slider
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Target Harvest Size",
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              "${targetAbw.toStringAsFixed(0)} g",
+                              style: TextStyle(
+                                color: colorScheme.onSurface,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Slider(
+                          value: targetAbw,
+                          min: 5.0,
+                          max: 1200.0,
+                          divisions: 239, // steps of 5g
+                          label: "${targetAbw.round()}g",
+                          onChanged: (val) {
+                            setState(() {
+                              _customTargetAbw = val;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    // Survival Rate Slider
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Assumed Survival Rate",
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              "${(survivalRate * 100).toStringAsFixed(0)}%",
+                              style: TextStyle(
+                                color: colorScheme.onSurface,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Slider(
+                          value: survivalRate,
+                          min: 0.50,
+                          max: 1.00,
+                          divisions: 50, // steps of 1%
+                          label: "${(survivalRate * 100).round()}%",
+                          onChanged: (val) {
+                            setState(() {
+                              _customSurvivalRate = val;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -518,13 +988,20 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  if (pond != null)
+                  if (pond != null) ...[
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                       sliver: SliverToBoxAdapter(
                         child: _buildAutoFeedCard(context, pond, metrics),
                       ),
                     ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                      sliver: SliverToBoxAdapter(
+                        child: _buildHarvestProjectionCard(context, pond, metrics),
+                      ),
+                    ),
+                  ],
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
