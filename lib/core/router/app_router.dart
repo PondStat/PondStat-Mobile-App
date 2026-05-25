@@ -13,6 +13,7 @@ import 'package:pondstat/features/notifications/presentation/notifications_inbox
 import 'package:pondstat/features/profile/presentation/edit_profile_page.dart';
 import 'package:pondstat/features/profile/presentation/settings_page.dart';
 import 'package:pondstat/features/profile/presentation/manage_collaborators_page.dart';
+import 'package:pondstat/features/chat/presentation/pond_chat_page.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/services/notification_service.dart';
 
@@ -153,6 +154,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ManageCollaboratorsPage(
                   pondId: pondId,
                   pondName: extra?['pondName'] as String? ?? 'Pond',
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path: 'chat',
+            pageBuilder: (context, state) {
+              final pondId = state.pathParameters['pondId']!;
+              final extra = state.extra as Map<String, dynamic>?;
+              return _buildSlideRightPage(
+                state,
+                PondChatPage(
+                  pondId: pondId,
+                  pondName: extra?['pondName'] as String? ?? 'Pond',
+                  userRole: extra?['userRole'] as String? ?? 'viewer',
                 ),
               );
             },

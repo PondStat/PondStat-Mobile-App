@@ -13,6 +13,7 @@ class MonitoringHeader extends ConsumerWidget {
   final String species;
   final VoidCallback onBackTap;
   final VoidCallback onHistoryTap;
+  final VoidCallback onChatTap;
   final VoidCallback onProfileTap;
   final VoidCallback? onHelpTap;
   final GlobalKey? profileKey;
@@ -24,6 +25,7 @@ class MonitoringHeader extends ConsumerWidget {
     required this.species,
     required this.onBackTap,
     required this.onHistoryTap,
+    required this.onChatTap,
     required this.onProfileTap,
     this.onHelpTap,
     this.profileKey,
@@ -136,6 +138,17 @@ class MonitoringHeader extends ConsumerWidget {
               onHistoryTap();
             },
             tooltip: 'Log History',
+            surfaceContainer: surfaceContainer,
+          ),
+          const SizedBox(width: 8),
+          _buildCircleIconButton(
+            context: context,
+            icon: Icons.chat_bubble_outline_rounded,
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              onChatTap();
+            },
+            tooltip: 'Chat & Notes',
             surfaceContainer: surfaceContainer,
           ),
           const SizedBox(width: 8),

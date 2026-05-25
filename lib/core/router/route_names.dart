@@ -20,6 +20,9 @@ class AppRoutes {
   /// Parameterized route: `/pond/:pondId/collaborators`
   static const String collaborators = '/pond/:pondId/collaborators';
 
+  /// Parameterized route: `/pond/:pondId/chat`
+  static const String chat = '/pond/:pondId/chat';
+
   // ─── Path Builders ────────────────────────────────────────────────────
 
   /// Returns `/pond/<id>` with the actual pond ID substituted.
@@ -28,4 +31,7 @@ class AppRoutes {
   /// Returns `/pond/<id>/collaborators` with the actual pond ID substituted.
   static String collaboratorsPath(String pondId) =>
       '/pond/$pondId/collaborators';
+
+  /// Returns `/pond/<id>/chat` with the actual pond ID substituted.
+  static String chatPath(String pondId) => '/pond/$pondId/chat';
 }

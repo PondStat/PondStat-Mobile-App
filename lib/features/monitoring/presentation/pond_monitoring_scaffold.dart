@@ -13,6 +13,7 @@ import 'package:pondstat/features/monitoring/presentation/edit_history_sheet.dar
 import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
+import 'package:pondstat/core/router/route_names.dart';
 
 import 'operations_page.dart';
 import 'overview_tab.dart';
@@ -165,6 +166,16 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
     );
   }
 
+  void _navigateToChat() {
+    context.push(
+      AppRoutes.chatPath(widget.pondId),
+      extra: <String, dynamic>{
+        'pondName': widget.pondName,
+        'userRole': widget.userRole,
+      },
+    );
+  }
+
   @override
   void dispose() {
     _scheduleSubscription?.cancel();
@@ -288,6 +299,7 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
                   species: widget.species,
                   onBackTap: () => context.pop(),
                   onHistoryTap: _showEditHistory,
+                  onChatTap: _navigateToChat,
                   onProfileTap: _showProfileSheet,
                   profileKey: _profileKey,
                   onHelpTap: () {
