@@ -1,12 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
+import 'package:pondstat/core/services/notification_service.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/monitoring_header.dart';
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_history_sheet.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 import 'operations_page.dart';
@@ -42,6 +47,7 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
   final Set<int> _visitedTabs = {2};
   late DateTime _focusedDay;
   DateTime? _selectedDay;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _scheduleSubscription;
 
   bool get canEdit => widget.userRole == 'owner' || widget.userRole == 'editor';
 
@@ -85,6 +91,29 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
       initialFocus.month,
       initialFocus.day,
     );
+
+    final currentUserId = ref.read(firebaseAuthProvider).currentUser?.uid;
+    if (currentUserId != null) {
+      _scheduleSubscription = ref.read(monitoringRepositoryProvider)
+          .schedulesCollection
+          .doc("${widget.pondId}_$currentUserId")
+          .snapshots()
+          .listen((doc) {
+        if (!mounted) return;
+        if (doc.exists) {
+          final data = doc.data();
+          if (data != null && data['schedule'] != null) {
+            final schedule = data['schedule'] as Map<String, dynamic>;
+            ref.read(notificationServiceProvider).scheduleShiftReminders(
+              pondId: widget.pondId,
+              pondName: widget.pondName,
+              userId: currentUserId,
+              schedule: schedule,
+            );
+          }
+        }
+      });
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -138,6 +167,7 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
 
   @override
   void dispose() {
+    _scheduleSubscription?.cancel();
     ShowcaseView.getNamed('pond_monitoring').unregister();
     super.dispose();
   }

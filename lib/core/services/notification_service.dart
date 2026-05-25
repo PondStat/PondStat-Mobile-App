@@ -12,6 +12,8 @@ import 'package:pondstat/core/services/logger_service.dart';
 import 'package:pondstat/core/services/logging/app_logger.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/core/services/notification_types.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -62,6 +64,8 @@ class NotificationService implements AppNotifier {
 
   Future<void> initialize() async {
     if (_initialized || kIsWeb) return;
+
+    tz.initializeTimeZones();
 
     // Register background message handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -419,5 +423,122 @@ class NotificationService implements AppNotifier {
         tag: 'NOTIFICATION',
       );
     }
+  }
+
+  Future<void> scheduleShiftReminders({
+    required String pondId,
+    required String pondName,
+    required String userId,
+    required Map<String, dynamic> schedule,
+  }) async {
+    if (kIsWeb) return;
+
+    final List<String> daysOfWeek = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+
+    final androidDetails = AndroidNotificationDetails(
+      NotificationChannel.shiftReminders.id,
+      NotificationChannel.shiftReminders.name,
+      channelDescription: NotificationChannel.shiftReminders.description,
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    final iosDetails = const DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    // 1. Cancel previous notifications for this pond/user to avoid overlap
+    final baseId = pondId.hashCode.abs() % 10000;
+    for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
+      for (int shiftIndex = 0; shiftIndex < 2; shiftIndex++) {
+        final id = baseId * 100 + dayIndex * 10 + shiftIndex;
+        await _localNotifications.cancel(id);
+      }
+    }
+
+    // 2. Schedule new ones based on the user's active shifts
+    for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
+      final dayName = daysOfWeek[dayIndex];
+      if (!schedule.containsKey(dayName)) continue;
+
+      final dayMap = schedule[dayName];
+      if (dayMap is! Map) continue;
+
+      final bool morning = dayMap['morning'] == true;
+      final bool afternoon = dayMap['afternoon'] == true;
+
+      final targetDayOfWeek = dayIndex + 1;
+
+      if (morning) {
+        final id = baseId * 100 + dayIndex * 10 + 0;
+        final scheduledDate = _nextInstanceOfDayOfWeekAndTime(targetDayOfWeek, 8, 0);
+        final String dueParams = _getDueParametersMessage(dayName);
+
+        await _localNotifications.zonedSchedule(
+          id,
+          '🌅 Shift Reminder: Morning',
+          'Your shift for $pondName is scheduled. Due: $dueParams',
+          scheduledDate,
+          details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+          payload: '/pond/$pondId',
+        );
+      }
+
+      if (afternoon) {
+        final id = baseId * 100 + dayIndex * 10 + 1;
+        final scheduledDate = _nextInstanceOfDayOfWeekAndTime(targetDayOfWeek, 16, 0);
+        final String dueParams = _getDueParametersMessage(dayName);
+
+        await _localNotifications.zonedSchedule(
+          id,
+          '🌇 Shift Reminder: Afternoon',
+          'Your shift for $pondName is scheduled. Due: $dueParams',
+          scheduledDate,
+          details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+          payload: '/pond/$pondId',
+        );
+      }
+    }
+  }
+
+  String _getDueParametersMessage(String dayName) {
+    if (dayName == 'Monday') {
+      return 'Daily parameters & Weekly Biological parameters (Phytoplankton, etc.)';
+    } else if (dayName == 'Wednesday') {
+      return 'Daily parameters & Biweekly Chemical parameters (Dissolved Oxygen, Ammonia, Nitrite, etc.)';
+    } else {
+      return 'Daily parameters (pH, Temp, Salinity, Transparency)';
+    }
+  }
+
+  tz.TZDateTime _nextInstanceOfDayOfWeekAndTime(int targetDayOfWeek, int hour, int minute) {
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    
+    while (scheduledDate.isBefore(now) || scheduledDate.weekday != targetDayOfWeek) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+    return scheduledDate;
   }
 }

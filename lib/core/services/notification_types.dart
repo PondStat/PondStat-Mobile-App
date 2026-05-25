@@ -45,6 +45,13 @@ enum NotificationChannel {
     id: 'pond_health_summary',
     name: 'Pond Health Summary',
     description: 'Daily summary of pond health status',
+  ),
+
+  /// Scheduled shift reminders.
+  shiftReminders(
+    id: 'pond_shift_reminders',
+    name: 'Shift Reminders',
+    description: 'Reminders for your assigned shifts and due parameters',
   );
 
   const NotificationChannel({

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
-import 'package:pondstat/core/widgets/empty_state_card.dart';
 import 'package:pondstat/core/widgets/staggered_list_item.dart';
 import 'package:pondstat/core/widgets/loading_placeholder.dart';
 import 'package:pondstat/core/widgets/error_state_card.dart';
@@ -195,63 +194,96 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
             onRefresh: _refreshData,
             color: Theme.of(context).colorScheme.primary,
             backgroundColor: Theme.of(context).colorScheme.surface,
-            child: isCompletelyEmpty && !widget.canEdit
-                ? Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: CustomShowcase(
-                      showcaseKey: _shiftsListKey,
-                      scope: 'pond_monitoring',
-                      title: 'Shift Schedules',
-                      description: 'View the assigned morning and afternoon shifts for each day of the week.',
-                      child: EmptyStateCard(
-                        image: const Icon(Icons.event_busy_rounded),
-                        title: 'No Schedules Assigned',
-                        description:
-                            'There are currently no shifts scheduled for this pond.',
-                        scrollable: true,
-                      ),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(
+                top: 12,
+                left: 20,
+                right: 20,
+                bottom: 120, // padding for FAB
+              ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+                  child: Text(
+                    "👥 SHIFT ASSIGNMENTS",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: Theme.of(context).colorScheme.primary,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                if (isCompletelyEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainer,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.event_busy_rounded,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          size: 36,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No Shifts Assigned',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'There are currently no shifts scheduled for this pond.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   )
-                : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(
-                      top: 12,
-                      left: 20,
-                      right: 20,
-                      bottom: 100, // padding for FAB
-                    ),
-                    itemCount: _daysOfWeek.length,
-                    itemBuilder: (context, index) {
-                      final day = _daysOfWeek[index];
-                      final morningUsers = groupedSchedules[day]!['morning']!;
-                      final afternoonUsers = groupedSchedules[day]!['afternoon']!;
+                else
+                  ...List.generate(_daysOfWeek.length, (index) {
+                    final day = _daysOfWeek[index];
+                    final morningUsers = groupedSchedules[day]!['morning']!;
+                    final afternoonUsers = groupedSchedules[day]!['afternoon']!;
 
-                      // Only show days that have at least one assignment, unless we are in edit mode
-                      // If edit mode, show all days so they can see nothing is assigned.
-                      if (morningUsers.isEmpty &&
-                          afternoonUsers.isEmpty &&
-                          !widget.canEdit) {
-                        return const SizedBox.shrink();
-                      }
+                    if (morningUsers.isEmpty &&
+                        afternoonUsers.isEmpty &&
+                        !widget.canEdit) {
+                      return const SizedBox.shrink();
+                    }
 
-                      Widget dayCard = _buildDayCard(day, morningUsers, afternoonUsers);
-                      if (!didShowcaseShiftCard) {
-                        didShowcaseShiftCard = true;
-                        dayCard = CustomShowcase(
-                          showcaseKey: _shiftsListKey,
-                          scope: 'pond_monitoring',
-                          title: 'Shift Schedules',
-                          description: 'View the assigned morning and afternoon shifts for each day of the week.',
-                          child: dayCard,
-                        );
-                      }
-
-                      return StaggeredListItem(
-                        index: index,
+                    Widget dayCard = _buildDayCard(day, morningUsers, afternoonUsers);
+                    if (!didShowcaseShiftCard) {
+                      didShowcaseShiftCard = true;
+                      dayCard = CustomShowcase(
+                        showcaseKey: _shiftsListKey,
+                        scope: 'pond_monitoring',
+                        title: 'Shift Schedules',
+                        description: 'View the assigned morning and afternoon shifts for each day of the week.',
                         child: dayCard,
                       );
-                    },
-                  ),
+                    }
+
+                    return StaggeredListItem(
+                      index: index,
+                      child: dayCard,
+                    );
+                  }),
+                _buildSmartTasksList(),
+              ],
+            ),
           );
         },
       ),
@@ -358,5 +390,249 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
         ],
       ),
     );
+  }
+
+  Widget _buildSmartTasksList() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final List<Map<String, dynamic>> smartDays = [
+      {
+        'day': 'Monday',
+        'type': 'Daily & Weekly biological parameters',
+        'gradient': [const Color(0xFF4CAF50), const Color(0xFF009688)],
+        'icon': Icons.calendar_today_rounded,
+        'params': ['pH Level', 'Temperature', 'Salinity', 'Transparency', 'Phytoplankton', 'Test yellow 10-1 (CFU/ml)', 'Test green 10-1 (CFU/ml)'],
+      },
+      {
+        'day': 'Tuesday',
+        'type': 'Daily physical/chemical parameters',
+        'gradient': [const Color(0xFF03A9F4), const Color(0xFF00BCD4)],
+        'icon': Icons.wb_sunny_rounded,
+        'params': ['pH Level', 'Temperature', 'Salinity', 'Transparency'],
+      },
+      {
+        'day': 'Wednesday',
+        'type': 'Daily & Biweekly chemical parameters',
+        'gradient': [const Color(0xFF9C27B0), const Color(0xFF673AB7)],
+        'icon': Icons.science_rounded,
+        'params': ['pH Level', 'Temperature', 'Salinity', 'Transparency', 'Dissolved Oxygen', 'Ammonia', 'Nitrite', 'Nitrate', 'Total Alkalinity'],
+      },
+      {
+        'day': 'Thursday',
+        'type': 'Daily physical/chemical parameters',
+        'gradient': [const Color(0xFF03A9F4), const Color(0xFF00BCD4)],
+        'icon': Icons.wb_sunny_rounded,
+        'params': ['pH Level', 'Temperature', 'Salinity', 'Transparency'],
+      },
+      {
+        'day': 'Friday',
+        'type': 'Daily physical/chemical parameters',
+        'gradient': [const Color(0xFF03A9F4), const Color(0xFF00BCD4)],
+        'icon': Icons.wb_sunny_rounded,
+        'params': ['pH Level', 'Temperature', 'Salinity', 'Transparency'],
+      },
+      {
+        'day': 'Saturday',
+        'type': 'Daily physical/chemical parameters',
+        'gradient': [const Color(0xFF03A9F4), const Color(0xFF00BCD4)],
+        'icon': Icons.wb_sunny_rounded,
+        'params': ['pH Level', 'Temperature', 'Salinity', 'Transparency'],
+      },
+      {
+        'day': 'Sunday',
+        'type': 'Daily physical/chemical parameters',
+        'gradient': [const Color(0xFF03A9F4), const Color(0xFF00BCD4)],
+        'icon': Icons.wb_sunny_rounded,
+        'params': ['pH Level', 'Temperature', 'Salinity', 'Transparency'],
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Text(
+            "📋 SMART MONITORING SCHEDULE",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: colorScheme.primary,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Text(
+            "Automatically generated based on parameter measurement frequency",
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        ...smartDays.map((sd) {
+          final gradientColors = sd['gradient'] as List<Color>;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(
+                color: colorScheme.outlineVariant,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: gradientColors.first,
+                      width: 6,
+                    ),
+                  ),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: gradientColors.first.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            sd['icon'] as IconData,
+                            color: gradientColors.first,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                sd['day'] as String,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                sd['type'] as String,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: (sd['params'] as List<String>).map((paramName) {
+                        final paramColor = _getParameterColor(paramName);
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: paramColor.withValues(alpha: isDark ? 0.15 : 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: paramColor.withValues(alpha: 0.25),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getParameterIcon(paramName),
+                                size: 12,
+                                color: paramColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                paramName,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: paramColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Color _getParameterColor(String label) {
+    switch (label) {
+      case 'pH Level': return const Color(0xFFE91E63);
+      case 'Temperature': return const Color(0xFFFF5722);
+      case 'Salinity': return const Color(0xFF03A9F4);
+      case 'Transparency': return const Color(0xFFFFC107);
+      case 'Phytoplankton': return const Color(0xFF4CAF50);
+      case 'Test yellow 10-1 (CFU/ml)': return const Color(0xFFFF9800);
+      case 'Test green 10-1 (CFU/ml)': return const Color(0xFF8BC34A);
+      case 'Dissolved Oxygen': return const Color(0xFF00BCD4);
+      case 'Ammonia': return const Color(0xFFF44336);
+      case 'Nitrite': return const Color(0xFF673AB7);
+      case 'Nitrate': return const Color(0xFF9C27B0);
+      case 'Total Alkalinity': return const Color(0xFF009688);
+      default: return const Color(0xFF607D8B);
+    }
+  }
+
+  IconData _getParameterIcon(String label) {
+    switch (label) {
+      case 'pH Level': return Icons.water_drop_rounded;
+      case 'Temperature': return Icons.thermostat_rounded;
+      case 'Salinity': return Icons.grain_rounded;
+      case 'Transparency': return Icons.visibility_rounded;
+      case 'Phytoplankton': return Icons.biotech_rounded;
+      case 'Test yellow 10-1 (CFU/ml)': return Icons.science_rounded;
+      case 'Test green 10-1 (CFU/ml)': return Icons.science_rounded;
+      case 'Dissolved Oxygen': return Icons.air_rounded;
+      case 'Ammonia': return Icons.science_rounded;
+      case 'Nitrite': return Icons.science_outlined;
+      case 'Nitrate': return Icons.biotech_rounded;
+      case 'Total Alkalinity': return Icons.waves_rounded;
+      default: return Icons.bar_chart_rounded;
+    }
   }
 }
