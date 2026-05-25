@@ -12,6 +12,30 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/data/growth_repository.dart';
+import 'package:pondstat/features/monitoring/data/finances_repository.dart';
+import 'package:pondstat/core/services/safety/safety_evaluator.dart';
+import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+
+class FinanceTransaction {
+  final DateTime date;
+  final String type; // 'Group Expense', 'Direct Expense', 'Sale'
+  final String item;
+  final double quantity;
+  final String unit;
+  final double amountPerUnit;
+  final double totalAmount;
+
+  FinanceTransaction({
+    required this.date,
+    required this.type,
+    required this.item,
+    required this.quantity,
+    required this.unit,
+    required this.amountPerUnit,
+    required this.totalAmount,
+  });
+}
 
 class TrendsExporter {
   /// Captures the widget subtree under [boundaryKey] as raw PNG bytes.
@@ -38,6 +62,9 @@ class TrendsExporter {
     required BuildContext context,
     required String format,
     required MonitoringRepository monitoringRepo,
+    required GrowthRepository growthRepo,
+    required FinancesRepository financesRepo,
+    required String pondName,
     required GlobalKey boundaryKey,
     required String pondId,
     required String species,
@@ -120,27 +147,269 @@ class TrendsExporter {
         return;
       }
 
+      // ─── 1. Query Water Quality Data ───────────────────────────────
       final querySnapshot = await monitoringRepo.getMeasurementsByDateRange(
         pondId,
         startDate,
         endDate,
       ).get();
 
-      final pdf = pw.Document();
-      final image = pw.MemoryImage(capturedBytes);
+      final evaluator = SafetyEvaluator();
+      int warningAlertCount = 0;
+      int criticalAlertCount = 0;
+      int totalWQReadings = 0;
 
-      List<List<String>> tableData = [];
+      final Map<String, List<double>> wqParamsValues = {};
+      final Map<String, int> wqParamsOutliers = {};
+      final Map<String, String> wqParamsUnits = {};
+
       for (var doc in querySnapshot.docs) {
         final data = doc.data();
-        final ts = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-        final dateStr = DateFormat('yyyy-MM-dd').format(ts);
-        final timeStr = DateFormat('HH:mm').format(ts);
-        final type = data['type']?.toString() ?? 'NA';
-        final parameter = data['parameter']?.toString() ?? 'NA';
-        final value = data['value']?.toString() ?? 'NA';
-        final unit = data['unit']?.toString() ?? '';
+        final type = data['type']?.toString();
+        if (type == 'growth') continue;
 
-        tableData.add([dateStr, timeStr, type, parameter, value, unit]);
+        final paramLabel = data['parameter']?.toString() ?? 'Unknown';
+        final val = (data['value'] as num?)?.toDouble();
+        final unit = data['unit']?.toString() ?? '';
+        if (val == null) continue;
+
+        totalWQReadings++;
+        wqParamsValues.putIfAbsent(paramLabel, () => []).add(val);
+        wqParamsUnits[paramLabel] = unit;
+
+        // Evaluate alerts
+        var tierStr = '';
+        if (data['alert'] != null) {
+          final alertMap = data['alert'] as Map<String, dynamic>;
+          tierStr = alertMap['tier']?.toString() ?? '';
+        } else {
+          final paramItem = MonitoringParameters.getParameterByLabel(paramLabel, species);
+          if (paramItem != null) {
+            final eval = evaluator.evaluate(paramItem, val);
+            if (eval != null) {
+              tierStr = eval.tier.toString();
+            }
+          }
+        }
+
+        if (tierStr.isNotEmpty) {
+          final t = tierStr.toLowerCase();
+          if (t.contains('critical')) {
+            criticalAlertCount++;
+            wqParamsOutliers[paramLabel] = (wqParamsOutliers[paramLabel] ?? 0) + 1;
+          } else if (t.contains('warning')) {
+            warningAlertCount++;
+            wqParamsOutliers[paramLabel] = (wqParamsOutliers[paramLabel] ?? 0) + 1;
+          }
+        }
+      }
+
+      final List<List<String>> wqTableData = [];
+      for (var entry in wqParamsValues.entries) {
+        final paramName = entry.key;
+        final values = entry.value;
+        final unit = wqParamsUnits[paramName] ?? '';
+        final outliers = wqParamsOutliers[paramName] ?? 0;
+
+        final double avg = values.reduce((a, b) => a + b) / values.length;
+        final double min = values.reduce((a, b) => a < b ? a : b);
+        final double max = values.reduce((a, b) => a > b ? a : b);
+
+        wqTableData.add([
+          paramName,
+          unit,
+          avg.toStringAsFixed(1),
+          min.toStringAsFixed(1),
+          max.toStringAsFixed(1),
+          outliers.toString(),
+        ]);
+      }
+      wqTableData.sort((a, b) => a[0].compareTo(b[0]));
+
+      // ─── 2. Query Growth Data ──────────────────────────────────────
+      final allGrowthMetrics = await growthRepo.calculateGrowthMetrics(pondId);
+      final filteredGrowth = allGrowthMetrics.where((m) {
+        return m.date.isAfter(startDate.subtract(const Duration(seconds: 1))) &&
+               m.date.isBefore(endDate.add(const Duration(days: 1)));
+      }).toList();
+      filteredGrowth.sort((a, b) => a.date.compareTo(b.date));
+
+      double? startAbw;
+      double? endAbw;
+      double sumAdg = 0.0;
+      int adgCount = 0;
+
+      for (var m in filteredGrowth) {
+        if (m.abw != null) {
+          startAbw ??= m.abw;
+          endAbw = m.abw;
+        }
+        if (m.adg != null) {
+          sumAdg += m.adg!;
+          adgCount++;
+        }
+      }
+      final double? avgAdg = adgCount > 0 ? sumAdg / adgCount : null;
+
+      final List<List<String>> growthTableData = [];
+      for (var m in filteredGrowth) {
+        final dateStr = DateFormat('yyyy-MM-dd').format(m.date);
+        growthTableData.add([
+          'Week ${m.weekNumber}',
+          dateStr,
+          m.abw != null ? '${m.abw} g' : '-',
+          m.adg != null ? '${m.adg} g/d' : '-',
+          m.fcr != null ? m.fcr!.toStringAsFixed(2) : '-',
+          m.dfr != null ? '${m.dfr} kg/d' : '-',
+          m.feedConsumed > 0 ? '${m.feedConsumed} kg' : '-',
+          m.notes ?? '',
+        ]);
+      }
+
+      // ─── 3. Query Finances Data ────────────────────────────────────
+      final source = financesRepo.isOffline() ? Source.cache : Source.serverAndCache;
+
+      final groupExpSnap = await financesRepo.expensesCollection
+          .where('pondId', isEqualTo: pondId)
+          .get(GetOptions(source: source));
+
+      final directExpSnap = await financesRepo.pondExpensesCollection
+          .where('pondId', isEqualTo: pondId)
+          .get(GetOptions(source: source));
+
+      final salesSnap = await financesRepo.pondSalesCollection
+          .where('pondId', isEqualTo: pondId)
+          .get(GetOptions(source: source));
+
+      final List<FinanceTransaction> transactions = [];
+      double totalGroupExp = 0.0;
+      double totalDirectExp = 0.0;
+      double totalSales = 0.0;
+
+      bool isWithinRange(DateTime dt) {
+        return dt.isAfter(startDate.subtract(const Duration(seconds: 1))) &&
+               dt.isBefore(endDate.add(const Duration(days: 1)));
+      }
+
+      for (var doc in groupExpSnap.docs) {
+        final data = doc.data();
+        final date = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+        if (!isWithinRange(date)) continue;
+
+        final total = (data['totalAmount'] as num?)?.toDouble() ?? 0.0;
+        totalGroupExp += total;
+
+        transactions.add(FinanceTransaction(
+          date: date,
+          type: 'Group Expense',
+          item: data['item']?.toString() ?? 'Group Expense',
+          quantity: (data['quantity'] as num?)?.toDouble() ?? 1.0,
+          unit: 'pcs',
+          amountPerUnit: (data['amountPerItem'] as num?)?.toDouble() ?? 0.0,
+          totalAmount: total,
+        ));
+      }
+
+      for (var doc in directExpSnap.docs) {
+        final data = doc.data();
+        final date = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+        if (!isWithinRange(date)) continue;
+
+        final total = (data['totalAmount'] as num?)?.toDouble() ?? 0.0;
+        totalDirectExp += total;
+
+        transactions.add(FinanceTransaction(
+          date: date,
+          type: 'Direct Expense',
+          item: '${data['category'] ?? 'Expense'}: ${data['item'] ?? ''}',
+          quantity: (data['quantity'] as num?)?.toDouble() ?? 1.0,
+          unit: data['unit']?.toString() ?? 'pcs',
+          amountPerUnit: (data['amountPerUnit'] as num?)?.toDouble() ?? 0.0,
+          totalAmount: total,
+        ));
+      }
+
+      for (var doc in salesSnap.docs) {
+        final data = doc.data();
+        final date = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+        if (!isWithinRange(date)) continue;
+
+        final total = (data['totalAmount'] as num?)?.toDouble() ?? 0.0;
+        totalSales += total;
+
+        transactions.add(FinanceTransaction(
+          date: date,
+          type: 'Sale',
+          item: '${data['productName'] ?? 'Sale'} to ${data['buyerName'] ?? ''}',
+          quantity: (data['quantity'] as num?)?.toDouble() ?? 1.0,
+          unit: data['unit']?.toString() ?? 'pcs',
+          amountPerUnit: (data['pricePerUnit'] as num?)?.toDouble() ?? 0.0,
+          totalAmount: total,
+        ));
+      }
+
+      transactions.sort((a, b) => a.date.compareTo(b.date));
+
+      final double totalExpenses = totalGroupExp + totalDirectExp;
+      final double netProfit = totalSales - totalExpenses;
+
+      final List<List<String>> financeTableData = [];
+      for (var tx in transactions) {
+        final dateStr = DateFormat('yyyy-MM-dd').format(tx.date);
+        financeTableData.add([
+          dateStr,
+          tx.type,
+          tx.item,
+          tx.quantity.toStringAsFixed(1),
+          tx.unit,
+          '\$${tx.amountPerUnit.toStringAsFixed(2)}',
+          '\$${tx.totalAmount.toStringAsFixed(2)}',
+        ]);
+      }
+
+      // ─── 4. PDF Setup & Render ─────────────────────────────────────
+      final pdf = pw.Document();
+      final chartImage = pw.MemoryImage(capturedBytes);
+
+      // Section helper widgets
+      pw.Widget buildSectionHeader(String title) {
+        return pw.Container(
+          margin: const pw.EdgeInsets.only(top: 20, bottom: 8),
+          padding: const pw.EdgeInsets.only(bottom: 4),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF0A74DA), width: 1.5)),
+          ),
+          child: pw.Text(
+            title,
+            style: pw.TextStyle(
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              color: const PdfColor.fromInt(0xFF0A74DA),
+            ),
+          ),
+        );
+      }
+
+      pw.Widget buildKpiCard({required String title, required List<pw.Widget> children, PdfColor? borderColor}) {
+        return pw.Container(
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.white,
+            border: pw.Border.all(color: borderColor ?? PdfColors.grey300, width: 1),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                title,
+                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700),
+              ),
+              pw.SizedBox(height: 6),
+              ...children,
+            ],
+          ),
+        );
       }
 
       pdf.addPage(
@@ -155,9 +424,18 @@ class TrendsExporter {
                 border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
               ),
               padding: const pw.EdgeInsets.only(bottom: 4.0),
-              child: pw.Text(
-                'PondStat Automated Report',
-                style: pw.TextStyle(color: PdfColors.grey500, fontSize: 8, fontWeight: pw.FontWeight.bold),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Pond Name: $pondName',
+                    style: pw.TextStyle(color: PdfColors.grey500, fontSize: 8, fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.Text(
+                    'PondStat Operational Report',
+                    style: pw.TextStyle(color: PdfColors.grey500, fontSize: 8, fontWeight: pw.FontWeight.bold),
+                  ),
+                ],
               ),
             );
           },
@@ -184,116 +462,252 @@ class TrendsExporter {
               ),
             );
           },
-          build: (pw.Context context) => [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      'PondStat Report',
-                      style: pw.TextStyle(
-                        fontSize: 26,
-                        fontWeight: pw.FontWeight.bold,
-                        color: const PdfColor.fromInt(0xFF0A74DA),
-                      ),
-                    ),
-                    pw.SizedBox(height: 4),
-                    pw.Text(
-                      'Comprehensive Pond Analysis & Metrics',
-                      style: pw.TextStyle(
-                        fontSize: 12,
-                        color: PdfColors.grey600,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text('Date Generated: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                    pw.SizedBox(height: 2),
-                    pw.Text('Pond ID: $pondId', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                    pw.SizedBox(height: 2),
-                    pw.Text('Species: $species', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                  ],
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 16),
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: const pw.BoxDecoration(
-                color: PdfColor.fromInt(0x0F0A74DA),
-                borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
-              ),
-              child: pw.Row(
+          build: (pw.Context context) {
+            final wqHealthColor = criticalAlertCount > 0
+                ? const PdfColor.fromInt(0xFFE53935)
+                : (warningAlertCount > 0
+                    ? const PdfColor.fromInt(0xFFFFB300)
+                    : const PdfColor.fromInt(0xFF4CAF50));
+
+            return [
+              // Cover Title Block
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    'Date Range: ',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: const PdfColor.fromInt(0xFF0A74DA)),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'PondStat Report',
+                        style: pw.TextStyle(
+                          fontSize: 26,
+                          fontWeight: pw.FontWeight.bold,
+                          color: const PdfColor.fromInt(0xFF0A74DA),
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Comprehensive Pond Analysis & Metrics',
+                        style: pw.TextStyle(
+                          fontSize: 12,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                    ],
                   ),
-                  pw.Text(
-                    '${DateFormat('MMMM d, yyyy').format(startDate)} - ${DateFormat('MMMM d, yyyy').format(endDate)}',
-                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text('Date Generated: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      pw.SizedBox(height: 2),
+                      pw.Text('Pond ID: $pondId', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      pw.SizedBox(height: 2),
+                      pw.Text('Species: $species', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    ],
                   ),
                 ],
               ),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Text(
-              'Visual Trends Dashboard',
-              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF0A74DA)),
-            ),
-            pw.SizedBox(height: 8),
-            pw.Container(
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+              pw.SizedBox(height: 16),
+
+              // Date Range Indicator
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: const pw.BoxDecoration(
+                  color: PdfColor.fromInt(0x0F0A74DA),
+                  borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
+                ),
+                child: pw.Row(
+                  children: [
+                    pw.Text(
+                      'Date Range: ',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: const PdfColor.fromInt(0xFF0A74DA)),
+                    ),
+                    pw.Text(
+                      '${DateFormat('MMMM d, yyyy').format(startDate)} - ${DateFormat('MMMM d, yyyy').format(endDate)}',
+                      style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
+                    ),
+                  ],
+                ),
               ),
-              padding: const pw.EdgeInsets.all(8),
-              child: pw.Image(image, height: 260, fit: pw.BoxFit.contain),
-            ),
-            if (tableData.isNotEmpty) ...[
               pw.SizedBox(height: 20),
+
+              // KPI Dashboard row
               pw.Text(
-                'Raw Parameter Log Records',
+                'Operational Summary Dashboard',
                 style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF0A74DA)),
               ),
               pw.SizedBox(height: 8),
-              pw.TableHelper.fromTextArray(
-                context: context,
-                headers: ['Date', 'Time', 'Type', 'Parameter', 'Value', 'Unit'],
-                data: tableData,
-                border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
-                headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF0A74DA)),
-                cellAlignment: pw.Alignment.centerLeft,
-                cellStyle: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
-                cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                cellDecoration: (int index, dynamic data, int rowNum) {
-                  return pw.BoxDecoration(
-                    color: rowNum % 2 == 0 ? PdfColors.grey100 : PdfColors.white,
-                  );
-                },
+              pw.Row(
+                children: [
+                  pw.Expanded(
+                    child: buildKpiCard(
+                      title: 'WATER QUALITY HEALTH',
+                      borderColor: wqHealthColor,
+                      children: [
+                        pw.Text('Total Readings: $totalWQReadings', style: const pw.TextStyle(fontSize: 9)),
+                        pw.Text('Warning Alerts: $warningAlertCount', style: pw.TextStyle(fontSize: 9, fontWeight: warningAlertCount > 0 ? pw.FontWeight.bold : pw.FontWeight.normal)),
+                        pw.Text('Critical Alerts: $criticalAlertCount', style: pw.TextStyle(fontSize: 9, fontWeight: criticalAlertCount > 0 ? pw.FontWeight.bold : pw.FontWeight.normal)),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(width: 12),
+                  pw.Expanded(
+                    child: buildKpiCard(
+                      title: 'STOCK GROWTH',
+                      children: [
+                        pw.Text('Start ABW: ${startAbw != null ? "$startAbw g" : "N/A"}', style: const pw.TextStyle(fontSize: 9)),
+                        pw.Text('End ABW: ${endAbw != null ? "$endAbw g" : "N/A"}', style: const pw.TextStyle(fontSize: 9)),
+                        pw.Text('Avg ADG: ${avgAdg != null ? "${avgAdg.toStringAsFixed(2)} g/d" : "N/A"}', style: const pw.TextStyle(fontSize: 9)),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(width: 12),
+                  pw.Expanded(
+                    child: buildKpiCard(
+                      title: 'CROP FINANCES',
+                      children: [
+                        pw.Text('Expenses: \$${totalExpenses.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 9)),
+                        pw.Text('Sales: \$${totalSales.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 9)),
+                        pw.Text(
+                          'Net Profit: \$${netProfit.toStringAsFixed(2)}',
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                            color: netProfit >= 0 ? const PdfColor.fromInt(0xFF4CAF50) : const PdfColor.fromInt(0xFFE53935),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ] else ...[
-              pw.SizedBox(height: 20),
+
+              pw.NewPage(),
+
+              // Page 2: Water Quality Trends & Statistics Table
+              buildSectionHeader('Water Quality Trends'),
+              pw.SizedBox(height: 8),
               pw.Container(
-                alignment: pw.Alignment.center,
-                padding: const pw.EdgeInsets.all(16),
-                decoration: const pw.BoxDecoration(
-                  color: PdfColors.grey100,
-                  borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
                 ),
-                child: pw.Text(
-                  'No parameter records logged for this date range.',
-                  style: pw.TextStyle(color: PdfColors.grey600, fontSize: 10, fontStyle: pw.FontStyle.italic),
-                ),
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Image(chartImage, height: 240, fit: pw.BoxFit.contain),
               ),
-            ],
-          ],
+              pw.SizedBox(height: 16),
+              pw.Text(
+                'Water Quality Parameters Statistics',
+                style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF0A74DA)),
+              ),
+              pw.SizedBox(height: 8),
+              if (wqTableData.isNotEmpty) ...[
+                pw.TableHelper.fromTextArray(
+                  context: context,
+                  headers: ['Parameter', 'Unit', 'Average', 'Min', 'Max', 'Outliers'],
+                  data: wqTableData,
+                  border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                  headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                  headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF0A74DA)),
+                  cellAlignment: pw.Alignment.centerLeft,
+                  cellStyle: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
+                  cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  cellDecoration: (int index, dynamic data, int rowNum) {
+                    return pw.BoxDecoration(
+                      color: rowNum % 2 == 0 ? PdfColors.grey100 : PdfColors.white,
+                    );
+                  },
+                ),
+              ] else ...[
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.all(16),
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.grey100,
+                    borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
+                  child: pw.Text(
+                    'No water quality parameters logged for this date range.',
+                    style: pw.TextStyle(color: PdfColors.grey600, fontSize: 10, fontStyle: pw.FontStyle.italic),
+                  ),
+                ),
+              ],
+
+              pw.NewPage(),
+
+              // Page 3: Stock Growth Metrics
+              buildSectionHeader('Stock Growth Performance'),
+              pw.SizedBox(height: 8),
+              if (growthTableData.isNotEmpty) ...[
+                pw.TableHelper.fromTextArray(
+                  context: context,
+                  headers: ['Week', 'Sampling Date', 'ABW', 'ADG', 'FCR', 'DFR', 'Feed Consumed', 'Notes'],
+                  data: growthTableData,
+                  border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                  headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                  headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF0A74DA)),
+                  cellAlignment: pw.Alignment.centerLeft,
+                  cellStyle: const pw.TextStyle(fontSize: 8, color: PdfColors.grey800),
+                  cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  cellDecoration: (int index, dynamic data, int rowNum) {
+                    return pw.BoxDecoration(
+                      color: rowNum % 2 == 0 ? PdfColors.grey100 : PdfColors.white,
+                    );
+                  },
+                ),
+              ] else ...[
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.all(16),
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.grey100,
+                    borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
+                  child: pw.Text(
+                    'No growth metrics logged for this date range.',
+                    style: pw.TextStyle(color: PdfColors.grey600, fontSize: 10, fontStyle: pw.FontStyle.italic),
+                  ),
+                ),
+              ],
+
+              pw.NewPage(),
+
+              // Page 4: Crop Finances Ledger
+              buildSectionHeader('Financial Transactions Ledger'),
+              pw.SizedBox(height: 8),
+              if (financeTableData.isNotEmpty) ...[
+                pw.TableHelper.fromTextArray(
+                  context: context,
+                  headers: ['Date', 'Type', 'Description', 'Qty', 'Unit', 'Rate', 'Total'],
+                  data: financeTableData,
+                  border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                  headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                  headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF0A74DA)),
+                  cellAlignment: pw.Alignment.centerLeft,
+                  cellStyle: const pw.TextStyle(fontSize: 8, color: PdfColors.grey800),
+                  cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  cellDecoration: (int index, dynamic data, int rowNum) {
+                    return pw.BoxDecoration(
+                      color: rowNum % 2 == 0 ? PdfColors.grey100 : PdfColors.white,
+                    );
+                  },
+                ),
+              ] else ...[
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.all(16),
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.grey100,
+                    borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
+                  child: pw.Text(
+                    'No financial transactions recorded for this date range.',
+                    style: pw.TextStyle(color: PdfColors.grey600, fontSize: 10, fontStyle: pw.FontStyle.italic),
+                  ),
+                ),
+              ],
+            ];
+          },
         ),
       );
 

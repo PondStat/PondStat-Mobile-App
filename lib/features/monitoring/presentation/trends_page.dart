@@ -9,15 +9,19 @@ import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 import 'package:pondstat/features/monitoring/presentation/utils/trends_exporter.dart';
+import 'package:pondstat/features/monitoring/data/growth_repository.dart';
+import 'package:pondstat/features/monitoring/data/finances_repository.dart';
 
 class TrendsPage extends ConsumerStatefulWidget {
   final String pondId;
+  final String pondName;
   final String species;
   final String userRole;
 
   const TrendsPage({
     super.key,
     required this.pondId,
+    required this.pondName,
     required this.species,
     required this.userRole,
   });
@@ -103,12 +107,17 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
     });
 
     final monitoringRepo = ref.read(monitoringRepositoryProvider);
+    final growthRepo = ref.read(growthRepositoryProvider);
+    final financesRepo = ref.read(financesRepositoryProvider);
 
     try {
       await TrendsExporter.exportReport(
         context: context,
         format: format,
         monitoringRepo: monitoringRepo,
+        growthRepo: growthRepo,
+        financesRepo: financesRepo,
+        pondName: widget.pondName,
         boundaryKey: _boundaryKey,
         pondId: widget.pondId,
         species: widget.species,

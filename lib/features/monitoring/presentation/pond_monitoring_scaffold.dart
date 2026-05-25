@@ -191,6 +191,7 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
         case 1:
           return TrendsPage(
             pondId: widget.pondId,
+            pondName: widget.pondName,
             species: widget.species,
             userRole: widget.userRole,
           );
