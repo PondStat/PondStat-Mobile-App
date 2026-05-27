@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:clock/clock.dart';
 import 'package:pondstat/core/utils/datetime_extensions.dart';
+import 'package:pondstat/core/services/connectivity_provider.dart';
+
+import 'package:pondstat/core/firebase/offline_repository_mixin.dart';
 
 part 'monitoring_repository.g.dart';
 
@@ -12,15 +16,28 @@ MonitoringRepository monitoringRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
-  return MonitoringRepository(baseRef, firestore, auth);
+  final isOffline = ref.watch(isOfflineProvider);
+  return MonitoringRepository(
+    baseRef,
+    firestore,
+    auth,
+    isOffline: () => isOffline,
+  );
 }
 
-class MonitoringRepository {
+class MonitoringRepository with OfflineRepositoryMixin {
   final DocumentReference<Map<String, dynamic>> _baseRef;
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  @override
+  final bool Function() isOffline;
 
-  MonitoringRepository(this._baseRef, this._firestore, this._auth);
+  MonitoringRepository(
+    this._baseRef,
+    this._firestore,
+    this._auth, {
+    required this.isOffline,
+  });
 
   User? get currentUser => _auth.currentUser;
 
@@ -39,8 +56,6 @@ class MonitoringRepository {
   CollectionReference<Map<String, dynamic>> get schedulesCollection =>
       _baseRef.collection('schedules');
 
-  CollectionReference<Map<String, dynamic>> get expensesCollection =>
-      _baseRef.collection('expenses');
 
   // ─── Historical Queries (with clock for testable time) ───────────────
 
@@ -115,19 +130,21 @@ class MonitoringRepository {
         "${selectedDay.year}-${selectedDay.month}-${selectedDay.day}";
 
     // Validate that the parameter has not already been recorded for this day
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
     final existing = await measurementsCollection
         .where('pondId', isEqualTo: pondId)
         .where('type', isEqualTo: type)
         .where('dateKey', isEqualTo: dateKey)
         .where('parameter', isEqualTo: label)
-        .get();
+        .get(GetOptions(source: source));
 
     if (existing.docs.isNotEmpty) {
       throw Exception("Parameter '$label' has already been recorded for this day.");
     }
 
     final batch = _firestore.batch();
-    final measurementRef = measurementsCollection.doc();
+    final String docId = "${pondId}_${label.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}_${dateKey}_$type";
+    final measurementRef = measurementsCollection.doc(docId);
 
     final measurementData = {
       'pondId': pondId,
@@ -149,12 +166,14 @@ class MonitoringRepository {
 
     batch.set(measurementRef, measurementData);
 
+    final String historyAction = (type == 'growth') ? 'growth_create' : 'create';
+
     _logHistory(
       batch: batch,
       pondId: pondId,
       measurementId: measurementRef.id,
       parameter: label,
-      action: 'create',
+      action: historyAction,
       before: null,
       after: {
         'value': averageValue,
@@ -164,7 +183,24 @@ class MonitoringRepository {
       },
     );
 
-    await _commitBatchWithTimeout(batch);
+    if (alert != null) {
+      _logHistory(
+        batch: batch,
+        pondId: pondId,
+        measurementId: measurementRef.id,
+        parameter: label,
+        action: 'alert',
+        before: null,
+        after: {
+          'tier': alert['tier'],
+          'title': alert['title'],
+          'body': alert['body'],
+          'value': averageValue,
+        },
+      );
+    }
+
+    await commitBatchWithTimeout(batch);
     return measurementRef.id;
   }
 
@@ -191,7 +227,7 @@ class MonitoringRepository {
       after: null,
     );
 
-    await _commitBatchWithTimeout(batch);
+    await commitBatchWithTimeout(batch);
   }
 
   /// Deletes a list/group of measurements from Firestore in a batch and logs to history.
@@ -223,7 +259,7 @@ class MonitoringRepository {
       );
     }
 
-    await _commitBatchWithTimeout(batch);
+    await commitBatchWithTimeout(batch);
   }
 
   /// Clears all input values (pointValues, replicateValues, value, notes) for a group of measurements.
@@ -271,7 +307,7 @@ class MonitoringRepository {
       });
     }
 
-    await _commitBatchWithTimeout(batch);
+    await commitBatchWithTimeout(batch);
   }
 
   /// Updates multiple measurements in a single batch and logs them to history.
@@ -297,18 +333,21 @@ class MonitoringRepository {
 
       batch.update(doc.reference, {'pointValues': newPoints, 'value': avg});
 
+      final isGrowth = data['type'] == 'growth';
+      final historyAction = isGrowth ? 'growth_update' : 'update';
+
       _logHistory(
         batch: batch,
         pondId: pondId,
         measurementId: doc.id,
         parameter: data['parameter'],
-        action: 'update',
+        action: historyAction,
         before: {'value': data['value'], 'pointValues': data['pointValues']},
         after: {'value': avg, 'pointValues': newPoints},
       );
     }
 
-    await _commitBatchWithTimeout(batch);
+    await commitBatchWithTimeout(batch);
   }
 
   /// Updates measurements with replicate values and calculates point averages.
@@ -352,28 +391,29 @@ class MonitoringRepository {
 
       batch.update(doc.reference, updateData);
 
-      // History logging
-      final historyRef = measurementHistoryCollection.doc();
-      batch.set(historyRef, {
-        'pondId': pondId,
-        'measurementId': doc.id,
-        'parameter': data['parameter'],
-        'action': 'update',
-        'editedAt': FieldValue.serverTimestamp(),
-        'editedBy': currentUser?.uid,
-        'editorName': currentUser?.displayName ?? 'Unknown',
-        'before': {
+      final isGrowth = data['type'] == 'growth';
+      final historyAction = isGrowth ? 'growth_update' : 'update';
+
+      _logHistory(
+        batch: batch,
+        pondId: pondId,
+        measurementId: doc.id,
+        parameter: data['parameter'],
+        action: historyAction,
+        before: {
           'value': data['value'],
           'pointValues': data['pointValues'],
           'replicateValues': data['replicateValues'],
           'notes': data['notes'],
         },
-        'after': updateData,
-      });
+        after: updateData,
+      );
     }
 
-    await _commitBatchWithTimeout(batch);
+    await commitBatchWithTimeout(batch);
   }
+
+
 
   /// Adds a new custom parameter to Firestore.
   Future<void> addCustomParameter({
@@ -385,21 +425,23 @@ class MonitoringRepository {
   }) async {
     if (currentUser == null) throw Exception('User not authenticated');
 
-    await customParametersCollection.add({
-      'label': label,
-      'unit': unit,
-      'type': type,
-      'category': category,
-      'pondId': pondId,
-      'createdAt': FieldValue.serverTimestamp(),
-      'createdBy': currentUser!.uid,
+    await runWrite(() async {
+      await customParametersCollection.add({
+        'label': label,
+        'unit': unit,
+        'type': type,
+        'category': category,
+        'pondId': pondId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'createdBy': currentUser!.uid,
+      });
     });
   }
 
   /// Deletes a custom parameter from Firestore.
   Future<void> deleteCustomParameter(String parameterId) async {
     if (currentUser == null) throw Exception('User not authenticated');
-    await customParametersCollection.doc(parameterId).delete();
+    await runWrite(() => customParametersCollection.doc(parameterId).delete());
   }
 
   /// Saves or updates a job schedule for a member.
@@ -412,14 +454,14 @@ class MonitoringRepository {
     if (currentUser == null) throw Exception('User not authenticated');
 
     final docId = "${pondId}_$userId";
-    await schedulesCollection.doc(docId).set({
+    await runWrite(() => schedulesCollection.doc(docId).set({
       'pondId': pondId,
       'userId': userId,
       'userName': userName,
       'schedule': schedule,
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedBy': currentUser!.uid,
-    });
+    }));
   }
 
   /// Fetches a job schedule for a specific user in a pond.
@@ -428,43 +470,27 @@ class MonitoringRepository {
     String userId,
   ) async {
     final docId = "${pondId}_$userId";
-    final doc = await schedulesCollection.doc(docId).get();
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
+    final doc = await schedulesCollection.doc(docId).get(GetOptions(source: source));
     return doc.exists ? doc.data() : null;
   }
 
-  /// Adds a new expense to Firestore.
-  Future<void> addExpense({
+  /// Fetches the last recorded measurement for a specific parameter in a pond.
+  Future<Map<String, dynamic>?> getLastRecordedValues({
     required String pondId,
-    required String item,
-    required int quantity,
-    required double amountPerItem,
-    required double totalAmount,
+    required String label,
   }) async {
-    if (currentUser == null) throw Exception('User not authenticated');
-
-    await expensesCollection.add({
-      'pondId': pondId,
-      'item': item,
-      'quantity': quantity,
-      'amountPerItem': amountPerItem,
-      'totalAmount': totalAmount,
-      'buyerId': currentUser!.uid,
-      'buyerName': currentUser!.displayName ?? 'Unknown',
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-  }
-
-  /// Deletes an expense from Firestore.
-  Future<void> deleteExpense(String expenseId) async {
-    if (currentUser == null) throw Exception('User not authenticated');
-    await expensesCollection.doc(expenseId).delete();
-  }
-
-  /// Stream of expenses for a pond.
-  Stream<QuerySnapshot<Map<String, dynamic>>> getExpensesStream(String pondId) {
-    return expensesCollection
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
+    final querySnapshot = await measurementsCollection
         .where('pondId', isEqualTo: pondId)
-        .snapshots();
+        .where('parameter', isEqualTo: label)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .get(GetOptions(source: source));
+    if (querySnapshot.docs.isNotEmpty) {
+      return querySnapshot.docs.first.data();
+    }
+    return null;
   }
 
   void _logHistory({
@@ -490,10 +516,4 @@ class MonitoringRepository {
     });
   }
 
-  Future<void> _commitBatchWithTimeout(WriteBatch batch) async {
-    await batch.commit().timeout(
-      const Duration(seconds: 2),
-      onTimeout: () => null,
-    );
-  }
 }

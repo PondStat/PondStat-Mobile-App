@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/core/router/route_names.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
+import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
+import 'package:pondstat/features/profile/presentation/widgets/bouncy_menu_button.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 
 class ProfileBottomSheet extends ConsumerStatefulWidget {
   final String? currentPondId;
   final String? currentPondName;
   final String? currentUserRole;
+  final bool startCollaboratorTour;
 
   const ProfileBottomSheet({
     super.key,
     this.currentPondId,
     this.currentPondName,
     this.currentUserRole,
+    this.startCollaboratorTour = false,
   });
 
   @override
@@ -33,9 +39,13 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
   late Animation<double> _fadeButtons;
   late Animation<Offset> _slideUp;
 
+  final GlobalKey _collaboratorKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
+    ShowcaseView.register(scope: 'profile_sheet');
+
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -69,10 +79,24 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
         );
 
     _entranceController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.startCollaboratorTour && widget.currentUserRole == 'owner') {
+        // Wait slightly for the modal sheets entrance slide animation to complete
+        Future.delayed(const Duration(milliseconds: 650), () {
+          if (mounted) {
+            ShowcaseView.getNamed('profile_sheet').startShowCase([_collaboratorKey]);
+            ref.read(onboardingTourProvider.notifier).markCollaboratorsAsSeen();
+          }
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    ShowcaseView.getNamed('profile_sheet').unregister();
     _entranceController.dispose();
     super.dispose();
   }
@@ -94,7 +118,8 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
 
   @override
   Widget build(BuildContext context) {
-    final User? user = FirebaseAuth.instance.currentUser;
+    final userAsync = ref.watch(userChangesProvider);
+    final User? user = userAsync.value ?? FirebaseAuth.instance.currentUser;
     final theme = Theme.of(context);
 
     return Container(
@@ -124,6 +149,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
                 ),
               ),
 
+              // User Info
               FadeTransition(
                 opacity: _fadeHeader,
                 child: SlideTransition(
@@ -138,6 +164,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
               ),
               const SizedBox(height: 24),
 
+              // Current Workspace / Pond info
               if (widget.currentPondId != null &&
                   widget.currentUserRole != null) ...[
                 FadeTransition(
@@ -172,6 +199,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
                 ),
               ],
 
+              // Menu Options
               FadeTransition(
                 opacity: _fadeButtons,
                 child: SlideTransition(
@@ -191,18 +219,24 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
 
                       if (widget.currentPondId != null &&
                           widget.currentUserRole == 'owner')
-                        BouncyMenuButton(
-                          icon: Icons.group_add_outlined,
-                          text: 'Manage Collaborators',
-                          onTap: () {
-                            Navigator.pop(context);
-                            context.push(
-                              AppRoutes.collaboratorsPath(widget.currentPondId!),
-                              extra: <String, dynamic>{
-                                'pondName': widget.currentPondName ?? 'Pond',
-                              },
-                            );
-                          },
+                        CustomShowcase(
+                          showcaseKey: _collaboratorKey,
+                          scope: 'profile_sheet',
+                          title: "Manage Pond Collaborators",
+                          description: "Invite and manage farm hands, editors, or other viewers to help you monitor this pond's parameters together!",
+                          child: BouncyMenuButton(
+                            icon: Icons.group_add_outlined,
+                            text: 'Manage Collaborators',
+                            onTap: () {
+                              Navigator.pop(context);
+                              context.push(
+                                AppRoutes.collaboratorsPath(widget.currentPondId!),
+                                extra: <String, dynamic>{
+                                  'pondName': widget.currentPondName ?? 'Pond',
+                                },
+                              );
+                            },
+                          ),
                         ),
 
                       const SizedBox(height: 16),
@@ -460,6 +494,7 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
+          actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
           title: Row(
             children: [
               Container(
@@ -526,139 +561,13 @@ class _ProfileBottomSheetState extends ConsumerState<ProfileBottomSheet>
     );
 
     if (shouldSignOut == true) {
+      final logger = ref.read(appLoggerProvider);
       if (context.mounted) Navigator.of(context).pop();
       try {
-        await FirebaseAuth.instance.signOut();
-        await GoogleSignIn().signOut();
+        await ref.read(authRepositoryProvider).signOut();
       } catch (e, stackTrace) {
-        ref.read(appLoggerProvider).error("Sign out error", error: e, stackTrace: stackTrace, tag: 'AUTH');
+        logger.error("Sign out error", error: e, stackTrace: stackTrace, tag: 'AUTH');
       }
     }
-  }
-}
-
-class BouncyMenuButton extends StatefulWidget {
-  final IconData icon;
-  final String text;
-  final bool isDestructive;
-  final VoidCallback onTap;
-
-  const BouncyMenuButton({
-    super.key,
-    required this.icon,
-    required this.text,
-    this.isDestructive = false,
-    required this.onTap,
-  });
-
-  @override
-  State<BouncyMenuButton> createState() => _BouncyMenuButtonState();
-}
-
-class _BouncyMenuButtonState extends State<BouncyMenuButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-    );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.96,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onTapDown(TapDownDetails details) {
-    HapticFeedback.lightImpact();
-    _controller.forward();
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    _controller.reverse();
-    widget.onTap();
-  }
-
-  void _onTapCancel() => _controller.reverse();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final Color itemColor = widget.isDestructive
-        ? Colors.red.shade600
-        : theme.colorScheme.onSurface;
-    final Color iconBgColor = widget.isDestructive
-        ? Colors.red.withValues(alpha: 0.1)
-        : theme.colorScheme.surfaceContainerHighest;
-    final Color iconColor = widget.isDestructive
-        ? Colors.red.shade600
-        : theme.colorScheme.onSurfaceVariant;
-
-    return InkWell(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
-      borderRadius: BorderRadius.circular(16),
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: Semantics(
-          button: true,
-          label: widget.text,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: iconBgColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(widget.icon, color: iconColor, size: 22),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    widget.text,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: itemColor,
-                    ),
-                  ),
-                ),
-                if (!widget.isDestructive)
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.5,
-                    ),
-                    size: 24,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

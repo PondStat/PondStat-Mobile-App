@@ -45,20 +45,6 @@ class SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(SliverAppBarDelegate oldDelegate) => false;
 }
 
-class SlideGradientTransform extends GradientTransform {
-  final double percent;
-  const SlideGradientTransform(this.percent);
-
-  @override
-  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.translationValues(
-      bounds.width * (percent * 3 - 1.5),
-      0.0,
-      0.0,
-    );
-  }
-}
-
 BoxDecoration getPrimaryGradient(BuildContext context) {
   final theme = Theme.of(context);
   return BoxDecoration(

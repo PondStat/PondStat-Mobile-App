@@ -94,7 +94,7 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
         try {
           FirebaseFirestore.instance.settings = const Settings(
             persistenceEnabled: true,
-            cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+            cacheSizeBytes: 104857600, // 100 MB limit
           );
           ref.read(appLoggerProvider).info('Offline persistence enabled', tag: 'FIREBASE');
         } catch (e) {
@@ -170,46 +170,55 @@ class ErrorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                'Connection Error',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'We are having trouble connecting to the servers. Please check your internet connection and try again.',
-                style: Theme.of(context).textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.exit_to_app_rounded),
-                onPressed: () {
-                  SystemNavigator.pop();
-                },
-                label: const Text('Exit App'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Builder(
+              builder: (context) {
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 64),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Connection Error',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'We are having trouble connecting to the servers. Please check your internet connection and try again.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.exit_to_app_rounded),
+                      onPressed: () {
+                        SystemNavigator.pop();
+                      },
+                      label: const Text('Exit App'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+            ),
           ),
         ),
       ),

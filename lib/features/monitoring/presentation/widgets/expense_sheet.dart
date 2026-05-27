@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
-import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/data/finances_repository.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
+import 'financial_total_card.dart';
 
 class ExpenseSheet extends ConsumerStatefulWidget {
   final String pondId;
@@ -20,12 +21,11 @@ class ExpenseSheet extends ConsumerStatefulWidget {
 class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _itemController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController(
-    text: '1',
-  );
+  final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
 
   bool _isSaving = false;
+  bool _forceClose = false;
 
   @override
   void dispose() {
@@ -45,9 +45,6 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
     return _itemController.text.isNotEmpty || _amountController.text.isNotEmpty;
   }
 
-  bool get _isValid {
-    return _itemController.text.trim().isNotEmpty && _totalAmount > 0;
-  }
 
   Future<void> _saveExpense() async {
     if (!_formKey.currentState!.validate()) return;
@@ -56,7 +53,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
     HapticFeedback.mediumImpact();
 
     try {
-      await ref.read(monitoringRepositoryProvider).addExpense(
+      await ref.read(financesRepositoryProvider).addExpense(
         pondId: widget.pondId,
         item: _itemController.text.trim(),
         quantity: int.parse(_quantityController.text),
@@ -70,11 +67,14 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
           onTimeout: () => [ConnectivityResult.none],
         );
         if (mounted) {
-          Navigator.pop(context, true);
           if (connectivityResult.contains(ConnectivityResult.none)) {
             SnackbarHelper.showSuccess(context, "Expense saved locally (will sync when online)");
           } else {
             SnackbarHelper.showSuccess(context, "Expense recorded successfully");
+          }
+          if (mounted) {
+            setState(() => _forceClose = true);
+            Navigator.pop(context, true);
           }
         }
       }
@@ -93,23 +93,16 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
     if (_hasData) {
       final shouldPop = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Discard unsaved expense?'),
-          content: const Text('Are you sure you want to discard your changes?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('CANCEL'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('DISCARD', style: TextStyle(color: Colors.red)),
-            ),
-          ],
+        builder: (context) => const DiscardChangesDialog(
+          title: 'Discard unsaved expense?',
+          content: 'Are you sure you want to discard your changes?',
+          cancelText: 'CANCEL',
+          confirmText: 'DISCARD',
         ),
       );
 
       if (shouldPop == true && mounted) {
+        setState(() => _forceClose = true);
         Navigator.pop(context);
       }
     }
@@ -121,7 +114,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return PopScope(
-      canPop: !_hasData,
+      canPop: !_hasData || _forceClose,
       onPopInvokedWithResult: (didPop, result) => _onPopInvoked(didPop),
       child: Container(
         decoration: BoxDecoration(
@@ -132,7 +125,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
           top: 12,
           left: 24,
           right: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          bottom: MediaQuery.of(context).padding.bottom + 32,
         ),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -233,8 +226,12 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                             FilteringTextInputFormatter.digitsOnly,
                           ],
                           onChanged: (_) => setState(() {}),
-                          validator: (v) =>
-                              int.tryParse(v ?? '') == null ? "Invalid" : null,
+                          validator: (v) {
+                            final parsed = int.tryParse(v ?? '');
+                            if (parsed == null) return "Invalid";
+                            if (parsed <= 0) return "Must be > 0";
+                            return null;
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -254,16 +251,29 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                             ),
                           ],
                           onChanged: (_) => setState(() {}),
-                          validator: (v) => double.tryParse(v ?? '') == null
-                              ? "Invalid"
-                              : null,
+                          validator: (v) {
+                            final parsed = double.tryParse(v ?? '');
+                            if (parsed == null) return "Invalid";
+                            if (parsed <= 0) return "Must be > 0";
+                            return null;
+                          },
                         ),
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 24),
-                  _buildTotalCard(isDark),
+                  FinancialTotalCard(
+                    label: "Total Amount",
+                    amount: _totalAmount,
+                    textColor: Colors.teal,
+                    backgroundColor: isDark
+                        ? Colors.teal.withValues(alpha: 0.1)
+                        : Colors.teal.shade50.withValues(alpha: 0.5),
+                    borderColor: isDark
+                        ? Colors.teal.withValues(alpha: 0.3)
+                        : Colors.teal.shade100,
+                  ),
 
                   const SizedBox(height: 32),
 
@@ -277,56 +287,15 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                       text: 'Save Expense',
                       icon: Icons.check_circle_outline_rounded,
                       isLoading: _isSaving,
-                      onPressed: _isValid ? _saveExpense : null,
+                      onPressed: _isSaving ? null : _saveExpense,
                     ),
                   ),
+                  SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTotalCard(bool isDark) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.teal.withValues(alpha: 0.1)
-            : Colors.teal.shade50.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark
-              ? Colors.teal.withValues(alpha: 0.3)
-              : Colors.teal.shade100,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            "Total Amount",
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: Colors.teal,
-              fontSize: 16,
-            ),
-          ),
-          Text(
-            NumberFormat.currency(
-              symbol: '₱',
-              decimalDigits: 2,
-            ).format(_totalAmount),
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              color: Colors.teal,
-              fontSize: 24,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
+import 'package:pondstat/core/services/connectivity_provider.dart';
+import 'package:pondstat/core/firebase/offline_repository_mixin.dart';
 
 part 'notifications_repository.g.dart';
 
@@ -46,16 +48,31 @@ NotificationsRepository notificationsRepository(Ref ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
   final logger = ref.watch(appLoggerProvider);
-  return NotificationsRepository(baseRef, firestore, auth, logger);
+  final isOffline = ref.watch(isOfflineProvider);
+  return NotificationsRepository(
+    baseRef,
+    firestore,
+    auth,
+    logger,
+    isOffline: () => isOffline,
+  );
 }
 
-class NotificationsRepository {
+class NotificationsRepository with OfflineRepositoryMixin {
   final DocumentReference<Map<String, dynamic>> _baseRef;
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
   final AppLogger _log;
+  @override
+  final bool Function() isOffline;
 
-  NotificationsRepository(this._baseRef, this._firestore, this._auth, this._log);
+  NotificationsRepository(
+    this._baseRef,
+    this._firestore,
+    this._auth,
+    this._log, {
+    required this.isOffline,
+  });
 
   User? get currentUser => _auth.currentUser;
 
@@ -122,7 +139,7 @@ class NotificationsRepository {
     try {
       final collection = _notificationsCollection;
       if (collection == null) return;
-      await collection.doc(notificationId).update({'isRead': isRead});
+      await runWrite(() => collection.doc(notificationId).update({'isRead': isRead}));
     } catch (e) {
       _log.error(
         'Error updating notification read status',
@@ -136,8 +153,10 @@ class NotificationsRepository {
     try {
       final collection = _notificationsCollection;
       if (collection == null) return;
-
-      final unread = await collection.where('isRead', isEqualTo: false).get();
+      final source = isOffline() ? Source.cache : Source.serverAndCache;
+      final unread = await collection
+          .where('isRead', isEqualTo: false)
+          .get(GetOptions(source: source));
 
       if (unread.docs.isEmpty) return;
 
@@ -152,7 +171,7 @@ class NotificationsRepository {
         for (var doc in chunk) {
           batch.update(doc.reference, {'isRead': true});
         }
-        await batch.commit();
+        await commitBatchWithTimeout(batch);
       }
     } catch (e) {
       _log.error(
@@ -167,13 +186,106 @@ class NotificationsRepository {
     try {
       final collection = _notificationsCollection;
       if (collection == null) return;
-      await collection.doc(notificationId).delete();
+      await runWrite(() => collection.doc(notificationId).delete());
     } catch (e) {
       _log.error(
         'Error deleting notification',
         error: e,
         tag: 'NOTIFICATIONS',
       );
+    }
+  }
+
+  Future<void> sendNotification({
+    required String recipientUserId,
+    required String title,
+    required String body,
+    String? pondId,
+  }) async {
+    try {
+      await runWrite(() => usersCollection
+          .doc(recipientUserId)
+          .collection('notifications')
+          .add({
+        'title': title,
+        'body': body,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'pondId': pondId,
+      }));
+      _log.info(
+        'Sent notification to $recipientUserId: "$title"',
+        tag: 'NOTIFICATIONS',
+      );
+    } catch (e, stackTrace) {
+      _log.error(
+        'Error sending notification to $recipientUserId',
+        error: e,
+        stackTrace: stackTrace,
+        tag: 'NOTIFICATIONS',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> notifyPondMembers({
+    required String pondId,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      final currentUserId = currentUser?.uid;
+      final pondDoc = await _baseRef.collection('ponds').doc(pondId).get();
+      if (!pondDoc.exists) return;
+
+      final data = pondDoc.data();
+      if (data == null) return;
+
+      final roles = data['roles'] as Map<String, dynamic>? ?? {};
+      final otherMemberIds = roles.keys.where((uid) => uid != currentUserId).toList();
+
+      for (final recipientUserId in otherMemberIds) {
+        await sendNotification(
+          recipientUserId: recipientUserId,
+          title: title,
+          body: body,
+          pondId: pondId,
+        );
+      }
+    } catch (e, stackTrace) {
+      _log.error(
+        'Error in notifyPondMembers for pond $pondId',
+        error: e,
+        stackTrace: stackTrace,
+        tag: 'NOTIFICATIONS',
+      );
+    }
+  }
+
+  Future<void> restoreNotification(NotificationModel notification) async {
+    try {
+      final collection = _notificationsCollection;
+      if (collection == null) return;
+      await runWrite(() => collection.doc(notification.id).set({
+        'title': notification.title,
+        'body': notification.body,
+        'timestamp': Timestamp.fromDate(notification.timestamp),
+        'isRead': notification.isRead,
+        'pondId': notification.pondId,
+        'measurementId': notification.measurementId,
+      }));
+      _log.info(
+        'Restored notification: ${notification.id}',
+        tag: 'NOTIFICATIONS',
+      );
+    } catch (e, stackTrace) {
+      _log.error(
+        'Error restoring notification',
+        error: e,
+        stackTrace: stackTrace,
+        tag: 'NOTIFICATIONS',
+      );
+      rethrow;
     }
   }
 }

@@ -13,6 +13,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pondstat/features/notifications/data/notifications_repository.dart';
+import 'package:pondstat/core/services/safety/alert_types.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 
 
 class WaterQualityPage extends ConsumerStatefulWidget {
@@ -48,7 +52,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
     if (widget.canEdit) {
       keys.add(_recordParamsKey);
     }
-    ShowcaseView.get().startShowCase(keys);
+    ShowcaseView.getNamed('pond_monitoring').startShowCase(keys);
   }
 
   @override
@@ -94,8 +98,9 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
       );
 
       Map<String, dynamic>? alertMap;
+      AlertPayload? alertPayload;
       if (parameterItem != null) {
-        final alertPayload = ref.read(safetyServiceProvider).getAlertPayload(
+        alertPayload = ref.read(safetyServiceProvider).getAlertPayload(
           parameter: parameterItem,
           value: averageValue,
           pondId: widget.pondId,
@@ -123,6 +128,27 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
         notes: notes,
         alert: alertMap,
       );
+
+      final currentUserName = FirebaseAuth.instance.currentUser?.displayName ?? 'A collaborator';
+      try {
+        final hasAlert = alertPayload != null;
+        await ref.read(notificationsRepositoryProvider).notifyPondMembers(
+          pondId: widget.pondId,
+          title: hasAlert 
+              ? alertPayload.title 
+              : 'New Parameter Recorded in ${widget.pondName}',
+          body: hasAlert 
+              ? alertPayload.body 
+              : '$currentUserName recorded $label: $averageValue$unit.',
+        );
+      } catch (e, stackTrace) {
+        ref.read(appLoggerProvider).error(
+          'Failed to send parameter recording notification',
+          error: e,
+          stackTrace: stackTrace,
+          tag: 'COLLABORATORS',
+        );
+      }
 
       if (parameterItem != null) {
         await ref.read(safetyServiceProvider).checkAndNotify(
@@ -238,6 +264,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
         children: [
           CustomShowcase(
             showcaseKey: _qualityTabsKey,
+            scope: 'pond_monitoring',
             title: 'Parameter Schedules',
             description: 'Switch between parameters grouped by sampling frequency: Daily (pH, Temp, DO), Weekly (Alkalinity, Salinity), or Biweekly.',
             child: PreferredSize(
@@ -259,6 +286,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
           Expanded(
             child: CustomShowcase(
               showcaseKey: _measurementsListKey,
+              scope: 'pond_monitoring',
               title: 'Water Quality Records',
               description: 'View recorded measurements for the selected day. Tap any card to edit details if permissions allow.',
               child: TabBarView(
@@ -276,6 +304,7 @@ class _WaterQualityPageState extends ConsumerState<WaterQualityPage>
       floatingActionButton: widget.canEdit
           ? CustomShowcase(
               showcaseKey: _recordParamsKey,
+              scope: 'pond_monitoring',
               title: 'Record Parameter Data',
               description: 'Tap here to log a new water quality parameter reading for the selected date.',
               child: Semantics(

@@ -47,5 +47,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+		<string>This app requires access to your camera to take a profile picture.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>This app requires access to your photo library to pick a profile picture.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>This app requires access to your location to automatically display the current weather forecast for your pond.</string>
 	</dict>
 </plist>

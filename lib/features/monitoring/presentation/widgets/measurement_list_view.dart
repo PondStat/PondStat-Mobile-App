@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -33,7 +32,6 @@ class MeasurementListView extends ConsumerStatefulWidget {
 }
 
 class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
-  String? _selectedFilter;
   late Stream<QuerySnapshot> _measurementsStream;
 
   @override
@@ -49,7 +47,6 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
         oldWidget.type != widget.type ||
         oldWidget.dateKey != widget.dateKey) {
       _initStream();
-      setState(() => _selectedFilter = null);
     }
   }
 
@@ -108,143 +105,42 @@ class _MeasurementListViewState extends ConsumerState<MeasurementListView> {
             return tB.compareTo(tA); // Descending
           });
 
-        // 1. Extract Unique Parameters
-        final Set<String> uniqueParams = {};
-        for (var doc in sortedDocs) {
-          final data = doc.data() as Map<String, dynamic>? ?? {};
-          final param = data['parameter'] as String?;
-          if (param != null) uniqueParams.add(param);
-        }
-        final filterOptions = uniqueParams.toList()..sort();
-
-        // Ensure selected filter is still valid after data changes (e.g. deletion)
-        if (_selectedFilter != null &&
-            !filterOptions.contains(_selectedFilter)) {
-          // Schedule the state change to avoid calling setState during build
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _selectedFilter = null);
-          });
-        }
-
-        // 2. Filter the documents
-        final activeFilter =
-            _selectedFilter != null && filterOptions.contains(_selectedFilter)
-            ? _selectedFilter
-            : null;
-        final filteredDocs = activeFilter == null
-            ? sortedDocs
-            : sortedDocs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>? ?? {};
-                return data['parameter'] == activeFilter;
-              }).toList();
-
-        return Column(
-          children: [
-            // Filter Bar
-            if (filterOptions.isNotEmpty)
-              Container(
-                height: 50,
-                margin: const EdgeInsets.only(top: 8, bottom: 4),
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  children: [
-                    _buildFilterChip('All', null),
-                    ...filterOptions.map(
-                      (param) => _buildFilterChip(param, param),
-                    ),
-                  ],
-                ),
-              ),
-
-            // List View
-            Expanded(
-              child: RefreshIndicator(
-                color: widget.primaryBlue,
-                onRefresh: _refreshData,
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(
-                    top: 4,
-                    bottom: 120,
-                    left: 20,
-                    right: 20,
-                  ),
-                  itemCount: filteredDocs.length,
-                  itemBuilder: (context, index) {
-                    final data =
-                        filteredDocs[index].data() as Map<String, dynamic>? ?? {};
-                    return StaggeredListItem(
-                      index: index,
-                      child: MeasurementCard(
-                        key: ValueKey(filteredDocs[index].id),
-                        time: data['timeString'] ?? 'Unknown Time',
-                        title: data['parameter'] ?? 'Unknown Parameter',
-                        content: data['value'] != null
-                            ? "${data['value']} ${data['unit'] ?? ''}\n(Avg across recorded points)"
-                            : "n/a",
-                        canEdit: widget.canEdit,
-                        groupDocs: [filteredDocs[index]],
-                        onEdit: () => widget.onEdit([filteredDocs[index]]),
-                        notes: data['notes'] as String?,
-                      ),
-                    );
-                  },
-                ),
-              ),
+        return RefreshIndicator(
+          color: widget.primaryBlue,
+          onRefresh: _refreshData,
+          child: ListView.builder(
+            padding: const EdgeInsets.only(
+              top: 16,
+              bottom: 120,
+              left: 20,
+              right: 20,
             ),
-          ],
+            itemCount: sortedDocs.length,
+            itemBuilder: (context, index) {
+              final data =
+                  sortedDocs[index].data() as Map<String, dynamic>? ?? {};
+              return StaggeredListItem(
+                index: index,
+                child: MeasurementCard(
+                  key: ValueKey(sortedDocs[index].id),
+                  time: data['timeString'] ?? 'Unknown Time',
+                  title: data['parameter'] ?? 'Unknown Parameter',
+                  content: data['value'] != null
+                      ? "${data['value']} ${data['unit'] ?? ''}\n(Avg across recorded points)"
+                      : "NA",
+                  canEdit: widget.canEdit,
+                  groupDocs: [sortedDocs[index]],
+                  onEdit: () => widget.onEdit([sortedDocs[index]]),
+                  notes: data['notes'] as String?,
+                ),
+              );
+            },
+          ),
         );
       },
     );
   }
 
-  Widget _buildFilterChip(String label, String? filterValue) {
-    final theme = Theme.of(context);
-
-    // We know filterValue might be null (for 'All') or a string.
-    final isSelected = _selectedFilter == filterValue;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: Semantics(
-        label: "Filter measurements by $label",
-        selected: isSelected,
-        button: true,
-        child: ChoiceChip(
-          label: Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: isSelected
-                  ? Colors.white
-                  : theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          selected: isSelected,
-          onSelected: (selected) {
-            HapticFeedback.selectionClick();
-            if (selected) {
-              setState(() => _selectedFilter = filterValue);
-            } else if (_selectedFilter == filterValue) {
-              // Prevent unselecting the current chip if it's the only one selected
-              // (always keep something selected, usually 'All')
-              if (filterValue != null) {
-                setState(() => _selectedFilter = null);
-              }
-            }
-          },
-          selectedColor: widget.primaryBlue,
-          backgroundColor: theme.colorScheme.surfaceContainer,
-          side: BorderSide(
-            color: isSelected
-                ? widget.primaryBlue
-                : theme.colorScheme.outlineVariant,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        ),
-      ),
-    );
-  }
 
   Widget _buildEmptyState() {
     return RefreshIndicator(

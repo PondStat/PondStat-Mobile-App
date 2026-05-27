@@ -1,13 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pondstat/core/firebase/firebase_providers.dart';
+import 'package:pondstat/core/services/notification_service.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/monitoring_header.dart';
 import 'package:pondstat/features/profile/presentation/profile_bottom_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/edit_history_sheet.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
+import 'package:pondstat/core/router/route_names.dart';
+import 'package:pondstat/core/utils/responsive_helper.dart';
 
 import 'operations_page.dart';
 import 'overview_tab.dart';
@@ -42,13 +49,33 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
   final Set<int> _visitedTabs = {2};
   late DateTime _focusedDay;
   DateTime? _selectedDay;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _scheduleSubscription;
 
   bool get canEdit => widget.userRole == 'owner' || widget.userRole == 'editor';
+
+  final GlobalKey _profileKey = GlobalKey();
+  final GlobalKey _historyKey = GlobalKey();
+  final GlobalKey _chatKey = GlobalKey();
+  final GlobalKey _helpKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    ShowcaseView.register();
+    ShowcaseView.register(
+      scope: 'pond_monitoring',
+      onFinish: () {
+        if (!mounted) return;
+        final tourNotifier = ref.read(onboardingTourProvider);
+        if (widget.userRole == 'owner' &&
+            !tourNotifier.hasSeenCollaborators) {
+          Future.delayed(const Duration(milliseconds: 400), () {
+            if (!mounted) return;
+            ShowcaseView.getNamed('pond_monitoring').startShowCase([_profileKey]);
+            ref.read(onboardingTourProvider.notifier).markCollaboratorsAsSeen();
+          });
+        }
+      },
+    );
     final now = DateTime.now();
 
     final firstDay = widget.createdAt;
@@ -69,15 +96,47 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
       initialFocus.month,
       initialFocus.day,
     );
+
+    final currentUserId = ref.read(firebaseAuthProvider).currentUser?.uid;
+    if (currentUserId != null) {
+      _scheduleSubscription = ref.read(monitoringRepositoryProvider)
+          .schedulesCollection
+          .doc("${widget.pondId}_$currentUserId")
+          .snapshots()
+          .listen((doc) {
+        if (!mounted) return;
+        if (doc.exists) {
+          final data = doc.data();
+          if (data != null && data['schedule'] != null) {
+            final schedule = data['schedule'] as Map<String, dynamic>;
+            ref.read(notificationServiceProvider).scheduleShiftReminders(
+              pondId: widget.pondId,
+              pondName: widget.pondName,
+              userId: currentUserId,
+              schedule: schedule,
+            );
+          }
+        }
+      });
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final tourNotifier = ref.read(onboardingTourProvider);
+      if (widget.userRole == 'owner' &&
+          tourNotifier.hasSeenOverview &&
+          !tourNotifier.hasSeenCollaborators) {
+        ShowcaseView.getNamed('pond_monitoring').startShowCase([_profileKey]);
+      }
+    });
   }
 
-  @override
-  void dispose() {
-    ShowcaseView.get().unregister();
-    super.dispose();
-  }
+
 
   void _showProfileSheet() {
+    final tourState = ref.read(onboardingTourProvider);
+    final shouldStartTour = widget.userRole == 'owner' && !tourState.hasSeenCollaborators;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -87,6 +146,7 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
         currentPondId: widget.pondId,
         currentPondName: widget.pondName,
         currentUserRole: widget.userRole,
+        startCollaboratorTour: shouldStartTour,
       ),
     );
   }
@@ -110,6 +170,23 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
     );
   }
 
+  void _navigateToChat() {
+    context.push(
+      AppRoutes.chatPath(widget.pondId),
+      extra: <String, dynamic>{
+        'pondName': widget.pondName,
+        'userRole': widget.userRole,
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _scheduleSubscription?.cancel();
+    ShowcaseView.getNamed('pond_monitoring').unregister();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -129,6 +206,7 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
         case 1:
           return TrendsPage(
             pondId: widget.pondId,
+            pondName: widget.pondName,
             species: widget.species,
             userRole: widget.userRole,
           );
@@ -140,6 +218,10 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
             species: widget.species,
             createdAt: widget.createdAt,
             targetCulturePeriodDays: widget.targetCulturePeriodDays,
+            profileKey: _profileKey,
+            historyKey: _historyKey,
+            chatKey: _chatKey,
+            helpKey: _helpKey,
             focusedDay: _focusedDay,
             selectedDay: _selectedDay,
             onDaySelected: (selectedDay, focusedDay) {
@@ -165,12 +247,16 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
             },
           );
         case 3:
-          return GrowthPage(
-            pondId: widget.pondId,
-            pondName: widget.pondName,
-            species: widget.species,
-            canEdit: canEdit,
-          );
+          if (_selectedDay != null) {
+            return GrowthPage(
+              pondId: widget.pondId,
+              pondName: widget.pondName,
+              species: widget.species,
+              canEdit: canEdit,
+              selectedDay: _selectedDay!,
+            );
+          }
+          return const SizedBox.shrink();
         case 4:
           if (_selectedDay != null) {
             return WaterQualityPage(
@@ -207,108 +293,203 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
       }
     }
 
+    final bool isWide = ResponsiveHelper.isWide(context);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           const PondBackground(),
           SafeArea(
-            child: Column(
-              children: [
-                MonitoringHeader(
-                  pondId: widget.pondId,
-                  pondName: widget.pondName,
-                  species: widget.species,
-                  onBackTap: () => context.pop(),
-                  onHistoryTap: _showEditHistory,
-                  onProfileTap: _showProfileSheet,
-                  onHelpTap: () {
-                    ref.read(tourTriggerProvider.notifier).state = null;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      ref.read(tourTriggerProvider.notifier).state = _currentIndex;
-                    });
-                  },
-                ),
-                Expanded(
-                  child: FadeIndexedStack(
-                    index: _currentIndex,
-                    children: List.generate(5, (index) {
-                      if (!_visitedTabs.contains(index)) {
-                        return const SizedBox.shrink();
-                      }
-                      return buildTab(index);
-                    }),
+            child: isWide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      NavigationRail(
+                        selectedIndex: _currentIndex,
+                        onDestinationSelected: (index) {
+                          setState(() {
+                            _currentIndex = index;
+                            _visitedTabs.add(index);
+                          });
+                        },
+                        backgroundColor: isDark 
+                            ? theme.scaffoldBackgroundColor.withValues(alpha: 0.95)
+                            : theme.colorScheme.surface.withValues(alpha: 0.95),
+                        selectedIconTheme: IconThemeData(color: colorScheme.primary, size: 28),
+                        unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6), size: 24),
+                        selectedLabelTextStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: colorScheme.primary),
+                        unselectedLabelTextStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 10, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                        labelType: NavigationRailLabelType.all,
+                        destinations: const [
+                          NavigationRailDestination(
+                            icon: Icon(Icons.receipt_long_rounded),
+                            label: Text("Operations"),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.analytics_rounded),
+                            label: Text("Trends"),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.dashboard_rounded),
+                            label: Text("Overview"),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.trending_up_rounded),
+                            label: Text("Growth"),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.water_drop_rounded),
+                            label: Text("Parameter"),
+                          ),
+                        ],
+                      ),
+                      VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: isDark ? Colors.white12 : Colors.grey.shade300,
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            MonitoringHeader(
+                              pondId: widget.pondId,
+                              pondName: widget.pondName,
+                              species: widget.species,
+                              onBackTap: () => context.pop(),
+                              onHistoryTap: _showEditHistory,
+                              onChatTap: _navigateToChat,
+                              onProfileTap: _showProfileSheet,
+                              profileKey: _profileKey,
+                              historyKey: _historyKey,
+                              chatKey: _chatKey,
+                              helpKey: _helpKey,
+                              onHelpTap: () {
+                                ref.read(tourTriggerProvider.notifier).state = null;
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  ref.read(tourTriggerProvider.notifier).state = _currentIndex;
+                                });
+                              },
+                            ),
+                            Expanded(
+                              child: FadeIndexedStack(
+                                index: _currentIndex,
+                                children: List.generate(5, (index) {
+                                  if (!_visitedTabs.contains(index)) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return buildTab(index);
+                                }),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      MonitoringHeader(
+                        pondId: widget.pondId,
+                        pondName: widget.pondName,
+                        species: widget.species,
+                        onBackTap: () => context.pop(),
+                        onHistoryTap: _showEditHistory,
+                        onChatTap: _navigateToChat,
+                        onProfileTap: _showProfileSheet,
+                        profileKey: _profileKey,
+                        historyKey: _historyKey,
+                        chatKey: _chatKey,
+                        helpKey: _helpKey,
+                        onHelpTap: () {
+                          ref.read(tourTriggerProvider.notifier).state = null;
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            ref.read(tourTriggerProvider.notifier).state = _currentIndex;
+                          });
+                        },
+                      ),
+                      Expanded(
+                        child: FadeIndexedStack(
+                          index: _currentIndex,
+                          children: List.generate(5, (index) {
+                            if (!_visitedTabs.contains(index)) {
+                              return const SizedBox.shrink();
+                            }
+                            return buildTab(index);
+                          }),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, -5),
+      bottomNavigationBar: isWide
+          ? null
+          : Container(
+              decoration: BoxDecoration(
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
+              ),
+              child: BottomNavigationBar(
+                currentIndex: _currentIndex,
+                onTap: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                    _visitedTabs.add(index);
+                  });
+                },
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: colorScheme.surface,
+                selectedItemColor: colorScheme.primary,
+                unselectedItemColor: colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.6,
+                ),
+                selectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                ),
+                elevation: 0,
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.receipt_long_rounded),
+                    label: "Operations",
+                    tooltip: "Operations",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.analytics_rounded),
+                    label: "Trends",
+                    tooltip: "Trends",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.dashboard_rounded),
+                    label: "Overview",
+                    tooltip: "Overview",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.trending_up_rounded),
+                    label: "Growth",
+                    tooltip: "Growth",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.water_drop_rounded),
+                    label: "Parameter",
+                    tooltip: "Parameter",
                   ),
                 ],
-        ),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-                _visitedTabs.add(index);
-              });
-            },
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: colorScheme.surface,
-            selectedItemColor: colorScheme.primary,
-            unselectedItemColor: colorScheme.onSurfaceVariant.withValues(
-              alpha: 0.6,
+              ),
             ),
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 11,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 10,
-            ),
-            elevation: 0,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.receipt_long_rounded),
-                label: "Operations",
-                tooltip: "Operations",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.analytics_rounded),
-                label: "Trends",
-                tooltip: "Trends",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard_rounded),
-                label: "Overview",
-                tooltip: "Overview",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.trending_up_rounded),
-                label: "Growth",
-                tooltip: "Growth",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.water_drop_rounded),
-                label: "Parameter",
-                tooltip: "Parameter",
-              ),
-            ],
-          ),
-        ),
     );
   }
 }

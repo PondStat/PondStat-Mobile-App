@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
-import 'package:pondstat/core/widgets/pondstat_text_field.dart';
+import 'package:pondstat/features/profile/presentation/widgets/invite_collaborator_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/core/widgets/loading_placeholder.dart';
 import 'package:pondstat/core/widgets/error_state_card.dart';
+import 'package:pondstat/features/profile/presentation/widgets/collaborator_tile.dart';
+import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 
 class ManageCollaboratorsPage extends ConsumerStatefulWidget {
   final String pondId;
@@ -73,12 +74,13 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
   }
 
   Future<void> _inviteCollaborator() async {
-    final email = _emailController.text.trim().toLowerCase();
+    final emailInput = _emailController.text.trim();
+    final emailLowercase = emailInput.toLowerCase();
 
     final emailRegex = RegExp(
       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
     );
-    if (email.isEmpty || !emailRegex.hasMatch(email)) {
+    if (emailInput.isEmpty || !emailRegex.hasMatch(emailInput)) {
       SnackbarHelper.showInfo(context, 'Please enter a valid email address.');
       return;
     }
@@ -86,34 +88,74 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
     setState(() => _isAdding = true);
     FocusScope.of(context).unfocus();
 
+    // Capture providers before any async gap to avoid Riverpod ref access after unmount.
+    final authRepo = ref.read(authRepositoryProvider);
+    final pondRepo = ref.read(pondRepositoryProvider);
+    final notificationsRepo = ref.read(notificationsRepositoryProvider);
+
     try {
-      final query = await ref.read(authRepositoryProvider).usersCollection
-          .where('email', isEqualTo: email)
+      var query = await authRepo.usersCollection
+          .where('email', isEqualTo: emailLowercase)
           .limit(1)
           .get();
 
+      if (!mounted) return;
+
+      // Fallback: If not found, and the original input had capital letters, query by the exact casing.
+      if (query.docs.isEmpty && emailInput != emailLowercase) {
+        query = await authRepo.usersCollection
+            .where('email', isEqualTo: emailInput)
+            .limit(1)
+            .get();
+        
+        if (!mounted) return;
+      }
+
       if (query.docs.isEmpty) {
-        if (mounted) {
-          SnackbarHelper.showInfo(context, 'User not found. They must sign up for PondStat first.');
-        }
+        SnackbarHelper.showInfo(context, 'User not found. They must sign up for PondStat first.');
         setState(() => _isAdding = false);
         return;
       }
 
       final targetUserId = query.docs.first.id;
-      final pondRef = ref.read(pondRepositoryProvider).pondsCollection.doc(widget.pondId);
+      final pondRef = pondRepo.pondsCollection.doc(widget.pondId);
+
+      final pondSnapshot = await pondRef.get();
+      if (pondSnapshot.exists && mounted) {
+        final roles = pondSnapshot.data()?.roles ?? {};
+        if (roles.containsKey(targetUserId)) {
+          SnackbarHelper.showInfo(context, 'This user is already a collaborator.');
+          setState(() => _isAdding = false);
+          return;
+        }
+      }
 
       await pondRef.update({
         'memberIds': FieldValue.arrayUnion([targetUserId]),
         'roles.$targetUserId': 'viewer',
       });
 
+      try {
+        await notificationsRepo.sendNotification(
+          recipientUserId: targetUserId,
+          title: 'Added to ${widget.pondName}',
+          body: 'You were added as a viewer to ${widget.pondName}.',
+          pondId: widget.pondId,
+        );
+      } catch (e, stackTrace) {
+        ref.read(appLoggerProvider).error(
+          'Failed to send collaborator invitation notification',
+          error: e,
+          stackTrace: stackTrace,
+          tag: 'COLLABORATORS',
+        );
+      }
+
+      if (!mounted) return;
+
       HapticFeedback.heavyImpact();
       _emailController.clear();
-
-      if (mounted) {
-        SnackbarHelper.showSuccess(context, 'Collaborator added successfully!');
-      }
+      SnackbarHelper.showSuccess(context, 'Collaborator added successfully!');
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, 'Error adding collaborator: $e');
@@ -162,6 +204,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        actionsPadding: const EdgeInsets.only(bottom: 20, right: 20, left: 20),
         title: Row(
           children: [
             Container(
@@ -225,6 +268,7 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
 
   Future<void> _updateRole(String userId, String newRole) async {
     final pondRef = ref.read(pondRepositoryProvider).pondsCollection.doc(widget.pondId);
+    final notificationsRepo = ref.read(notificationsRepositoryProvider);
 
     try {
       if (newRole == 'remove') {
@@ -232,8 +276,65 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
           'memberIds': FieldValue.arrayRemove([userId]),
           'roles.$userId': FieldValue.delete(),
         });
+
+        try {
+          await notificationsRepo.sendNotification(
+            recipientUserId: userId,
+            title: 'Access removed from ${widget.pondName}',
+            body: 'Your access to ${widget.pondName} has been removed.',
+            pondId: widget.pondId,
+          );
+        } catch (e, stackTrace) {
+          ref.read(appLoggerProvider).error(
+            'Failed to send removal notification',
+            error: e,
+            stackTrace: stackTrace,
+            tag: 'COLLABORATORS',
+          );
+        }
+      } else if (newRole == 'owner') {
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        if (currentUserId != null) {
+          await pondRef.update({
+            'ownerId': userId,
+            'roles.$userId': 'owner',
+            'roles.$currentUserId': 'editor', // Demote current owner to editor
+          });
+
+          try {
+            await notificationsRepo.sendNotification(
+              recipientUserId: userId,
+              title: 'Pond Ownership Transferred',
+              body: 'You are now the owner of ${widget.pondName}.',
+              pondId: widget.pondId,
+            );
+          } catch (e, stackTrace) {
+            ref.read(appLoggerProvider).error(
+              'Failed to send ownership transfer notification',
+              error: e,
+              stackTrace: stackTrace,
+              tag: 'COLLABORATORS',
+            );
+          }
+        }
       } else {
         await pondRef.update({'roles.$userId': newRole});
+
+        try {
+          await notificationsRepo.sendNotification(
+            recipientUserId: userId,
+            title: 'Role updated in ${widget.pondName}',
+            body: 'Your role in ${widget.pondName} has been changed to $newRole.',
+            pondId: widget.pondId,
+          );
+        } catch (e, stackTrace) {
+          ref.read(appLoggerProvider).error(
+            'Failed to send role update notification',
+            error: e,
+            stackTrace: stackTrace,
+            tag: 'COLLABORATORS',
+          );
+        }
       }
       HapticFeedback.lightImpact();
     } catch (e) {
@@ -247,13 +348,55 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: backgroundLight,
-        body: SafeArea(
-          child: Column(
-            children: [
+    return StreamBuilder<DocumentSnapshot<Pond>>(
+      stream: ref.read(pondRepositoryProvider).pondsCollection
+          .doc(widget.pondId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(child: Text("Error: ${snapshot.error}")),
+          );
+        }
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final pond = snapshot.data?.data();
+        final roles = pond?.roles ?? {};
+        final myRole = roles[currentUserId];
+
+        if (myRole != 'owner') {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text("Access Denied"),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Text(
+                  "Only the pond owner is authorized to manage collaborators.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Scaffold(
+            backgroundColor: backgroundLight,
+            body: SafeArea(
+              child: Column(
+                children: [
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20.0,
@@ -314,97 +457,11 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
                 ),
               ),
 
-              Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Invite Collaborator",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: textDark,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: PondStatTextField(
-                            controller: _emailController,
-                            focusNode: _emailFocus,
-                            label: 'Collaborator Email',
-                            hint: 'user@email.com',
-                            prefixIcon: Icons.email_rounded,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _inviteCollaborator(),
-                            suffixIcon: _emailController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade300,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.close_rounded,
-                                        size: 14,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      HapticFeedback.selectionClick();
-                                      _emailController.clear();
-                                    },
-                                  )
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: _isAdding ? null : _inviteCollaborator,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryBlue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 18,
-                              horizontal: 20,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: _isAdding
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.send_rounded, size: 20),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              InviteCollaboratorCard(
+                emailController: _emailController,
+                emailFocus: _emailFocus,
+                isAdding: _isAdding,
+                onInvite: _inviteCollaborator,
               ),
 
               Padding(
@@ -492,605 +549,9 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
         ),
       ),
     );
-  }
-}
-
-class CollaboratorTile extends StatefulWidget {
-  final String pondId;
-  final String userId;
-  final String role;
-  final bool isMe;
-  final int index;
-  final Function(String, String) onRoleChange;
-  final Future<Map<String, dynamic>> Function(String) fetchUser;
-
-  const CollaboratorTile({
-    super.key,
-    required this.pondId,
-    required this.userId,
-    required this.role,
-    required this.isMe,
-    required this.index,
-    required this.onRoleChange,
-    required this.fetchUser,
-  });
-
-  @override
-  State<CollaboratorTile> createState() => _CollaboratorTileState();
-}
-
-class _CollaboratorTileState extends State<CollaboratorTile>
-    with TickerProviderStateMixin {
-  Map<String, dynamic>? userData;
-  bool isLoading = true;
-
-  late AnimationController _shimmerController;
-  late AnimationController _entranceController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-
-    _entranceController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _entranceController, curve: Curves.easeOut),
-    );
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _entranceController,
-            curve: Curves.easeOutQuart,
-          ),
-        );
-
-    _loadUser();
-  }
-
-  @override
-  void didUpdateWidget(covariant CollaboratorTile oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.userId != widget.userId) {
-      setState(() => isLoading = true);
-      _loadUser();
-    }
-  }
-
-  @override
-  void dispose() {
-    _shimmerController.dispose();
-    _entranceController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadUser() async {
-    final data = await widget.fetchUser(widget.userId);
-    if (mounted) {
-      setState(() {
-        userData = data;
-        isLoading = false;
-      });
-
-      Future.delayed(Duration(milliseconds: 50 * widget.index), () {
-        if (mounted) _entranceController.forward();
-      });
-    }
-  }
-
-  Color _getAvatarColor(String name) {
-    final pastelColors = [
-      const Color(0xFFFDA4AF),
-      const Color(0xFFFCD34D),
-      const Color(0xFF6EE7B7),
-      const Color(0xFF93C5FD),
-      const Color(0xFFC4B5FD),
-      const Color(0xFFF9A8D4),
-      const Color(0xFFFDBA74),
-      const Color(0xFF5EEAD4),
-    ];
-    final hash = name.hashCode.abs();
-    return pastelColors[hash % pastelColors.length];
-  }
-
-  void _showRoleSelector(BuildContext context) {
-    HapticFeedback.lightImpact();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => SafeArea(
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          padding: const EdgeInsets.only(
-            bottom: 32,
-            top: 12,
-            left: 24,
-            right: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 48,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: _getAvatarColor(
-                      (userData?['fullName']?.toString().trim().isEmpty ?? true)
-                          ? 'U'
-                          : userData!['fullName'],
-                    ).withValues(alpha: 0.2),
-                    radius: 20,
-                    child: Text(
-                      (userData?['fullName'] as String?).initials,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: _getAvatarColor(
-                          (userData?['fullName']?.toString().trim().isEmpty ??
-                                  true)
-                              ? 'U'
-                              : userData!['fullName'],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Manage Access",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        Text(
-                          userData?['fullName'] ?? 'User',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildRoleOption(
-                'viewer',
-                'Viewer',
-                'Can view pond data and measurements.',
-                Icons.visibility_rounded,
-                Colors.grey.shade700,
-              ),
-              _buildRoleOption(
-                'editor',
-                'Editor',
-                'Can add, edit, and manage measurements.',
-                Icons.edit_rounded,
-                Colors.blue.shade700,
-              ),
-              _buildRoleOption(
-                'owner',
-                'Owner',
-                'Full control. Can delete the pond and manage users.',
-                Icons.admin_panel_settings_rounded,
-                Colors.orange.shade700,
-              ),
-              const Divider(height: 32),
-              _buildRoleOption(
-                'remove',
-                'Remove Access',
-                'Revoke all access immediately.',
-                Icons.person_remove_rounded,
-                Colors.red.shade600,
-                isDestructive: true,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoleOption(
-    String roleId,
-    String title,
-    String description,
-    IconData icon,
-    Color color, {
-    bool isDestructive = false,
-  }) {
-    final isSelected = widget.role == roleId;
-
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context);
-        if (!isSelected) widget.onRoleChange(widget.userId, roleId);
       },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? color.withValues(alpha: 0.05)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? color.withValues(alpha: 0.3)
-                : Colors.transparent,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: isDestructive ? color : Theme.of(context).colorScheme.onSurface,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected) Icon(Icons.check_circle_rounded, color: color),
-          ],
-        ),
-      ),
     );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (isLoading) {
-      return FadeTransition(
-        opacity: Tween<double>(
-          begin: 0.4,
-          end: 1.0,
-        ).animate(_shimmerController),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey.shade100),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 14,
-                      width: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 10,
-                      width: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final rawName = userData?['fullName']?.toString().trim() ?? '';
-    final name = rawName.isEmpty ? 'Unknown User' : rawName;
-    final email = userData?['email'] ?? '';
-    final initials = name.initials;
-    final avatarColor = widget.isMe
-        ? const Color(0xFF0A74DA)
-        : _getAvatarColor(name);
-
-    Widget tileContent = Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: avatarColor.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: CircleAvatar(
-            radius: 22,
-            backgroundColor: widget.isMe
-                ? avatarColor
-                : avatarColor.withValues(alpha: 0.2),
-            child: Text(
-              initials,
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: widget.isMe ? Colors.white : avatarColor,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          widget.isMe ? "$name (You)" : name,
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 15,
-          ),
-        ),
-        subtitle: Text(
-          email,
-          style: TextStyle(
-            color: Colors.grey.shade500,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            widget.isMe
-                ? Tooltip(
-                    message: 'You cannot change your own role',
-                    triggerMode: TooltipTriggerMode.tap,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Text(
-                        widget.role.toUpperCase(),
-                        style: TextStyle(
-                          color: Colors.green.shade700,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  )
-                : InkWell(
-                    onTap: () => _showRoleSelector(context),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.role.toUpperCase(),
-                            style: TextStyle(
-                              color: Colors.grey.shade700,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.expand_more_rounded,
-                            size: 16,
-                            color: Colors.grey.shade600,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-          ],
-        ),
-      ),
-    );
-
-    Widget animatedTile = FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(position: _slideAnimation, child: tileContent),
-    );
-
-    if (!widget.isMe) {
-      return Dismissible(
-        key: Key("dismiss_${widget.userId}"),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 24),
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.red.shade500,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Icon(
-            Icons.delete_sweep_rounded,
-            color: Colors.white,
-            size: 28,
-          ),
-        ),
-        onUpdate: (details) {
-          if (details.reached && !details.previousReached) {
-            HapticFeedback.lightImpact();
-          }
-        },
-        confirmDismiss: (direction) async {
-          HapticFeedback.selectionClick();
-          return await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.red,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Remove Access?",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: Text(
-                "This user will immediately lose all access to this pond's data.",
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  height: 1.4,
-                  fontSize: 15,
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withValues(alpha: 0.1),
-                    foregroundColor: Colors.red,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text(
-                    "Remove",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        onDismissed: (_) {
-          widget.onRoleChange(widget.userId, 'direct_remove');
-        },
-        child: animatedTile,
-      );
-    }
-
-    return animatedTile;
   }
 }
+
+

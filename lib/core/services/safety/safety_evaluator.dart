@@ -12,6 +12,13 @@ class SafetyEvaluator {
   /// Evaluates a parameter value against its absolute and optimal thresholds.
   /// Returns null if the value is within optimal bounds.
   SafetyEvaluation? evaluate(ParameterItem parameter, double value) {
+    if (value.isNaN || value.isInfinite) {
+      return const SafetyEvaluation(
+        tier: AlertTier.critical,
+        direction: AlertDirection.above,
+      );
+    }
+
     // 1. Check Critical Bounds first
     if (parameter.absoluteMin != null && value < parameter.absoluteMin!) {
       return const SafetyEvaluation(

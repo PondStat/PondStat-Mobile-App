@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pondstat/core/router/route_names.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PondListCard extends StatefulWidget {
+class PondListCard extends ConsumerStatefulWidget {
   final String pondId;
   final String pondName;
   final String species;
@@ -23,10 +24,10 @@ class PondListCard extends StatefulWidget {
   });
 
   @override
-  State<PondListCard> createState() => _PondListCardState();
+  ConsumerState<PondListCard> createState() => _PondListCardState();
 }
 
-class _PondListCardState extends State<PondListCard>
+class _PondListCardState extends ConsumerState<PondListCard>
     with TickerProviderStateMixin {
   bool _isNavigating = false;
   late final AnimationController _waveController;
@@ -372,6 +373,8 @@ class _PondListCardState extends State<PondListCard>
     }
     return FontAwesomeIcons.droplet;
   }
+
+
 }
 
 class _PondWaterPainter extends CustomPainter {
@@ -500,4 +503,6 @@ class _PondWaterPainter extends CustomPainter {
         oldDelegate.isDark != isDark;
   }
 }
+
+
 

@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
+import 'package:pondstat/core/services/connectivity_provider.dart';
+import 'package:pondstat/features/monitoring/utils/growth_calculators.dart';
+
+import 'package:pondstat/core/firebase/offline_repository_mixin.dart';
 
 part 'growth_repository.g.dart';
 
@@ -51,13 +56,22 @@ class GrowthMetrics {
 @riverpod
 GrowthRepository growthRepository(Ref ref) {
   final baseRef = ref.watch(appBaseRefProvider);
-  return GrowthRepository(baseRef);
+  final isOffline = ref.watch(isOfflineProvider);
+  return GrowthRepository(
+    baseRef,
+    isOffline: () => isOffline,
+  );
 }
 
-class GrowthRepository {
+class GrowthRepository with OfflineRepositoryMixin {
   final DocumentReference<Map<String, dynamic>> _baseRef;
+  @override
+  final bool Function() isOffline;
 
-  GrowthRepository(this._baseRef);
+  GrowthRepository(
+    this._baseRef, {
+    required this.isOffline,
+  });
 
   // ─── Collection References ───────────────────────────────────────────
   CollectionReference<Map<String, dynamic>> get pondsCollection =>
@@ -72,7 +86,8 @@ class GrowthRepository {
   Future<List<GrowthMetrics>> calculateGrowthMetrics(
     String pondId,
   ) async {
-    final pondDoc = await pondsCollection.doc(pondId).get();
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
+    final pondDoc = await pondsCollection.doc(pondId).get(GetOptions(source: source));
     if (!pondDoc.exists) return [];
 
     final pondData = pondDoc.data() ?? {};
@@ -97,8 +112,8 @@ class GrowthRepository {
     if (pondData['createdAt'] != null) {
       pondStartDate = (pondData['createdAt'] as Timestamp).toDate();
     } else {
-      pondStartDate = (allDocs.first.data()!['timestamp'] as Timestamp)
-          .toDate();
+      final fallbackTimestamp = allDocs.first.data()!['timestamp'] as Timestamp?;
+      pondStartDate = fallbackTimestamp?.toDate() ?? DateTime.now();
     }
 
     final weeklyBuckets = _bucketizeByWeek(allDocs, pondStartDate);
@@ -108,9 +123,10 @@ class GrowthRepository {
 
   Future<List<DocumentSnapshot<Map<String, dynamic>>>>
   _fetchRelevantMeasurements(String pondId, List<String> relevantParams) async {
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
     final measurementsSnapshot = await measurementsCollection
         .where('pondId', isEqualTo: pondId)
-        .get();
+        .get(GetOptions(source: source));
 
     return measurementsSnapshot.docs
         .where((doc) => relevantParams.contains(doc.data()['parameter']))
@@ -159,8 +175,7 @@ class GrowthRepository {
       );
 
       weeklyBuckets[displayWeek]!['date'] = date;
-      weeklyBuckets[displayWeek]![param] =
-          (weeklyBuckets[displayWeek]![param] as double) + val;
+      weeklyBuckets[displayWeek]![param] = val;
 
       final note = data['notes'] as String?;
       if (note != null && note.trim().isNotEmpty) {
@@ -221,17 +236,23 @@ class GrowthRepository {
 
       final double? currentAbw = explicitAbw > 0
           ? explicitAbw
-          : (sampleCount > 0 ? totalWeight / sampleCount : null);
+          : GrowthCalculators.calculateABW(weight: totalWeight, count: sampleCount);
 
       double? adg = explicitAdg > 0 ? explicitAdg : null;
       double? dfr = explicitDfr > 0
           ? explicitDfr
-          : (currentAbw != null && feedingRate > 0
-              ? (currentAbw * fishCount * feedingRate / 100.0)
-              : null);
+          : GrowthCalculators.calculateDFR(
+              stocked: fishCount.toDouble(),
+              survivalRate: 100.0,
+              abw: currentAbw,
+              feedingRate: feedingRate,
+            );
       double? fcr = explicitFcr > 0
           ? explicitFcr
-          : (weightGained > 0 && feedConsumed > 0 ? feedConsumed / weightGained : null);
+          : GrowthCalculators.calculateFCR(
+              feedGiven: feedConsumed,
+              weightGained: weightGained,
+            );
 
       if (i > 0 && explicitAdg == 0.0) {
         final prevWeek = sortedWeeks[i - 1];
@@ -245,14 +266,18 @@ class GrowthRepository {
 
         final double? prevAbw = prevExplicitAbw > 0
             ? prevExplicitAbw
-            : (prevSampleCount > 0 ? prevTotalWeight / prevSampleCount : null);
+            : GrowthCalculators.calculateABW(weight: prevTotalWeight, count: prevSampleCount);
 
         final DateTime currentDate = bucket['date'] as DateTime;
         final DateTime prevDate = prevBucket['date'] as DateTime;
         final int daysBetween = currentDate.difference(prevDate).inDays;
 
         if (daysBetween > 0 && currentAbw != null && prevAbw != null && currentAbw > 0 && prevAbw > 0) {
-          adg = (currentAbw - prevAbw) / daysBetween;
+          adg = GrowthCalculators.calculateADG(
+            currentAbw: currentAbw,
+            previousAbw: prevAbw,
+            days: daysBetween.toDouble(),
+          );
         }
       }
 
@@ -306,8 +331,9 @@ class GrowthRepository {
     if (docIds.isEmpty) return;
 
     // Fetch all docs in parallel
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
     final snapshots = await Future.wait(
-      docIds.map((id) => measurementsCollection.doc(id).get()),
+      docIds.map((id) => measurementsCollection.doc(id).get(GetOptions(source: source))),
     );
 
     final batch = _baseRef.firestore.batch();
@@ -333,7 +359,7 @@ class GrowthRepository {
 
       batch.delete(docSnap.reference);
     }
-    await _commitBatchWithTimeout(batch);
+    await commitBatchWithTimeout(batch);
   }
 
   /// Updates growth sampling metrics in a single batch and logs them to history.
@@ -357,8 +383,9 @@ class GrowthRepository {
     if (allDocIds.isEmpty) return;
 
     // Fetch all docs in parallel
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
     final snapshots = await Future.wait(
-      allDocIds.map((id) => measurementsCollection.doc(id).get()),
+      allDocIds.map((id) => measurementsCollection.doc(id).get(GetOptions(source: source))),
     );
 
     final batch = _baseRef.firestore.batch();
@@ -419,13 +446,7 @@ class GrowthRepository {
       });
     }
 
-    await _commitBatchWithTimeout(batch);
+    await commitBatchWithTimeout(batch);
   }
 
-  Future<void> _commitBatchWithTimeout(WriteBatch batch) async {
-    await batch.commit().timeout(
-      const Duration(seconds: 2),
-      onTimeout: () => null,
-    );
-  }
 }

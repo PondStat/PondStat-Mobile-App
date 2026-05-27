@@ -101,6 +101,7 @@ class _DestructiveDialogState extends State<DestructiveDialog> {
                           try {
                             await widget.onConfirm();
                             if (context.mounted) {
+                              setState(() => _isDeleting = false);
                               Navigator.pop(context);
                             }
                           } catch (e) {

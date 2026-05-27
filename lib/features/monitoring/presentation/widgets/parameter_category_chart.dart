@@ -5,45 +5,56 @@ import 'package:intl/intl.dart';
 import 'package:pondstat/features/monitoring/data/trends_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 
-class BiologicalParametersChart extends StatefulWidget {
+class ParameterCategoryChart extends StatefulWidget {
   final Map<String, List<NormalizedTrendPoint>> normalizedData;
   final String species;
   final DateTime startDate;
   final DateTime endDate;
+  final String title;
+  final Map<String, bool>? initialVisibility;
 
-  const BiologicalParametersChart({
+  const ParameterCategoryChart({
     super.key,
     required this.normalizedData,
     required this.species,
     required this.startDate,
     required this.endDate,
+    required this.title,
+    this.initialVisibility,
   });
 
   @override
-  State<BiologicalParametersChart> createState() =>
-      _BiologicalParametersChartState();
+  State<ParameterCategoryChart> createState() =>
+      _ParameterCategoryChartState();
 }
 
-class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
+class _ParameterCategoryChartState extends State<ParameterCategoryChart> {
   final Map<String, bool> _visibleParameters = {};
+  int? _lastTouchedSpotIndex;
 
   @override
   void initState() {
     super.initState();
+    if (widget.initialVisibility != null) {
+      _visibleParameters.addAll(widget.initialVisibility!);
+    }
     _syncVisibleParameters();
   }
 
   @override
-  void didUpdateWidget(covariant BiologicalParametersChart oldWidget) {
+  void didUpdateWidget(covariant ParameterCategoryChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncVisibleParameters();
   }
 
   void _syncVisibleParameters() {
-    bool isFirst = true;
+    bool isFirst = _visibleParameters.isEmpty;
     for (var key in widget.normalizedData.keys) {
       if (!_visibleParameters.containsKey(key)) {
-        _visibleParameters[key] = isFirst;
+        // If initialVisibility is provided, use it. Otherwise, default the first item to true, rest to false.
+        _visibleParameters[key] = widget.initialVisibility != null 
+            ? (widget.initialVisibility![key] ?? true) 
+            : isFirst;
         isFirst = false;
       }
     }
@@ -91,9 +102,9 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "BIOLOGICAL PARAMETERS",
-                style: TextStyle(
+              Text(
+                widget.title.toUpperCase(),
+                style: const TextStyle(
                   color: Colors.blueGrey,
                   fontWeight: FontWeight.w900,
                   fontSize: 12,
@@ -244,11 +255,11 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
       lineBars.add(
         LineChartBarData(
           spots: spots,
-          isCurved: true,
+          isCurved: points.length > 1,
           color: paramColor,
           barWidth: 3,
           isStrokeCapRound: true,
-          dotData: const FlDotData(show: false),
+          dotData: FlDotData(show: points.length == 1),
           belowBarData: BarAreaData(show: false),
         ),
       );
@@ -325,6 +336,16 @@ class _BiologicalParametersChartState extends State<BiologicalParametersChart> {
       borderData: FlBorderData(show: false),
       lineBarsData: lineBars,
       lineTouchData: LineTouchData(
+        touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
+          if (response == null || response.lineBarSpots == null || response.lineBarSpots!.isEmpty) {
+            return;
+          }
+          final spotIndex = response.lineBarSpots!.first.spotIndex;
+          if (spotIndex != _lastTouchedSpotIndex) {
+            _lastTouchedSpotIndex = spotIndex;
+            HapticFeedback.selectionClick();
+          }
+        },
         touchTooltipData: LineTouchTooltipData(
           fitInsideHorizontally: true,
           fitInsideVertically: true,

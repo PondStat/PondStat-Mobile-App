@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/expenses_tab.dart';
+import 'package:pondstat/features/monitoring/presentation/pond_expenses_tab.dart';
+import 'package:pondstat/features/monitoring/presentation/pond_sales_tab.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/expense_sheet.dart';
-import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/pond_expense_sheet.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/pond_sale_sheet.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
@@ -35,7 +38,7 @@ class _FinancesTabState extends ConsumerState<FinancesTab>
     if (widget.canEdit && _selectedFilterIndex == 0) {
       keys.add(_addExpensesKey);
     }
-    ShowcaseView.get().startShowCase(keys);
+    ShowcaseView.getNamed('pond_monitoring').startShowCase(keys);
   }
 
   @override
@@ -55,13 +58,31 @@ class _FinancesTabState extends ConsumerState<FinancesTab>
   bool get wantKeepAlive => true;
 
   void _handleFabPressed() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => ExpenseSheet(pondId: widget.pondId),
-    );
+    if (_selectedFilterIndex == 0) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => ExpenseSheet(pondId: widget.pondId),
+      );
+    } else if (_selectedFilterIndex == 1) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => PondExpenseSheet(pondId: widget.pondId),
+      );
+    } else if (_selectedFilterIndex == 2) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => PondSaleSheet(pondId: widget.pondId),
+      );
+    }
   }
 
   @override
@@ -86,6 +107,7 @@ class _FinancesTabState extends ConsumerState<FinancesTab>
           // Filter Chips
           CustomShowcase(
             showcaseKey: _financesChipsKey,
+            scope: 'pond_monitoring',
             title: 'Financial Filters',
             description: 'Filter transaction history between combined group expenses, direct pond expenses, and sales.',
             child: SingleChildScrollView(
@@ -144,31 +166,75 @@ class _FinancesTabState extends ConsumerState<FinancesTab>
           ),
         ],
       ),
-      floatingActionButton: (widget.canEdit && _selectedFilterIndex == 0)
-          ? CustomShowcase(
-              showcaseKey: _addExpensesKey,
-              title: 'Add Expenses',
-              description: 'Log new financial expenditures like feed purchases, labor, or equipment for this pond.',
-              child: Semantics(
-                label: "Add expenses receipt data",
-                button: true,
-                child: FloatingActionButton.extended(
-                  heroTag: 'finances_fab',
-                  onPressed: _handleFabPressed,
-                  backgroundColor: Colors.teal,
-                  icon: const Icon(Icons.receipt_long_rounded, color: Colors.white),
-                  label: const Text(
-                    "Add Expenses",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            )
+      floatingActionButton: widget.canEdit
+          ? _buildFabForFilter(_selectedFilterIndex)
           : null,
     );
+  }
+
+  Widget? _buildFabForFilter(int index) {
+    if (index == 0) {
+      return CustomShowcase(
+        showcaseKey: _addExpensesKey,
+        scope: 'pond_monitoring',
+        title: 'Add Expenses',
+        description: 'Log new financial expenditures like feed purchases, labor, or equipment for this pond.',
+        child: Semantics(
+          label: "Add expenses receipt data",
+          button: true,
+          child: FloatingActionButton.extended(
+            heroTag: 'finances_fab_group',
+            onPressed: _handleFabPressed,
+            backgroundColor: Colors.teal,
+            icon: const Icon(Icons.receipt_long_rounded, color: Colors.white),
+            label: const Text(
+              "Add Expenses",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      );
+    } else if (index == 1) {
+      return Semantics(
+        label: "Add direct pond expense",
+        button: true,
+        child: FloatingActionButton.extended(
+          heroTag: 'finances_fab_pond',
+          onPressed: _handleFabPressed,
+          backgroundColor: Colors.indigo,
+          icon: const Icon(Icons.receipt_rounded, color: Colors.white),
+          label: const Text(
+            "Add Pond Expense",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    } else if (index == 2) {
+      return Semantics(
+        label: "Add pond sale",
+        button: true,
+        child: FloatingActionButton.extended(
+          heroTag: 'finances_fab_sale',
+          onPressed: _handleFabPressed,
+          backgroundColor: const Color(0xFF10B981),
+          icon: const Icon(Icons.monetization_on_rounded, color: Colors.white),
+          label: const Text(
+            "Add Sale",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+    return null;
   }
 
   Widget _buildContentForFilter(int index) {
@@ -178,22 +244,18 @@ class _FinancesTabState extends ConsumerState<FinancesTab>
         pondId: widget.pondId,
         canAdd: widget.canEdit,
       );
+    } else if (index == 1) {
+      return PondExpensesTab(
+        key: const ValueKey(1),
+        pondId: widget.pondId,
+        canAdd: widget.canEdit,
+      );
     } else {
-      return _buildComingSoon(key: ValueKey(index), title: _filters[index]);
+      return PondSalesTab(
+        key: const ValueKey(2),
+        pondId: widget.pondId,
+        canAdd: widget.canEdit,
+      );
     }
-  }
-
-  Widget _buildComingSoon({required Key key, required String title}) {
-    return Center(
-      key: key,
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: EmptyStateCard(
-          image: const Icon(Icons.construction_rounded),
-          title: "$title Coming Soon",
-          description: "This feature is currently under development.",
-        ),
-      ),
-    );
   }
 }

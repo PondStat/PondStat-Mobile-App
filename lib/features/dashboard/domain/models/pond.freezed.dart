@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Pond {
 
- String get id; String get name; String get species; int get stockingQuantity; int get targetCulturePeriodDays; String get ownerId; List<String> get memberIds; Map<String, String> get roles;@TimestampConverter() DateTime? get createdAt;
+ String get id; String get name; String get species; int get stockingQuantity; int get targetCulturePeriodDays; String get ownerId; List<String> get memberIds; Map<String, String> get roles;@TimestampConverter() DateTime? get createdAt; double? get latitude; double? get longitude;
 /// Create a copy of Pond
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $PondCopyWith<Pond> get copyWith => _$PondCopyWithImpl<Pond>(this as Pond, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Pond&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.species, species) || other.species == species)&&(identical(other.stockingQuantity, stockingQuantity) || other.stockingQuantity == stockingQuantity)&&(identical(other.targetCulturePeriodDays, targetCulturePeriodDays) || other.targetCulturePeriodDays == targetCulturePeriodDays)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&const DeepCollectionEquality().equals(other.memberIds, memberIds)&&const DeepCollectionEquality().equals(other.roles, roles)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Pond&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.species, species) || other.species == species)&&(identical(other.stockingQuantity, stockingQuantity) || other.stockingQuantity == stockingQuantity)&&(identical(other.targetCulturePeriodDays, targetCulturePeriodDays) || other.targetCulturePeriodDays == targetCulturePeriodDays)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&const DeepCollectionEquality().equals(other.memberIds, memberIds)&&const DeepCollectionEquality().equals(other.roles, roles)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,species,stockingQuantity,targetCulturePeriodDays,ownerId,const DeepCollectionEquality().hash(memberIds),const DeepCollectionEquality().hash(roles),createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,species,stockingQuantity,targetCulturePeriodDays,ownerId,const DeepCollectionEquality().hash(memberIds),const DeepCollectionEquality().hash(roles),createdAt,latitude,longitude);
 
 @override
 String toString() {
-  return 'Pond(id: $id, name: $name, species: $species, stockingQuantity: $stockingQuantity, targetCulturePeriodDays: $targetCulturePeriodDays, ownerId: $ownerId, memberIds: $memberIds, roles: $roles, createdAt: $createdAt)';
+  return 'Pond(id: $id, name: $name, species: $species, stockingQuantity: $stockingQuantity, targetCulturePeriodDays: $targetCulturePeriodDays, ownerId: $ownerId, memberIds: $memberIds, roles: $roles, createdAt: $createdAt, latitude: $latitude, longitude: $longitude)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $PondCopyWith<$Res>  {
   factory $PondCopyWith(Pond value, $Res Function(Pond) _then) = _$PondCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String species, int stockingQuantity, int targetCulturePeriodDays, String ownerId, List<String> memberIds, Map<String, String> roles,@TimestampConverter() DateTime? createdAt
+ String id, String name, String species, int stockingQuantity, int targetCulturePeriodDays, String ownerId, List<String> memberIds, Map<String, String> roles,@TimestampConverter() DateTime? createdAt, double? latitude, double? longitude
 });
 
 
@@ -65,7 +65,7 @@ class _$PondCopyWithImpl<$Res>
 
 /// Create a copy of Pond
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? species = null,Object? stockingQuantity = null,Object? targetCulturePeriodDays = null,Object? ownerId = null,Object? memberIds = null,Object? roles = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? species = null,Object? stockingQuantity = null,Object? targetCulturePeriodDays = null,Object? ownerId = null,Object? memberIds = null,Object? roles = null,Object? createdAt = freezed,Object? latitude = freezed,Object? longitude = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -76,7 +76,9 @@ as int,ownerId: null == ownerId ? _self.ownerId : ownerId // ignore: cast_nullab
 as String,memberIds: null == memberIds ? _self.memberIds : memberIds // ignore: cast_nullable_to_non_nullable
 as List<String>,roles: null == roles ? _self.roles : roles // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as double?,longitude: freezed == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
+as double?,
   ));
 }
 
@@ -161,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String species,  int stockingQuantity,  int targetCulturePeriodDays,  String ownerId,  List<String> memberIds,  Map<String, String> roles, @TimestampConverter()  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String species,  int stockingQuantity,  int targetCulturePeriodDays,  String ownerId,  List<String> memberIds,  Map<String, String> roles, @TimestampConverter()  DateTime? createdAt,  double? latitude,  double? longitude)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Pond() when $default != null:
-return $default(_that.id,_that.name,_that.species,_that.stockingQuantity,_that.targetCulturePeriodDays,_that.ownerId,_that.memberIds,_that.roles,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.species,_that.stockingQuantity,_that.targetCulturePeriodDays,_that.ownerId,_that.memberIds,_that.roles,_that.createdAt,_that.latitude,_that.longitude);case _:
   return orElse();
 
 }
@@ -182,10 +184,10 @@ return $default(_that.id,_that.name,_that.species,_that.stockingQuantity,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String species,  int stockingQuantity,  int targetCulturePeriodDays,  String ownerId,  List<String> memberIds,  Map<String, String> roles, @TimestampConverter()  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String species,  int stockingQuantity,  int targetCulturePeriodDays,  String ownerId,  List<String> memberIds,  Map<String, String> roles, @TimestampConverter()  DateTime? createdAt,  double? latitude,  double? longitude)  $default,) {final _that = this;
 switch (_that) {
 case _Pond():
-return $default(_that.id,_that.name,_that.species,_that.stockingQuantity,_that.targetCulturePeriodDays,_that.ownerId,_that.memberIds,_that.roles,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.species,_that.stockingQuantity,_that.targetCulturePeriodDays,_that.ownerId,_that.memberIds,_that.roles,_that.createdAt,_that.latitude,_that.longitude);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +204,10 @@ return $default(_that.id,_that.name,_that.species,_that.stockingQuantity,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String species,  int stockingQuantity,  int targetCulturePeriodDays,  String ownerId,  List<String> memberIds,  Map<String, String> roles, @TimestampConverter()  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String species,  int stockingQuantity,  int targetCulturePeriodDays,  String ownerId,  List<String> memberIds,  Map<String, String> roles, @TimestampConverter()  DateTime? createdAt,  double? latitude,  double? longitude)?  $default,) {final _that = this;
 switch (_that) {
 case _Pond() when $default != null:
-return $default(_that.id,_that.name,_that.species,_that.stockingQuantity,_that.targetCulturePeriodDays,_that.ownerId,_that.memberIds,_that.roles,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.species,_that.stockingQuantity,_that.targetCulturePeriodDays,_that.ownerId,_that.memberIds,_that.roles,_that.createdAt,_that.latitude,_that.longitude);case _:
   return null;
 
 }
@@ -217,7 +219,7 @@ return $default(_that.id,_that.name,_that.species,_that.stockingQuantity,_that.t
 @JsonSerializable()
 
 class _Pond extends Pond {
-  const _Pond({required this.id, this.name = '', this.species = '', this.stockingQuantity = 0, this.targetCulturePeriodDays = 0, this.ownerId = '', final  List<String> memberIds = const [], final  Map<String, String> roles = const {}, @TimestampConverter() this.createdAt}): _memberIds = memberIds,_roles = roles,super._();
+  const _Pond({required this.id, this.name = '', this.species = '', this.stockingQuantity = 0, this.targetCulturePeriodDays = 0, this.ownerId = '', final  List<String> memberIds = const [], final  Map<String, String> roles = const {}, @TimestampConverter() this.createdAt, this.latitude, this.longitude}): _memberIds = memberIds,_roles = roles,super._();
   factory _Pond.fromJson(Map<String, dynamic> json) => _$PondFromJson(json);
 
 @override final  String id;
@@ -241,6 +243,8 @@ class _Pond extends Pond {
 }
 
 @override@TimestampConverter() final  DateTime? createdAt;
+@override final  double? latitude;
+@override final  double? longitude;
 
 /// Create a copy of Pond
 /// with the given fields replaced by the non-null parameter values.
@@ -255,16 +259,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Pond&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.species, species) || other.species == species)&&(identical(other.stockingQuantity, stockingQuantity) || other.stockingQuantity == stockingQuantity)&&(identical(other.targetCulturePeriodDays, targetCulturePeriodDays) || other.targetCulturePeriodDays == targetCulturePeriodDays)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&const DeepCollectionEquality().equals(other._memberIds, _memberIds)&&const DeepCollectionEquality().equals(other._roles, _roles)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Pond&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.species, species) || other.species == species)&&(identical(other.stockingQuantity, stockingQuantity) || other.stockingQuantity == stockingQuantity)&&(identical(other.targetCulturePeriodDays, targetCulturePeriodDays) || other.targetCulturePeriodDays == targetCulturePeriodDays)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&const DeepCollectionEquality().equals(other._memberIds, _memberIds)&&const DeepCollectionEquality().equals(other._roles, _roles)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,species,stockingQuantity,targetCulturePeriodDays,ownerId,const DeepCollectionEquality().hash(_memberIds),const DeepCollectionEquality().hash(_roles),createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,species,stockingQuantity,targetCulturePeriodDays,ownerId,const DeepCollectionEquality().hash(_memberIds),const DeepCollectionEquality().hash(_roles),createdAt,latitude,longitude);
 
 @override
 String toString() {
-  return 'Pond(id: $id, name: $name, species: $species, stockingQuantity: $stockingQuantity, targetCulturePeriodDays: $targetCulturePeriodDays, ownerId: $ownerId, memberIds: $memberIds, roles: $roles, createdAt: $createdAt)';
+  return 'Pond(id: $id, name: $name, species: $species, stockingQuantity: $stockingQuantity, targetCulturePeriodDays: $targetCulturePeriodDays, ownerId: $ownerId, memberIds: $memberIds, roles: $roles, createdAt: $createdAt, latitude: $latitude, longitude: $longitude)';
 }
 
 
@@ -275,7 +279,7 @@ abstract mixin class _$PondCopyWith<$Res> implements $PondCopyWith<$Res> {
   factory _$PondCopyWith(_Pond value, $Res Function(_Pond) _then) = __$PondCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String species, int stockingQuantity, int targetCulturePeriodDays, String ownerId, List<String> memberIds, Map<String, String> roles,@TimestampConverter() DateTime? createdAt
+ String id, String name, String species, int stockingQuantity, int targetCulturePeriodDays, String ownerId, List<String> memberIds, Map<String, String> roles,@TimestampConverter() DateTime? createdAt, double? latitude, double? longitude
 });
 
 
@@ -292,7 +296,7 @@ class __$PondCopyWithImpl<$Res>
 
 /// Create a copy of Pond
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? species = null,Object? stockingQuantity = null,Object? targetCulturePeriodDays = null,Object? ownerId = null,Object? memberIds = null,Object? roles = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? species = null,Object? stockingQuantity = null,Object? targetCulturePeriodDays = null,Object? ownerId = null,Object? memberIds = null,Object? roles = null,Object? createdAt = freezed,Object? latitude = freezed,Object? longitude = freezed,}) {
   return _then(_Pond(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -303,7 +307,9 @@ as int,ownerId: null == ownerId ? _self.ownerId : ownerId // ignore: cast_nullab
 as String,memberIds: null == memberIds ? _self._memberIds : memberIds // ignore: cast_nullable_to_non_nullable
 as List<String>,roles: null == roles ? _self._roles : roles // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as double?,longitude: freezed == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
+as double?,
   ));
 }
 

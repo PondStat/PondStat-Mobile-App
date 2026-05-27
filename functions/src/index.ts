@@ -19,7 +19,7 @@ export const onMeasurementCreated = functions.firestore
       return null;
     }
 
-    const {pondId, alert} = data;
+    const {pondId, alert, parameter} = data;
     const {title, body} = alert;
 
     try {
@@ -35,40 +35,32 @@ export const onMeasurementCreated = functions.firestore
         return null;
       }
 
-      // 2. Fetch FCM tokens and write to in-app inbox for each member
-      const tokens: string[] = [];
-      const notificationPromises: Promise<any>[] = [];
-
-      for (const memberId of memberIds) {
+      // 2. Fetch FCM tokens concurrently and write to in-app inbox for each member
+      const memberPromises = memberIds.map(async (memberId) => {
         // Write to in-app notifications subcollection
         const notificationRef = db
           .collection(`${BASE_PATH}/users/${memberId}/notifications`)
           .doc();
 
-        notificationPromises.push(
-          notificationRef.set({
-            title,
-            body,
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            isRead: false,
-            type: "alert",
-            pondId,
-            measurementId: context.params.measurementId,
-          })
-        );
+        const writePromise = notificationRef.set({
+          title,
+          body,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          isRead: false,
+          type: "alert",
+          pondId,
+          measurementId: context.params.measurementId,
+        });
 
         // Fetch user FCM token
-        const userDoc = await db.doc(`${BASE_PATH}/users/${memberId}`).get();
-        const fcmToken = userDoc.data()?.fcmToken;
-        if (fcmToken) {
-          tokens.push(fcmToken);
-        } else {
-          console.warn(`User ${memberId} has no fcmToken assigned.`);
-        }
-      }
+        const fetchPromise = db.doc(`${BASE_PATH}/users/${memberId}`).get();
 
-      // Execute in-app notification logs
-      await Promise.all(notificationPromises);
+        const [_, userDoc] = await Promise.all([writePromise, fetchPromise]);
+        return userDoc.data()?.fcmToken as string | undefined;
+      });
+
+      const resolvedTokens = await Promise.all(memberPromises);
+      const tokens = resolvedTokens.filter((token): token is string => !!token);
 
       // 3. Send push notifications via FCM
       if (tokens.length > 0) {
@@ -77,6 +69,9 @@ export const onMeasurementCreated = functions.firestore
           notification: {
             title,
             body,
+          },
+          data: {
+            route: `/pond/${pondId}?pondId=${pondId}&parameter=${encodeURIComponent(parameter || "")}`,
           },
           android: {
             priority: "high",

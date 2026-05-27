@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/telemetry_stat_row.dart';
+import 'package:pondstat/features/dashboard/domain/models/pond.dart';
+import 'package:pondstat/features/dashboard/data/pond_repository.dart';
+import 'package:pondstat/core/services/weather_service.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 
 class _DailyRecord {
   final DateTime timestamp;
@@ -22,6 +28,7 @@ class PeriodicParametersChart extends ConsumerStatefulWidget {
   final String type;
   final DateTime startDate;
   final DateTime endDate;
+  final GlobalKey? weatherOverlayKey;
 
   const PeriodicParametersChart({
     super.key,
@@ -30,6 +37,7 @@ class PeriodicParametersChart extends ConsumerStatefulWidget {
     required this.type,
     required this.startDate,
     required this.endDate,
+    this.weatherOverlayKey,
   });
 
   @override
@@ -41,11 +49,12 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
     with SingleTickerProviderStateMixin {
   late final List<ParameterItem> _baseParams;
   int _selectedIndex = 0;
+  String _selectedWeatherOverlay = 'None'; // 'None', 'Rainfall', 'Air Temp', 'UV Index'
 
   // Cache the active stream so it is not recreated on every build/setState.
   Stream<List<_DailyRecord>>? _cachedStream;
-  String?
-  _cachedStreamParamLabel; // tracks which param the cached stream belongs to
+  String? _cachedStreamParamLabel; // tracks which param the cached stream belongs to
+  int? _lastTouchedSpotIndex;
 
   @override
   void initState() {
@@ -187,6 +196,8 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
             _buildSectionHeader(theme),
             const SizedBox(height: 12),
             _buildParamTabBar(theme, isDark, params),
+            const SizedBox(height: 12),
+            _buildWeatherOverlaySelector(theme, isDark),
             const SizedBox(height: 16),
             _buildChartArea(theme, isDark, params),
             const SizedBox(height: 24),
@@ -251,6 +262,7 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
           return GestureDetector(
             onTap: () {
               if (_selectedIndex != i) {
+                HapticFeedback.selectionClick();
                 setState(() {
                   _selectedIndex = i;
                   // Invalidate cache so _getStream() rebuilds for new param
@@ -309,6 +321,90 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
     );
   }
 
+  Widget _buildWeatherOverlaySelector(ThemeData theme, bool isDark) {
+    final colorScheme = theme.colorScheme;
+    final options = ['None', 'Rainfall', 'Air Temp', 'UV Index'];
+    final selectorWidget = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Text(
+            'Weather Overlay:',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: options.map((opt) {
+                  final active = _selectedWeatherOverlay == opt;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6.0),
+                    child: ChoiceChip(
+                      label: Text(
+                        opt,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: active ? Colors.white : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      selected: active,
+                      onSelected: (val) {
+                        if (val) {
+                          setState(() {
+                            _selectedWeatherOverlay = opt;
+                          });
+                        }
+                      },
+                      selectedColor: const Color(0xFF0D9488),
+                      backgroundColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: active ? Colors.transparent : colorScheme.outlineVariant,
+                        ),
+                      ),
+                      showCheckmark: false,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (widget.weatherOverlayKey != null) {
+      return CustomShowcase(
+        showcaseKey: widget.weatherOverlayKey!,
+        scope: 'pond_monitoring',
+        title: 'Weather Overlay Selector',
+        description: 'Correlate daily parameter fluctuations (like Temperature and DO) with weather overlays such as Rainfall, Air Temperature, and UV index.',
+        child: selectorWidget,
+      );
+    }
+    return selectorWidget;
+  }
+
+  DailyWeatherData? _getWeatherForDate(DateTime timestamp, List<DailyWeatherData> weatherList) {
+    for (var w in weatherList) {
+      if (w.date.year == timestamp.year &&
+          w.date.month == timestamp.month &&
+          w.date.day == timestamp.day) {
+        return w;
+      }
+    }
+    return null;
+  }
+
   Widget _buildChartArea(
     ThemeData theme,
     bool isDark,
@@ -316,148 +412,69 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
   ) {
     if (params.isEmpty) return const SizedBox.shrink();
     final param = params[_selectedIndex];
-    return StreamBuilder<List<_DailyRecord>>(
-      // FIX 1: use cached stream instead of calling _recordsStream() directly
-      stream: _getStream(param),
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return _buildLoadingCard(isDark, param.getColor(context), theme);
-        }
-        if (snap.hasError) {
-          return _buildErrorCard(snap.error.toString(), isDark, theme);
-        }
-        final records = snap.data ?? [];
-        if (records.isEmpty) return _buildEmptyCard(param, isDark, theme);
-        if (records.length == 1) {
-          return _buildSinglePointCard(records.first, param, isDark, theme);
-        }
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              _buildStatRow(records, param, theme, isDark),
-              const SizedBox(height: 16),
-              _buildCard(
-                isDark: isDark,
-                color: param.getColor(context),
-                theme: theme,
-                child: _buildLineChart(records, param, isDark, theme),
-              ),
-              if (!param.isSinglePoint &&
-                  (param.optimalMin != null || param.optimalMax != null)) ...[
-                const SizedBox(height: 8),
-                _buildRangeLegend(param, isDark, theme),
-              ],
-            ],
-          ),
+
+    return StreamBuilder<Pond>(
+      stream: ref.read(pondRepositoryProvider).getPondStream(widget.pondId),
+      builder: (context, pondSnap) {
+        final pond = pondSnap.data;
+        final lat = pond?.latitude ?? WeatherService.defaultLat;
+        final lon = pond?.longitude ?? WeatherService.defaultLon;
+
+        return FutureBuilder<List<DailyWeatherData>>(
+          future: ref.read(weatherServiceProvider).fetchHistory(lat, lon, widget.startDate, widget.endDate),
+          builder: (context, weatherSnap) {
+            final weatherList = weatherSnap.data ?? [];
+
+            return StreamBuilder<List<_DailyRecord>>(
+              stream: _getStream(param),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return _buildLoadingCard(isDark, param.getColor(context), theme);
+                }
+                if (snap.hasError) {
+                  return _buildErrorCard(snap.error.toString(), isDark, theme);
+                }
+                final records = snap.data ?? [];
+                if (records.isEmpty) return _buildEmptyCard(param, isDark, theme);
+                if (records.length == 1) {
+                  return _buildSinglePointCard(records.first, param, isDark, theme);
+                }
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      TelemetryStatRow(
+                        values: records.map((r) => r.averageValue).toList(),
+                        unit: param.unit,
+                        themeColor: param.getColor(context),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildCard(
+                        isDark: isDark,
+                        color: param.getColor(context),
+                        theme: theme,
+                        child: _buildLineChart(records, param, weatherList, isDark, theme),
+                      ),
+                      if (!param.isSinglePoint &&
+                          (param.optimalMin != null || param.optimalMax != null)) ...[
+                        const SizedBox(height: 8),
+                        _buildRangeLegend(param, isDark, theme),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
       },
-    );
-  }
-
-  Widget _buildStatRow(
-    List<_DailyRecord> records,
-    ParameterItem param,
-    ThemeData theme,
-    bool isDark,
-  ) {
-    final values = records.map((r) => r.averageValue).toList();
-    final latest = values.last;
-    final min = values.reduce((a, b) => a < b ? a : b);
-    final max = values.reduce((a, b) => a > b ? a : b);
-    final avg = values.reduce((a, b) => a + b) / values.length;
-    final unit = param.unit.isEmpty ? '' : ' ${param.unit}';
-    return Row(
-      children: [
-        _buildStatChip(
-          label: 'Latest',
-          value: '${latest.toStringAsFixed(2)}$unit',
-          color: param.getColor(context),
-          isDark: isDark,
-          theme: theme,
-          isHighlighted: true,
-        ),
-        const SizedBox(width: 8),
-        _buildStatChip(
-          label: 'Avg',
-          value: '${avg.toStringAsFixed(2)}$unit',
-          color: param.getColor(context),
-          isDark: isDark,
-          theme: theme,
-        ),
-        const SizedBox(width: 8),
-        _buildStatChip(
-          label: 'Min',
-          value: '${min.toStringAsFixed(2)}$unit',
-          color: param.getColor(context),
-          isDark: isDark,
-          theme: theme,
-        ),
-        const SizedBox(width: 8),
-        _buildStatChip(
-          label: 'Max',
-          value: '${max.toStringAsFixed(2)}$unit',
-          color: param.getColor(context),
-          isDark: isDark,
-          theme: theme,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatChip({
-    required String label,
-    required String value,
-    required Color color,
-    required bool isDark,
-    required ThemeData theme,
-    bool isHighlighted = false,
-  }) {
-    final colorScheme = theme.colorScheme;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isHighlighted
-              ? color.withValues(alpha: 0.12)
-              : colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(14),
-          border: isHighlighted
-              ? Border.all(color: color.withValues(alpha: 0.3), width: 1.5)
-              : null,
-        ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: isHighlighted ? color : colorScheme.onSurfaceVariant,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: isHighlighted ? color : colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildLineChart(
     List<_DailyRecord> records,
     ParameterItem param,
+    List<DailyWeatherData> weatherList,
     bool isDark,
     ThemeData theme,
   ) {
@@ -482,7 +499,76 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
     final labelColor = colorScheme.onSurfaceVariant;
     final gridColor = colorScheme.outlineVariant;
 
+    final hasWeatherOverlay = _selectedWeatherOverlay != 'None' && weatherList.isNotEmpty;
+    double minWeather = 0.0;
+    double maxWeather = 1.0;
+    List<FlSpot> weatherSpots = [];
+    Color weatherColor = Colors.grey;
+
+    if (hasWeatherOverlay) {
+      if (_selectedWeatherOverlay == 'Rainfall') {
+        weatherColor = const Color(0xFF3B82F6);
+        final valuesList = weatherList.map((w) => w.rainfall ?? 0.0).toList();
+        minWeather = 0.0;
+        maxWeather = valuesList.isNotEmpty ? valuesList.reduce((a, b) => a > b ? a : b) : 10.0;
+        if (maxWeather < 10.0) maxWeather = 10.0;
+      } else if (_selectedWeatherOverlay == 'Air Temp') {
+        weatherColor = const Color(0xFFEF4444);
+        final valuesList = weatherList.map((w) => w.temperature ?? 0.0).toList();
+        if (valuesList.isNotEmpty) {
+          minWeather = valuesList.reduce((a, b) => a < b ? a : b) - 2.0;
+          maxWeather = valuesList.reduce((a, b) => a > b ? a : b) + 2.0;
+        } else {
+          minWeather = 20.0;
+          maxWeather = 40.0;
+        }
+      } else if (_selectedWeatherOverlay == 'UV Index') {
+        weatherColor = const Color(0xFF8B5CF6);
+        final valuesList = weatherList.map((w) => w.uvIndex ?? 0.0).toList();
+        minWeather = 0.0;
+        maxWeather = valuesList.isNotEmpty ? valuesList.reduce((a, b) => a > b ? a : b) : 10.0;
+        if (maxWeather < 5.0) maxWeather = 5.0;
+      }
+
+      for (int i = 0; i < records.length; i++) {
+        final rec = records[i];
+        final wData = _getWeatherForDate(rec.timestamp, weatherList);
+        double wVal = 0.0;
+        if (_selectedWeatherOverlay == 'Rainfall') {
+          wVal = wData?.rainfall ?? 0.0;
+        } else if (_selectedWeatherOverlay == 'Air Temp') {
+          wVal = wData?.temperature ?? minWeather;
+        } else if (_selectedWeatherOverlay == 'UV Index') {
+          wVal = wData?.uvIndex ?? 0.0;
+        }
+
+        final double normalizedY;
+        if (maxWeather == minWeather) {
+          normalizedY = minY + (maxY - minY) / 2.0;
+        } else {
+          normalizedY = minY + (wVal - minWeather) / (maxWeather - minWeather) * (maxY - minY);
+        }
+        weatherSpots.add(FlSpot(i.toDouble(), normalizedY));
+      }
+    }
+
     List<HorizontalLine> extraLines = [];
+    if (param.optimalMin != null && param.optimalMax != null) {
+      final double diff = param.optimalMax! - param.optimalMin!;
+      const int linesCount = 15;
+      final double step = diff / (linesCount - 1);
+      for (int i = 0; i < linesCount; i++) {
+        final double yVal = param.optimalMin! + i * step;
+        extraLines.add(
+          HorizontalLine(
+            y: yVal,
+            color: Colors.green.withValues(alpha: 0.02),
+            strokeWidth: 6.0,
+          ),
+        );
+      }
+    }
+
     if (param.optimalMin != null) {
       extraLines.add(
         HorizontalLine(
@@ -594,9 +680,32 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
             ),
             rightTitles: AxisTitles(
               sideTitles: SideTitles(
-                showTitles: true,
+                showTitles: hasWeatherOverlay,
                 reservedSize: 42,
-                getTitlesWidget: (value, meta) => const SizedBox.shrink(),
+                getTitlesWidget: (value, meta) {
+                  if (!hasWeatherOverlay) return const SizedBox.shrink();
+                  if (value == meta.min || value == meta.max) {
+                    return const SizedBox.shrink();
+                  }
+                  final weatherVal = minWeather + (value - minY) / (maxY - minY) * (maxWeather - minWeather);
+                  final unit = _selectedWeatherOverlay == 'Rainfall'
+                      ? 'mm'
+                      : _selectedWeatherOverlay == 'Air Temp'
+                          ? '°C'
+                          : '';
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text(
+                      '${weatherVal.toStringAsFixed(1)}$unit',
+                      style: TextStyle(
+                        color: weatherColor,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                  );
+                },
               ),
             ),
             topTitles: const AxisTitles(
@@ -604,6 +713,16 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
             ),
           ),
           lineTouchData: LineTouchData(
+            touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
+              if (response == null || response.lineBarSpots == null || response.lineBarSpots!.isEmpty) {
+                return;
+              }
+              final spotIndex = response.lineBarSpots!.first.spotIndex;
+              if (spotIndex != _lastTouchedSpotIndex) {
+                _lastTouchedSpotIndex = spotIndex;
+                HapticFeedback.selectionClick();
+              }
+            },
             touchTooltipData: LineTouchTooltipData(
               fitInsideHorizontally: true,
               fitInsideVertically: true,
@@ -613,18 +732,35 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
               ),
               tooltipBorderRadius: BorderRadius.circular(12),
               getTooltipItems: (spots) => spots.map((s) {
+                if (s.barIndex != 0) return null;
+
                 final record = records[s.spotIndex];
                 final dt = record.timestamp;
                 final unit = param.unit.isEmpty ? '' : ' ${param.unit}';
+
+                String tooltipText = '${dt.month}/${dt.day}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}\n';
+                tooltipText += '${param.label}: ${s.y.toStringAsFixed(2)}$unit';
+
+                if (hasWeatherOverlay) {
+                  final wData = _getWeatherForDate(dt, weatherList);
+                  if (_selectedWeatherOverlay == 'Rainfall') {
+                    tooltipText += '\nRain: ${wData?.rainfall?.toStringAsFixed(1) ?? "0.0"} mm';
+                  } else if (_selectedWeatherOverlay == 'Air Temp') {
+                    tooltipText += '\nAir Temp: ${wData?.temperature?.toStringAsFixed(1) ?? "N/A"} °C';
+                  } else if (_selectedWeatherOverlay == 'UV Index') {
+                    tooltipText += '\nUV: ${wData?.uvIndex?.toStringAsFixed(1) ?? "N/A"}';
+                  }
+                }
+
                 return LineTooltipItem(
-                  '${dt.month}/${dt.day}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}\n${s.y.toStringAsFixed(2)}$unit',
+                  tooltipText,
                   TextStyle(
                     color: param.getColor(context),
                     fontWeight: FontWeight.w800,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
                 );
-              }).toList(),
+              }).whereType<LineTooltipItem>().toList(),
             ),
           ),
           lineBarsData: [
@@ -656,6 +792,18 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
                 ),
               ),
             ),
+            if (hasWeatherOverlay)
+              LineChartBarData(
+                spots: weatherSpots,
+                isCurved: true,
+                curveSmoothness: 0.35,
+                color: weatherColor,
+                barWidth: 1.5,
+                dashArray: [6, 4],
+                isStrokeCapRound: true,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(show: false),
+              ),
           ],
         ),
         duration: const Duration(milliseconds: 350),

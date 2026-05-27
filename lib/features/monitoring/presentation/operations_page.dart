@@ -59,11 +59,22 @@ class OperationsPage extends StatelessWidget {
               unselectedLabelStyle: const TextStyle(
                 fontWeight: FontWeight.w600,
               ),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 8.0),
               dividerColor: Colors.transparent,
               padding: const EdgeInsets.all(4),
               tabs: const [
-                Tab(text: "Schedules"),
-                Tab(text: "Finances"),
+                Tab(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text("Schedules"),
+                  ),
+                ),
+                Tab(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text("Finances"),
+                  ),
+                ),
               ],
             ),
           ),

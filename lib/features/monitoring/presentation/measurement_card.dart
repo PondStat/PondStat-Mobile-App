@@ -281,27 +281,42 @@ class MeasurementCard extends ConsumerWidget {
               ],
             ),
             if (notes != null && notes!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.tertiaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: colorScheme.tertiary.withValues(alpha: 0.2),
+              const SizedBox(height: 8),
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  title: Row(
+                    children: [
+                      Icon(
+                        Icons.sticky_note_2_rounded,
+                        size: 14,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "View Remarks & Notes",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  dense: true,
                   children: [
-                    Icon(
-                      Icons.sticky_note_2_rounded,
-                      size: 16,
-                      color: colorScheme.onTertiaryContainer,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.tertiaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: colorScheme.tertiary.withValues(alpha: 0.2),
+                        ),
+                      ),
                       child: Text(
                         notes!,
                         style: TextStyle(

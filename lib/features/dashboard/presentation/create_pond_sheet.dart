@@ -26,6 +26,10 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
       TextEditingController();
   final TextEditingController _culturePeriodController =
       TextEditingController();
+  final TextEditingController _latitudeController =
+      TextEditingController(text: '10.6389');
+  final TextEditingController _longitudeController =
+      TextEditingController(text: '122.2353');
 
   String? _selectedSpecies;
   final List<String> _speciesOptions = ['Shrimp', 'Tilapia'];
@@ -35,6 +39,8 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
     _newPondNameController.dispose();
     _stockingQuantityController.dispose();
     _culturePeriodController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -54,6 +60,8 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
     final quantity = int.tryParse(_stockingQuantityController.text.trim()) ?? 0;
     final culturePeriod =
         int.tryParse(_culturePeriodController.text.trim()) ?? 0;
+    final lat = double.tryParse(_latitudeController.text.trim()) ?? 10.6389;
+    final lon = double.tryParse(_longitudeController.text.trim()) ?? 122.2353;
 
     try {
       final pond = Pond(
@@ -65,6 +73,8 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
         ownerId: user.uid,
         memberIds: [user.uid],
         roles: {user.uid: 'owner'},
+        latitude: lat,
+        longitude: lon,
       );
 
       await ref.read(pondRepositoryProvider).createPond(pond);
@@ -103,10 +113,7 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
           top: 12,
           left: 24,
           right: 24,
-          bottom:
-              MediaQuery.viewInsetsOf(context).bottom +
-              MediaQuery.paddingOf(context).bottom +
-              24,
+          bottom: MediaQuery.paddingOf(context).bottom + 24,
         ),
         child: SingleChildScrollView(
           child: Form(
@@ -225,6 +232,7 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 36),
 
                 PrimaryButton(
@@ -233,6 +241,7 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
                   isLoading: _isLoading,
                   onPressed: _isLoading ? () {} : _createNewPond,
                 ),
+                SizedBox(height: MediaQuery.viewInsetsOf(context).bottom),
               ],
             ),
           ),

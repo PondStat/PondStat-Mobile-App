@@ -12,6 +12,7 @@ import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/empty_state_card.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
 
 class UnifiedScheduleSheet extends ConsumerStatefulWidget {
   final String pondId;
@@ -76,11 +77,16 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
   }
 
   Future<void> _loadEligibleUsers() async {
+    // Capture providers before async gap.
+    final pondRepo = ref.read(pondRepositoryProvider);
+    final authRepo = ref.read(authRepositoryProvider);
+    final logger = ref.read(appLoggerProvider);
+
     try {
-      final pondDoc = await ref.read(pondRepositoryProvider).pondsCollection
+      final pondDoc = await pondRepo.pondsCollection
           .doc(widget.pondId)
           .get();
-      if (!pondDoc.exists) return;
+      if (!mounted || !pondDoc.exists) return;
 
       final pond = pondDoc.data();
       if (pond == null) return;
@@ -89,9 +95,10 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
       List<Map<String, dynamic>> users = [];
       for (var entry in roles.entries) {
         if (entry.value == 'owner' || entry.value == 'editor') {
-          final userDoc = await ref.read(authRepositoryProvider).usersCollection
+          final userDoc = await authRepo.usersCollection
               .doc(entry.key)
               .get();
+          if (!mounted) return;
           if (userDoc.exists) {
             final userData = userDoc.data()!;
             users.add({
@@ -114,7 +121,7 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
         });
       }
     } catch (e, stackTrace) {
-      ref.read(appLoggerProvider).error('Error loading eligible users', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
+      logger.error('Error loading eligible users', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
       if (mounted) setState(() => _isLoadingUsers = false);
     }
   }
@@ -128,8 +135,12 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
       _resetSchedule();
     });
 
+    // Capture providers before async gap.
+    final monitoringRepo = ref.read(monitoringRepositoryProvider);
+    final logger = ref.read(appLoggerProvider);
+
     try {
-      final scheduleData = await ref.read(monitoringRepositoryProvider).getJobSchedule(
+      final scheduleData = await monitoringRepo.getJobSchedule(
         widget.pondId,
         _selectedUserId!,
       );
@@ -150,7 +161,7 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
         }
       }
     } catch (e, stackTrace) {
-      ref.read(appLoggerProvider).error('Error loading schedule', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
+      logger.error('Error loading schedule', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
     } finally {
       if (mounted) setState(() => _isLoadingUsers = false);
     }
@@ -182,9 +193,12 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
     setState(() => _isSaving = true);
     HapticFeedback.heavyImpact();
 
+    // Capture provider before async gap.
+    final monitoringRepo = ref.read(monitoringRepositoryProvider);
+
     try {
       final user = _eligibleUsers.firstWhere((u) => u['id'] == _selectedUserId);
-      await ref.read(monitoringRepositoryProvider).saveJobSchedule(
+      await monitoringRepo.saveJobSchedule(
         pondId: widget.pondId,
         userId: _selectedUserId!,
         userName: user['name'],
@@ -219,30 +233,9 @@ class _UnifiedScheduleSheetState extends ConsumerState<UnifiedScheduleSheet>
   Future<bool?> _showDiscardDialog() {
     return showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Discard Changes?"),
-        content: const Text(
-          "You have unsaved changes. Are you sure you want to discard them?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              "Keep Editing",
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade50,
-              foregroundColor: Colors.red.shade700,
-              elevation: 0,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Discard"),
-          ),
-        ],
+      builder: (context) => const DiscardChangesDialog(
+        title: 'Discard Changes?',
+        cancelText: 'Keep Editing',
       ),
     );
   }

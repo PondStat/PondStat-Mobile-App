@@ -3,11 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/core/utils/string_extensions.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
+import 'package:pondstat/features/profile/presentation/widgets/profile_avatar_picker.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:pondstat/core/services/connectivity_provider.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -27,8 +31,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   final ValueNotifier<bool> _hasChanges = ValueNotifier(false);
 
-  bool _isFetching = true;
+   bool _isFetching = true;
   bool _isLoading = false;
+  bool _canPop = false;
 
   String _initialName = '';
   String _initialStudentNum = '';
@@ -107,6 +112,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     if (_hasChanges.value && !_isLoading) {
       await _showDiscardDialog();
     } else {
+      setState(() => _canPop = true);
       Navigator.pop(context);
     }
   }
@@ -115,65 +121,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     HapticFeedback.selectionClick();
     final shouldDiscard = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              "Discard changes?",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.w800,
-                fontSize: 18,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          "You have unsaved changes. Are you sure you want to leave without saving?",
-          style: TextStyle(color: textMuted, height: 1.4, fontSize: 15),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              "Keep Editing",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade50,
-              foregroundColor: Colors.red.shade900,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              "Discard",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      builder: (context) => const DiscardChangesDialog(
+        title: 'Discard changes?',
+        content: 'You have unsaved changes. Are you sure you want to leave without saving?',
+        cancelText: 'Keep Editing',
+        confirmText: 'Discard',
       ),
     );
 
     if (shouldDiscard == true && mounted) {
+      setState(() => _canPop = true);
       Navigator.pop(context);
     }
   }
@@ -190,6 +147,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       return;
     }
 
+    // Capture repository before the async gap to avoid ref access after unmount.
+    final authRepo = ref.read(authRepositoryProvider);
+
     try {
       bool nameChanged = _nameController.text.trim() != _initialName;
       bool studentNumChanged =
@@ -198,6 +158,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (nameChanged) {
         await user.updateDisplayName(_nameController.text.trim());
       }
+
+      if (!mounted) return;
 
       final Map<String, dynamic> firestoreUpdates = {};
       if (nameChanged) {
@@ -208,7 +170,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       }
 
       if (firestoreUpdates.isNotEmpty) {
-        await ref.read(authRepositoryProvider).usersCollection
+        await authRepo.usersCollection
             .doc(user.uid)
             .update(firestoreUpdates);
       }
@@ -223,6 +185,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         HapticFeedback.heavyImpact();
 
         SnackbarHelper.showInfo(context, 'Profile updated successfully!');
+        setState(() => _canPop = true);
         Navigator.pop(context);
       }
     } catch (e) {
@@ -234,12 +197,152 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     }
   }
 
+  Future<void> _pickAndUploadImage() async {
+    FocusScope.of(context).unfocus();
+
+    // Check connectivity first
+    final isOffline = ref.read(isOfflineProvider);
+    if (isOffline) {
+      SnackbarHelper.showError(
+        context,
+        "Cannot upload profile picture while offline. Please connect to the internet and try again.",
+      );
+      return;
+    }
+
+    // 1. Show source selection sheet
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                "Change Profile Photo",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: Colors.blue),
+                ),
+                title: const Text("Take Photo", style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: Colors.blue),
+                ),
+                title: const Text("Choose from Gallery", style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  "Cancel",
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return;
+
+    // 2. Pick image
+    final picker = ImagePicker();
+    final XFile? pickedFile = await picker.pickImage(
+      source: source,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+
+    if (pickedFile == null) return;
+
+    // 3. Crop image
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: pickedFile.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Photo',
+          toolbarColor: primaryBlue,
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+          activeControlsWidgetColor: primaryBlue,
+        ),
+        IOSUiSettings(
+          title: 'Crop Photo',
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
+    );
+
+    if (croppedFile == null) return;
+
+    // 4. Upload
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.uploadProfilePicture(croppedFile.path);
+
+      if (mounted) {
+        SnackbarHelper.showInfo(context, 'Profile picture updated successfully!');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Failed to upload profile picture: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundLight,
       body: PopScope(
-        canPop: false,
+        canPop: _canPop,
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
           await _handleBackNavigation();
@@ -318,7 +421,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Widget _buildFormContent() {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final userChanges = ref.watch(userChangesProvider);
+    final currentUser = userChanges.value ?? FirebaseAuth.instance.currentUser;
     final photoUrl = currentUser?.photoURL;
     final displayName = _nameController.text.isNotEmpty
         ? _nameController.text
@@ -335,100 +439,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryBlue.withValues(alpha: 0.15),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: CircleAvatar(
-                            radius: 60,
-                            backgroundColor: Colors.blue.shade50,
-                            child: photoUrl != null
-                                ? ClipOval(
-                                    child: Image.network(
-                                      photoUrl,
-                                      width: 120,
-                                      height: 120,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder:
-                                          (context, child, loadingProgress) {
-                                            if (loadingProgress == null) {
-                                              return child;
-                                            }
-                                            return CircularProgressIndicator(
-                                              color: primaryBlue,
-                                            );
-                                          },
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Text(
-                                              displayName.initials,
-                                              style: TextStyle(
-                                                fontSize: 40,
-                                                fontWeight: FontWeight.w900,
-                                                color: primaryBlue,
-                                              ),
-                                            );
-                                          },
-                                    ),
-                                  )
-                                : Text(
-                                    displayName.initials,
-                                    style: TextStyle(
-                                      fontSize: 40,
-                                      fontWeight: FontWeight.w900,
-                                      color: primaryBlue,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            SnackbarHelper.showInfo(context, 'Profile picture uploads coming soon!',);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [secondaryBlue, primaryBlue],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.surface,
-                                width: 3,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: primaryBlue.withValues(alpha: 0.4),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt_rounded,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  ProfileAvatarPicker(
+                    photoUrl: photoUrl,
+                    displayName: displayName,
+                    onTap: _pickAndUploadImage,
                   ),
                   const SizedBox(height: 48),
 

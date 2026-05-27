@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/growth_tab.dart';
@@ -14,6 +13,8 @@ import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
+import 'package:pondstat/features/notifications/data/notifications_repository.dart';
+import 'package:pondstat/core/services/logging/logger_provider.dart';
 
 
 class GrowthPage extends ConsumerStatefulWidget {
@@ -21,6 +22,7 @@ class GrowthPage extends ConsumerStatefulWidget {
   final String pondName;
   final String species;
   final bool canEdit;
+  final DateTime selectedDay;
 
   const GrowthPage({
     super.key,
@@ -28,6 +30,7 @@ class GrowthPage extends ConsumerStatefulWidget {
     required this.pondName,
     required this.species,
     required this.canEdit,
+    required this.selectedDay,
   });
 
   @override
@@ -45,7 +48,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
     if (widget.canEdit) {
       keys.add(_recordGrowthKey);
     }
-    ShowcaseView.get().startShowCase(keys);
+    ShowcaseView.getNamed('pond_monitoring').startShowCase(keys);
   }
 
   @override
@@ -69,6 +72,8 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => RecordGrowthSheet(
         species: widget.species,
+        pondId: widget.pondId,
+        selectedDay: widget.selectedDay,
         onSave:
             ({
               required String label,
@@ -81,23 +86,6 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
               String? notes,
             }) async {
               try {
-                final now = DateTime.now();
-                final sixDaysAgo = now.subtract(const Duration(days: 6));
-                final snapshot = await ref.read(monitoringRepositoryProvider).measurementsCollection
-                     .where('pondId', isEqualTo: widget.pondId)
-                     .where('parameter', isEqualTo: label)
-                     .where(
-                       'timestamp',
-                       isGreaterThanOrEqualTo: Timestamp.fromDate(sixDaysAgo),
-                     )
-                     .get();
-
-                if (snapshot.docs.isNotEmpty) {
-                  throw Exception(
-                    "You have already recorded $label within the last 7 days.",
-                  );
-                }
-
                 await ref.read(monitoringRepositoryProvider).saveMeasurement(
                   pondId: widget.pondId,
                   label: label,
@@ -107,9 +95,26 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                   type: type,
                   pointValues: pointValues,
                   replicateValues: replicateValues,
-                  selectedDay: now,
+                  selectedDay: widget.selectedDay,
                   notes: notes,
                 );
+
+                final currentUserName = FirebaseAuth.instance.currentUser?.displayName ?? 'A collaborator';
+                try {
+                  await ref.read(notificationsRepositoryProvider).notifyPondMembers(
+                    pondId: widget.pondId,
+                    title: 'Growth Sampling Recorded in ${widget.pondName}',
+                    body: '$currentUserName recorded growth sampling ($label: $averageValue$unit).',
+                  );
+                } catch (e, stackTrace) {
+                  ref.read(appLoggerProvider).error(
+                    'Failed to send growth sampling notification',
+                    error: e,
+                    stackTrace: stackTrace,
+                    tag: 'COLLABORATORS',
+                  );
+                }
+
                 if (!sheetContext.mounted) return;
                 setState(() {
                   _refreshKey++;
@@ -214,6 +219,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
       backgroundColor: Colors.transparent,
       body: CustomShowcase(
         showcaseKey: _growthListKey,
+        scope: 'pond_monitoring',
         title: 'Growth Performance & Records',
         description: 'Track growth sampling indices like Average Body Weight (ABW), Average Daily Growth (ADG), Feed Conversion Ratio (FCR), and more over time.',
         child: GrowthTab(
@@ -227,6 +233,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
       floatingActionButton: widget.canEdit
           ? CustomShowcase(
               showcaseKey: _recordGrowthKey,
+              scope: 'pond_monitoring',
               title: 'Record Sampling',
               description: 'Tap here to log a new periodic fish growth sampling session (ABW, replicates, etc.).',
               child: Semantics(

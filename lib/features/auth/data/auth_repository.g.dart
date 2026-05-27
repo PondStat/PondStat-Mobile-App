@@ -48,4 +48,37 @@ final class AuthRepositoryProvider
   }
 }
 
-String _$authRepositoryHash() => r'f6e44a9a8da64dd07f8a2ef573deac7c065da6f8';
+String _$authRepositoryHash() => r'175fe6f66065b4cf23b750a1353fee5521f30fcc';
+
+@ProviderFor(userChanges)
+final userChangesProvider = UserChangesProvider._();
+
+final class UserChangesProvider
+    extends $FunctionalProvider<AsyncValue<User?>, User?, Stream<User?>>
+    with $FutureModifier<User?>, $StreamProvider<User?> {
+  UserChangesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'userChangesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$userChangesHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<User?> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<User?> create(Ref ref) {
+    return userChanges(ref);
+  }
+}
+
+String _$userChangesHash() => r'4a08c7ba96ca50c30ee65d5a45cd768410739689';

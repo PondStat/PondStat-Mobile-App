@@ -5,6 +5,7 @@ import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class EditGrowthSheet extends ConsumerStatefulWidget {
@@ -84,21 +85,8 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
   Future<bool?> _showDiscardDialog() {
     return showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Discard Changes?'),
-        content: const Text(
-          'You have unsaved changes. Are you sure you want to discard them?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+      builder: (context) => const DiscardChangesDialog(
+        title: 'Discard Changes?',
       ),
     );
   }
@@ -138,6 +126,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
 
       if (!mounted) return;
       widget.onSave();
+      setState(() => _isDirty = false);
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
@@ -184,7 +173,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
         top: 12,
         left: 24,
         right: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).padding.bottom + 24,
       ),
       child: PopScope(
         canPop: !_isDirty,
@@ -193,6 +182,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
           final shouldPop = await _showDiscardDialog();
           if (shouldPop == true) {
             if (context.mounted) {
+              setState(() => _isDirty = false);
               Navigator.pop(context);
             }
           }
@@ -330,6 +320,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
                     onPressed: _isDirty ? _saveChanges : null,
                   ),
                 ),
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
               ],
             ),
           ),

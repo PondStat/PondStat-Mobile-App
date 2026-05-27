@@ -8,6 +8,7 @@ import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:pondstat/core/widgets/primary_button.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/core/widgets/pondstat_dropdown_field.dart';
+import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
 import 'package:pondstat/core/services/logging/logger_provider.dart';
 // Removed dashboard_repository.dart
 
@@ -28,26 +29,34 @@ class EditPondSheet extends ConsumerStatefulWidget {
 class _EditPondSheetState extends ConsumerState<EditPondSheet> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _forceClose = false;
 
   late final TextEditingController _pondNameController;
   late final TextEditingController _stockingQuantityController;
   late final TextEditingController _culturePeriodController;
+  late final TextEditingController _latitudeController;
+  late final TextEditingController _longitudeController;
 
   String? _selectedSpecies;
   final List<String> _speciesOptions = ['Shrimp', 'Tilapia'];
 
   bool get _isDirty {
+    if (_forceClose) return false;
     final initialName = widget.initialData['name'] ?? '';
     final initialQuantity =
         widget.initialData['stockingQuantity']?.toString() ?? '';
     final initialPeriod =
         widget.initialData['targetCulturePeriodDays']?.toString() ?? '';
     final initialSpecies = widget.initialData['species'];
+    final initialLat = widget.initialData['latitude']?.toString() ?? '';
+    final initialLon = widget.initialData['longitude']?.toString() ?? '';
 
     return _pondNameController.text != initialName ||
         _stockingQuantityController.text != initialQuantity ||
         _culturePeriodController.text != initialPeriod ||
-        _selectedSpecies != initialSpecies;
+        _selectedSpecies != initialSpecies ||
+        _latitudeController.text != initialLat ||
+        _longitudeController.text != initialLon;
   }
 
   void _onFieldChanged() {
@@ -66,6 +75,12 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     _culturePeriodController = TextEditingController(
       text: widget.initialData['targetCulturePeriodDays']?.toString() ?? '',
     );
+    _latitudeController = TextEditingController(
+      text: widget.initialData['latitude']?.toString() ?? '',
+    );
+    _longitudeController = TextEditingController(
+      text: widget.initialData['longitude']?.toString() ?? '',
+    );
 
     final species = widget.initialData['species'];
     if (_speciesOptions.contains(species)) {
@@ -75,6 +90,8 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     _pondNameController.addListener(_onFieldChanged);
     _stockingQuantityController.addListener(_onFieldChanged);
     _culturePeriodController.addListener(_onFieldChanged);
+    _latitudeController.addListener(_onFieldChanged);
+    _longitudeController.addListener(_onFieldChanged);
   }
 
   @override
@@ -82,10 +99,14 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     _pondNameController.removeListener(_onFieldChanged);
     _stockingQuantityController.removeListener(_onFieldChanged);
     _culturePeriodController.removeListener(_onFieldChanged);
+    _latitudeController.removeListener(_onFieldChanged);
+    _longitudeController.removeListener(_onFieldChanged);
 
     _pondNameController.dispose();
     _stockingQuantityController.dispose();
     _culturePeriodController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -105,6 +126,8 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
     final quantity = int.tryParse(_stockingQuantityController.text.trim()) ?? 0;
     final culturePeriod =
         int.tryParse(_culturePeriodController.text.trim()) ?? 0;
+    final lat = double.tryParse(_latitudeController.text.trim()) ?? 10.6389;
+    final lon = double.tryParse(_longitudeController.text.trim()) ?? 122.2353;
 
     try {
       final updatedPond = Pond.fromJson({
@@ -114,11 +137,14 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
         'species': species,
         'stockingQuantity': quantity,
         'targetCulturePeriodDays': culturePeriod,
+        'latitude': lat,
+        'longitude': lon,
       });
 
       await ref.read(pondRepositoryProvider).updatePond(updatedPond);
 
       if (!mounted) return;
+      setState(() => _forceClose = true);
       Navigator.of(context).pop();
       SnackbarHelper.showSuccess(context, 'Pond updated successfully!');
     } catch (e, stackTrace) {
@@ -132,23 +158,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
   Future<bool> _showDiscardDialog() async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Discard changes?'),
-        content: const Text(
-          'You have unsaved changes. Are you sure you want to discard them?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Discard'),
-          ),
-        ],
-      ),
+      builder: (context) => const DiscardChangesDialog(),
     );
     return result ?? false;
   }
@@ -164,6 +174,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
         if (didPop) return;
         final shouldDiscard = await _showDiscardDialog();
         if (shouldDiscard && context.mounted) {
+          setState(() => _forceClose = true);
           Navigator.of(context).pop();
         }
       },
@@ -183,10 +194,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
             top: 12,
             left: 24,
             right: 24,
-            bottom:
-                MediaQuery.viewInsetsOf(context).bottom +
-                MediaQuery.paddingOf(context).bottom +
-                24,
+            bottom: MediaQuery.paddingOf(context).bottom + 24,
           ),
           child: SingleChildScrollView(
             child: Form(
@@ -304,6 +312,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 36),
                   PrimaryButton(
                     text: 'Save Changes',
@@ -311,6 +320,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
                     isLoading: _isLoading,
                     onPressed: (!_isDirty || _isLoading) ? null : _updatePond,
                   ),
+                  SizedBox(height: MediaQuery.viewInsetsOf(context).bottom),
                 ],
               ),
             ),

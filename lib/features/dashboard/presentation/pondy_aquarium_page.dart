@@ -2,10 +2,16 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:pondstat/features/dashboard/data/pondy_evolution_provider.dart';
+import 'package:pondstat/features/dashboard/presentation/widgets/pondy_companion_models.dart';
 import 'widgets/pondy_companion.dart';
+import 'widgets/aquarium_painters.dart';
+import 'widgets/aquarium_models.dart';
+import 'utils/aquarium_physics.dart';
 
-class PondyAquariumPage extends StatefulWidget {
+class PondyAquariumPage extends ConsumerStatefulWidget {
   final String statusMood;
 
   const PondyAquariumPage({
@@ -14,10 +20,10 @@ class PondyAquariumPage extends StatefulWidget {
   });
 
   @override
-  State<PondyAquariumPage> createState() => _PondyAquariumPageState();
+  ConsumerState<PondyAquariumPage> createState() => _PondyAquariumPageState();
 }
 
-class _PondyAquariumPageState extends State<PondyAquariumPage>
+class _PondyAquariumPageState extends ConsumerState<PondyAquariumPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ticker;
   double _timePhase = 0.0;
@@ -28,6 +34,9 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
   bool _vibeMode = false;
   double _hapticCooldown = 0.0;
   late final AudioPlayer _audioPlayer;
+  int _audioTransitionToken = 0;
+  bool _isDisposed = false;
+  final ValueNotifier<Offset?> _targetFoodNotifier = ValueNotifier<Offset?>(null);
 
   // Ecosystem Particles and Organisms
   final List<NeonFish> _fishList = [];
@@ -48,10 +57,9 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
       duration: const Duration(seconds: 1),
     )..addListener(() {
         if (!mounted) return;
-        setState(() {
-          _timePhase += 0.016; // approx 60 FPS
-          _updateEcosystemPhysics();
-        });
+        _timePhase += 0.016; // approx 60 FPS
+        _updateEcosystemPhysics();
+        _targetFoodNotifier.value = _getClosestFood();
       })..repeat();
 
     // 1. Spawn 12 background neon tetras
@@ -101,17 +109,41 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
+    _isDisposed = true;
+    try {
+      _audioPlayer.stop();
+      _audioPlayer.dispose();
+    } catch (_) {}
     _ticker.dispose();
+    _targetFoodNotifier.dispose();
     super.dispose();
   }
 
   Future<void> _toggleVibeAudio(bool enable) async {
+    final token = ++_audioTransitionToken;
     try {
+      if (_isDisposed || !mounted) return;
       if (enable) {
+        await _audioPlayer.setVolume(0.0);
+        if (_isDisposed || !mounted) return;
         await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+        if (_isDisposed || !mounted) return;
         await _audioPlayer.play(UrlSource('https://www.soundjay.com/nature/sounds/ocean-wave-1.mp3'));
+        
+        // Slowly fade in volume over 500ms (20 steps of 25ms)
+        for (int i = 1; i <= 20; i++) {
+          await Future.delayed(const Duration(milliseconds: 25));
+          if (token != _audioTransitionToken || _isDisposed || !mounted) return;
+          await _audioPlayer.setVolume(i / 20.0);
+        }
       } else {
+        // Slowly fade out volume over 500ms (20 steps of 25ms)
+        for (int i = 20; i >= 0; i--) {
+          await Future.delayed(const Duration(milliseconds: 25));
+          if (token != _audioTransitionToken || _isDisposed || !mounted) return;
+          await _audioPlayer.setVolume(i / 20.0);
+        }
+        if (_isDisposed || !mounted) return;
         await _audioPlayer.stop();
       }
     } catch (e) {
@@ -141,135 +173,21 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
     final double width = MediaQuery.of(context).size.width.clamp(200.0, 1000.0);
     final double height = MediaQuery.of(context).size.height.clamp(300.0, 2000.0);
 
-    // 1. Neon Schooling Fish Physics
-    double avgX = 0;
-    double avgY = 0;
-    if (_fishList.isNotEmpty) {
-      for (final fish in _fishList) {
-        avgX += fish.position.dx;
-        avgY += fish.position.dy;
-      }
-      avgX /= _fishList.length;
-      avgY /= _fishList.length;
-    }
-
-    for (final fish in _fishList) {
-      final double dx = avgX - fish.position.dx;
-      final double dy = avgY - fish.position.dy;
-      final double distToCenter = math.sqrt(dx * dx + dy * dy);
-      if (distToCenter > 15.0) {
-        final double targetAngle = math.atan2(dy, dx);
-        fish.angle = fish.angle * 0.96 + targetAngle * 0.04;
-      }
-      fish.angle += (_random.nextDouble() - 0.5) * 0.14;
-      fish.position += Offset(
-        math.cos(fish.angle) * fish.speed,
-        math.sin(fish.angle) * fish.speed,
-      );
-
-      final double margin = 40.0;
-      if (fish.position.dx < -margin) fish.position = Offset(width + margin, fish.position.dy);
-      if (fish.position.dx > width + margin) fish.position = Offset(-margin, fish.position.dy);
-      if (fish.position.dy < 60.0) fish.position = Offset(fish.position.dx, height - 120.0);
-      if (fish.position.dy > height - 100.0) fish.position = Offset(fish.position.dx, 100.0);
-    }
-
-    // 2. Food Pellets Sinking & Settling Gravity Physics
-    for (int i = _foodPellets.length - 1; i >= 0; i--) {
-      final pellet = _foodPellets[i];
-      if (pellet.settled) {
-        pellet.settleTicks++;
-        pellet.opacity = (1.0 - (pellet.settleTicks / 240.0)).clamp(0.0, 1.0);
-        if (pellet.settleTicks > 240) {
-          _foodPellets.removeAt(i);
-        }
-      } else {
-        // Sinks slowly with gentle diagonal sinus drift
-        final double drift = math.sin(_timePhase * 3.5 + pellet.driftPhase) * 0.35;
-        pellet.position += Offset(drift, pellet.speedY);
-
-        // Sand dune collision check (seabed settled bounds)
-        if (pellet.position.dy >= height - 32) {
-          pellet.position = Offset(pellet.position.dx, height - 32);
-          pellet.settled = true;
-        }
-      }
-    }
-
-    // 3. Floaty Algae Particles
-    for (final algae in _algaeParticles) {
-      algae.position += Offset(algae.speedX, algae.speedY);
-      algae.angle += 0.005;
-      if (algae.position.dx < -20) algae.position = Offset(width + 20, algae.position.dy);
-      if (algae.position.dx > width + 20) algae.position = Offset(-20, algae.position.dy);
-      if (algae.position.dy < 40) algae.position = Offset(algae.position.dx, height - 80);
-      if (algae.position.dy > height - 60) algae.position = Offset(algae.position.dx, 60);
-    }
-
-    // 4. Translucent Rising Plankton
-    for (final plankton in _planktonList) {
-      final double waveDrift = math.sin(_timePhase * 2.0 + plankton.phaseOffset) * 0.12;
-      plankton.position = Offset(
-        plankton.position.dx + waveDrift,
-        plankton.position.dy - plankton.speedY,
-      );
-      if (plankton.position.dy < 40) {
-        plankton.position = Offset(_random.nextDouble() * width, height - 40);
-      }
-    }
-
-    // 5. Bioluminescent Neon Jellyfish Pulsating Physics
-    if (_isNightMode) {
-      for (final jelly in _jellyfishList) {
-        // Bell contraction drives movement bursts
-        final double contraction = 1.0 + 0.16 * math.sin(_timePhase * 2.6 + jelly.phaseOffset);
-        final double effectiveSpeed = contraction < 0.95 ? jelly.speed * 2.0 : jelly.speed * 0.35;
-
-        // Propels upward and drifts slightly left/right
-        jelly.position = Offset(
-          jelly.position.dx + math.sin(_timePhase * 0.8 + jelly.phaseOffset) * 0.2,
-          jelly.position.dy - effectiveSpeed,
-        );
-
-        if (jelly.position.dy < -jelly.size * 2) {
-          jelly.position = Offset(_random.nextDouble() * width, height + jelly.size * 2);
-        }
-      }
-    }
-
-    // 6. Vibe Mode Bubbles Generator & Pop Haptics
-    if (_vibeMode) {
-      // Spawn bubble streams continuously
-      if (_random.nextDouble() < 0.08) {
-        _vibeBubbles.add(VibeBubble(
-          position: Offset(_random.nextDouble() * width, height + 10),
-          speedY: 1.5 + _random.nextDouble() * 2.0,
-          size: 3.0 + _random.nextDouble() * 5.0,
-          phaseOffset: _random.nextDouble() * 50.0,
-        ));
-      }
-
-      // Physics loop for vibe bubbles
-      _hapticCooldown -= 0.016;
-      for (int i = _vibeBubbles.length - 1; i >= 0; i--) {
-        final bubble = _vibeBubbles[i];
-        bubble.position = Offset(
-          bubble.position.dx + math.sin(_timePhase * 4.0 + bubble.phaseOffset) * 0.45,
-          bubble.position.dy - bubble.speedY,
-        );
-
-        // Popping haptics at surface check
-        if (bubble.position.dy < 80.0) {
-          _vibeBubbles.removeAt(i);
-          if (_hapticCooldown <= 0.0) {
-            HapticFeedback.selectionClick();
-            _hapticCooldown = 0.28; // avoid excessive haptic floods
-          }
-        }
-      }
-    } else {
-      _vibeBubbles.clear();
-    }
+    _hapticCooldown = AquariumPhysics.updateEcosystem(
+      fishList: _fishList,
+      foodPellets: _foodPellets,
+      algaeParticles: _algaeParticles,
+      planktonList: _planktonList,
+      jellyfishList: _jellyfishList,
+      vibeBubbles: _vibeBubbles,
+      timePhase: _timePhase,
+      width: width,
+      height: height,
+      isNightMode: _isNightMode,
+      vibeMode: _vibeMode,
+      hapticCooldown: _hapticCooldown,
+      random: _random,
+    );
   }
 
   void _spawnFoodPellet(Offset tapPos) {
@@ -294,9 +212,9 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
   @override
   Widget build(BuildContext context) {
     final double height = MediaQuery.of(context).size.height;
-
-    // Water gradients changing dynamically to status mood parameter health conditions!
-    final String mood = widget.statusMood;
+    final evolutionAsync = ref.watch(pondyEvolutionProvider);
+    final evolution = evolutionAsync.value ?? const PondyEvolutionState.empty();
+    final String mood = widget.statusMood == 'stable' ? evolution.statusMood : widget.statusMood;
     final List<Color> backgroundColors;
     if (mood == 'critical') {
       backgroundColors = _isNightMode
@@ -362,59 +280,71 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
               child: const SizedBox.expand(),
             ),
 
-            // 2. Wave Refracting God Rays
+            // 2-6. Ecosystem Aquarium CustomPaint Layers (Animated for High Performance)
             Positioned.fill(
-              child: CustomPaint(
-                painter: GodRaysPainter(
-                  timePhase: _timePhase,
-                  isNightMode: _isNightMode,
-                  statusMood: mood,
-                ),
-              ),
-            ),
+              child: AnimatedBuilder(
+                animation: _ticker,
+                builder: (context, child) {
+                  return Stack(
+                    children: [
+                      // 2. Wave Refracting God Rays
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: GodRaysPainter(
+                            timePhase: _timePhase,
+                            isNightMode: _isNightMode,
+                            statusMood: mood,
+                          ),
+                        ),
+                      ),
 
-            // 3. Schooling Neon Tetras
-            Positioned.fill(
-              child: CustomPaint(
-                painter: SchoolFishPainter(
-                  fishList: _fishList,
-                  timePhase: _timePhase,
-                ),
-              ),
-            ),
+                      // 3. Schooling Neon Tetras
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: SchoolFishPainter(
+                            fishList: _fishList,
+                            timePhase: _timePhase,
+                          ),
+                        ),
+                      ),
 
-            // 4. Bioluminescent Glowing Jellyfish forest in Night Mode
-            if (_isNightMode)
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: JellyfishPainter(
-                    jellyfishList: _jellyfishList,
-                    timePhase: _timePhase,
-                  ),
-                ),
-              ),
+                      // 4. Bioluminescent Glowing Jellyfish forest in Night Mode
+                      if (_isNightMode)
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: JellyfishPainter(
+                              jellyfishList: _jellyfishList,
+                              timePhase: _timePhase,
+                            ),
+                          ),
+                        ),
 
-            // 5. Swaying Seaweed Stalks (Multilayer depth parallax kelp)
-            Positioned.fill(
-              child: CustomPaint(
-                painter: SeaweedPainter(
-                  timePhase: _timePhase,
-                  isNightMode: _isNightMode,
-                  statusMood: mood,
-                ),
-              ),
-            ),
+                      // 5. Swaying Seaweed Stalks (Multilayer depth parallax kelp)
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: SeaweedPainter(
+                            timePhase: _timePhase,
+                            isNightMode: _isNightMode,
+                            statusMood: mood,
+                          ),
+                        ),
+                      ),
 
-            // 6. Plankton, Algae, Feed Pellets, and Vibe Mode Bubbles Layer
-            Positioned.fill(
-              child: CustomPaint(
-                painter: EcosystemParticlesPainter(
-                  foodPellets: _foodPellets,
-                  algaeParticles: _algaeParticles,
-                  planktonList: _planktonList,
-                  vibeBubbles: _vibeBubbles,
-                  timePhase: _timePhase,
-                ),
+                      // 6. Plankton, Algae, Feed Pellets, and Vibe Mode Bubbles Layer
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: EcosystemParticlesPainter(
+                            foodPellets: _foodPellets,
+                            algaeParticles: _algaeParticles,
+                            planktonList: _planktonList,
+                            vibeBubbles: _vibeBubbles,
+                            timePhase: _timePhase,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -425,7 +355,7 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
                 isFullScreen: true,
                 isNightMode: _isNightMode,
                 cleanTrigger: _cleanTrigger,
-                targetFoodPosition: _getClosestFood(),
+                targetFoodNotifier: _targetFoodNotifier,
                 onEat: (msg) {
                   // Pellet eaten hit! Remove pellet from list
                   if (_foodPellets.isNotEmpty) {
@@ -622,6 +552,17 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
                           },
                         ),
 
+                        // Achievements Button
+                        _buildControlItem(
+                          icon: Icons.emoji_events_rounded,
+                          label: "Achievements",
+                          glowColor: Colors.amber,
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            _showAchievementsDialog(context, ref);
+                          },
+                        ),
+
                         // Day/Night Mode Switch
                         _buildControlItem(
                           icon: _isNightMode ? Icons.nights_stay_rounded : Icons.wb_sunny_rounded,
@@ -694,521 +635,341 @@ class _PondyAquariumPageState extends State<PondyAquariumPage>
       ),
     );
   }
-}
 
-// ==================== ECOSYSTEM MODELS ====================
+  void _showAchievementsDialog(BuildContext context, WidgetRef ref) {
+    final evolution = ref.read(pondyEvolutionProvider).value ?? const PondyEvolutionState.empty();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
-class NeonFish {
-  Offset position;
-  double speed;
-  double angle;
-  double phaseOffset;
-  final Color color;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Container(
+              width: double.infinity,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.85)
+                    : Colors.white.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : colorScheme.primary.withValues(alpha: 0.15),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.emoji_events_rounded,
+                              color: Colors.amber,
+                              size: 28,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Achievements",
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                          style: IconButton.styleFrom(
+                            backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 32, thickness: 1),
 
-  NeonFish({
-    required this.position,
-    required this.speed,
-    required this.angle,
-    required this.phaseOffset,
-    required this.color,
-  });
-}
+                    // Pondy's Current Level Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: evolution.level == 3
+                              ? [Colors.amber.shade700.withValues(alpha: 0.25), Colors.amber.shade900.withValues(alpha: 0.1)]
+                              : evolution.level == 2
+                                  ? [colorScheme.primary.withValues(alpha: 0.2), colorScheme.primary.withValues(alpha: 0.05)]
+                                  : [colorScheme.surfaceContainerHighest, colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: evolution.level == 3
+                              ? Colors.amber.withValues(alpha: 0.4)
+                              : evolution.level == 2
+                                  ? colorScheme.primary.withValues(alpha: 0.3)
+                                  : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.black26 : Colors.white60,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              evolution.level == 3
+                                  ? "👑"
+                                  : evolution.level == 2
+                                      ? "🤠"
+                                      : "🐢",
+                              style: const TextStyle(fontSize: 32),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Pondy Evolution: Level ${evolution.level}",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: evolution.level == 3
+                                        ? Colors.amber.shade800
+                                        : evolution.level == 2
+                                            ? colorScheme.primary
+                                            : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  evolution.level == 3
+                                      ? "Monarch: Pondy is wearing the Golden Crown! Keep up the brilliant monitoring streak."
+                                      : evolution.level == 2
+                                          ? "Cowboy Scout: Pondy wears a cool Cowboy Hat. Active monitoring is going great!"
+                                          : "Hatchling: Standard form. Monitored less than 3 days in the past week.",
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontSize: 12,
+                                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
-class FoodPellet {
-  Offset position;
-  double speedY;
-  double driftPhase;
-  double size;
-  double opacity = 1.0;
-  bool settled = false;
-  int settleTicks = 0;
+                    // Streak Activity Progress
+                    Text(
+                      "Monitoring Activity",
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.02),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Active Days (Past 30d)",
+                                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                "${evolution.streakDays} / 30 days",
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: (evolution.streakDays / 30).clamp(0.0, 1.0),
+                              minHeight: 8,
+                              backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
-  FoodPellet({
-    required this.position,
-    required this.speedY,
-    required this.driftPhase,
-    required this.size,
-  });
-}
+                    // Badges Section
+                    Text(
+                      "Badges & Streaks",
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
 
-class AlgaeParticle {
-  Offset position;
-  double speedX;
-  double speedY;
-  double angle;
-  double size;
-
-  AlgaeParticle({
-    required this.position,
-    required this.speedX,
-    required this.speedY,
-    required this.angle,
-    required this.size,
-  });
-}
-
-class PlanktonParticle {
-  Offset position;
-  double speedY;
-  double size;
-  double phaseOffset;
-
-  PlanktonParticle({
-    required this.position,
-    required this.speedY,
-    required this.size,
-    required this.phaseOffset,
-  });
-}
-
-class NeonJellyfish {
-  Offset position;
-  double speed;
-  double phaseOffset;
-  final Color color;
-  final double size;
-
-  NeonJellyfish({
-    required this.position,
-    required this.speed,
-    required this.phaseOffset,
-    required this.color,
-    required this.size,
-  });
-}
-
-class VibeBubble {
-  Offset position;
-  double speedY;
-  double size;
-  double phaseOffset;
-
-  VibeBubble({
-    required this.position,
-    required this.speedY,
-    required this.size,
-    required this.phaseOffset,
-  });
-}
-
-// ==================== CUSTOM PAINTERS ====================
-
-// 1. Shimmering Wave God Rays Custom Painter
-class GodRaysPainter extends CustomPainter {
-  final double timePhase;
-  final bool isNightMode;
-  final String statusMood;
-
-  GodRaysPainter({
-    required this.timePhase,
-    required this.isNightMode,
-    required this.statusMood,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..isAntiAlias = true
-      ..style = PaintingStyle.fill;
-
-    // Brightness modifiers driven by parameter health
-    double brightnessMod = statusMood == 'critical' ? 0.35 : (statusMood == 'warning' ? 0.65 : 1.0);
-
-    final rayColor = isNightMode
-        ? const Color(0xFF64B5F6).withValues(alpha: 0.04 * brightnessMod)
-        : const Color(0xFFE0F7FA).withValues(alpha: 0.08 * brightnessMod);
-
-    final double rayCount = statusMood == 'critical' ? 2 : 4;
-
-    for (int i = 0; i < rayCount; i++) {
-      final double widthPhase = math.sin(timePhase * 0.8 + i * 1.5) * 15.0;
-      final double baseWidth = 50.0 + i * 20.0 + widthPhase;
-      final double angleOffset = math.sin(timePhase * 0.4 + i * 2.0) * 0.05;
-
-      final Path path = Path()
-        ..moveTo(-50, -50)
-        ..lineTo(baseWidth, -50)
-        ..lineTo(baseWidth * 2.5 + math.cos(angleOffset) * 200.0, size.height + 50)
-        ..lineTo((baseWidth - 50) * 2.5 + math.cos(angleOffset) * 200.0, size.height + 50)
-        ..close();
-
-      canvas.drawPath(path, paint..color = rayColor);
-    }
+                    _buildBadgeTile(
+                      context,
+                      title: "First Week Streak",
+                      description: "Record measurements on 7 distinct days in the last 30 days.",
+                      icon: Icons.calendar_month_rounded,
+                      unlocked: evolution.hasFirstWeekStreak,
+                      badgeColor: Colors.purple,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildBadgeTile(
+                      context,
+                      title: "Perfect pH Month",
+                      description: "Record pH values and keep them within safe levels with zero pH alerts for 30 days.",
+                      icon: Icons.opacity_rounded,
+                      unlocked: evolution.hasPerfectPhMonth,
+                      badgeColor: Colors.blue,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildBadgeTile(
+                      context,
+                      title: "Zero Alerts Week",
+                      description: "No warnings or critical alerts triggered across all ponds in the past 7 days.",
+                      icon: Icons.verified_user_rounded,
+                      unlocked: evolution.hasZeroAlertsWeek,
+                      badgeColor: Colors.green,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
-  @override
-  bool shouldRepaint(covariant GodRaysPainter oldDelegate) {
-    return oldDelegate.timePhase != timePhase ||
-        oldDelegate.isNightMode != isNightMode ||
-        oldDelegate.statusMood != statusMood;
-  }
-}
+  Widget _buildBadgeTile(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required IconData icon,
+    required bool unlocked,
+    required Color badgeColor,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-// 2. Schooling Neon Tetra Fish Custom Painter
-class SchoolFishPainter extends CustomPainter {
-  final List<NeonFish> fishList;
-  final double timePhase;
-
-  SchoolFishPainter({
-    required this.fishList,
-    required this.timePhase,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..isAntiAlias = true;
-
-    for (final fish in fishList) {
-      canvas.save();
-      canvas.translate(fish.position.dx, fish.position.dy);
-      canvas.rotate(fish.angle);
-
-      const double length = 17.0;
-      const double width = 5.6;
-
-      // Glow bioluminescence shadow
-      paint.color = fish.color.withValues(alpha: 0.20);
-      canvas.drawCircle(Offset.zero, 10, paint);
-
-      // Glowing body
-      paint.shader = LinearGradient(
-        colors: [fish.color, fish.color.withValues(alpha: 0.30)],
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-      ).createShader(const Rect.fromLTWH(-length / 2, -width / 2, length, width));
-      paint.style = PaintingStyle.fill;
-
-      final bodyPath = Path()
-        ..moveTo(length / 2, 0)
-        ..quadraticBezierTo(0, -width, -length / 2, 0)
-        ..quadraticBezierTo(0, width, length / 2, 0)
-        ..close();
-      canvas.drawPath(bodyPath, paint);
-
-      // Swaying Tail
-      paint.shader = null;
-      paint.color = fish.color;
-      final double tailSway = math.sin(timePhase * 16.0 + fish.phaseOffset) * 3.8;
-      final tailPath = Path()
-        ..moveTo(-length / 2, 0)
-        ..lineTo(-length / 2 - 5, tailSway - 3)
-        ..lineTo(-length / 2 - 2.5, 0)
-        ..lineTo(-length / 2 - 5, tailSway + 3)
-        ..close();
-      canvas.drawPath(tailPath, paint);
-
-      paint.color = Colors.white;
-      canvas.drawCircle(const Offset(length / 3.2, -0.8), 0.9, paint);
-
-      canvas.restore();
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant SchoolFishPainter oldDelegate) {
-    return oldDelegate.timePhase != timePhase || oldDelegate.fishList.length != fishList.length;
-  }
-}
-
-// 3. Bioluminescent Pulsating Jellyfish Custom Painter
-class JellyfishPainter extends CustomPainter {
-  final List<NeonJellyfish> jellyfishList;
-  final double timePhase;
-
-  JellyfishPainter({
-    required this.jellyfishList,
-    required this.timePhase,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..isAntiAlias = true
-      ..style = PaintingStyle.fill;
-
-    for (final jelly in jellyfishList) {
-      canvas.save();
-      canvas.translate(jelly.position.dx, jelly.position.dy);
-
-      // Rhythmic bell contraction scale
-      final double contract = 1.0 - 0.16 * math.sin(timePhase * 2.6 + jelly.phaseOffset);
-      canvas.scale(1.0, contract);
-
-      final double radius = jelly.size;
-
-      // Glow circle
-      paint.color = jelly.color.withValues(alpha: 0.15);
-      canvas.drawCircle(Offset.zero, radius * 1.5, paint);
-
-      // 1. Draw glowing translucent cap (dome)
-      paint.shader = LinearGradient(
-        colors: [jelly.color, jelly.color.withValues(alpha: 0.15)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(-radius, -radius, radius * 2, radius * 2));
-
-      final capPath = Path()
-        ..moveTo(-radius, 0)
-        ..cubicTo(-radius, -radius * 1.3, radius, -radius * 1.3, radius, 0)
-        ..quadraticBezierTo(0, radius * 0.3, -radius, 0)
-        ..close();
-      canvas.drawPath(capPath, paint);
-      paint.shader = null;
-
-      // 2. Draw organic dangling wavy tentacles below
-      paint.color = jelly.color.withValues(alpha: 0.4);
-      paint.style = PaintingStyle.stroke;
-      paint.strokeWidth = 1.2;
-
-      for (int i = 0; i < 3; i++) {
-        final double tentacleX = -radius * 0.5 + (i * radius * 0.5);
-        final double swayOffset = math.sin(timePhase * 4.0 + jelly.phaseOffset + (i * 1.5)) * (radius * 0.35);
-
-        final Path tentaclePath = Path()
-          ..moveTo(tentacleX, 0)
-          ..quadraticBezierTo(
-            tentacleX + swayOffset * 0.5,
-            radius * 0.8,
-            tentacleX + swayOffset,
-            radius * 1.8,
-          );
-        canvas.drawPath(tentaclePath, paint);
-      }
-
-      paint.style = PaintingStyle.fill;
-      canvas.restore();
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant JellyfishPainter oldDelegate) {
-    return oldDelegate.timePhase != timePhase || oldDelegate.jellyfishList.length != jellyfishList.length;
-  }
-}
-
-// 4. Swaying Seaweed Forest with Parallax Depth and Seabed Sand Dunes
-class SeaweedPainter extends CustomPainter {
-  final double timePhase;
-  final bool isNightMode;
-  final String statusMood;
-
-  SeaweedPainter({
-    required this.timePhase,
-    required this.isNightMode,
-    required this.statusMood,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..isAntiAlias = true
-      ..style = PaintingStyle.fill;
-
-    // Organic sand dunes
-    final sandPaint = Paint()
-      ..isAntiAlias = true
-      ..shader = LinearGradient(
-        colors: isNightMode
-            ? [const Color(0xFF041220), const Color(0xFF010A14)]
-            : (statusMood == 'critical'
-                ? [const Color(0xFF1B2F2A), const Color(0xFF0F1B18)]
-                : [const Color(0xFF004D40), const Color(0xFF00251A)]),
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, size.height - 40, size.width, 40));
-
-    final sandPath = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(0, size.height - 25)
-      ..quadraticBezierTo(size.width * 0.35, size.height - 42, size.width * 0.7, size.height - 22)
-      ..quadraticBezierTo(size.width * 0.85, size.height - 14, size.width, size.height - 28)
-      ..lineTo(size.width, size.height)
-      ..close();
-    canvas.drawPath(sandPath, sandPaint);
-
-    final seaweedColorLight = isNightMode
-        ? const Color(0xFF0F3820).withValues(alpha: 0.8)
-        : (statusMood == 'critical'
-            ? const Color(0xFF2E4F2E).withValues(alpha: 0.75) // murky olive
-            : const Color(0xFF2E7D32).withValues(alpha: 0.85));
-
-    final seaweedColorDark = isNightMode
-        ? const Color(0xFF05170B).withValues(alpha: 0.9)
-        : const Color(0xFF0D320D).withValues(alpha: 0.95);
-
-    // ==================== LAYER 1: FAR BACKGROUND PARALLAX KELP ====================
-    final List<double> parallaxXPositions = [
-      size.width * 0.15,
-      size.width * 0.38,
-      size.width * 0.55,
-      size.width * 0.76,
-      size.width * 0.88,
-    ];
-
-    for (int i = 0; i < parallaxXPositions.length; i++) {
-      final double rootX = parallaxXPositions[i];
-      final double height = 100.0 + (i % 2) * 50.0 + (math.sin(i * 5.0).abs() * 25.0);
-      final double rootY = size.height - 20;
-
-      // Slower sway cycle for background depth parallax
-      final double sway = math.sin(timePhase * 0.7 + i * 2.5) * (14.0 + i * 2.0);
-
-      paint.shader = LinearGradient(
-        colors: [seaweedColorLight.withValues(alpha: 0.32), seaweedColorDark.withValues(alpha: 0.32)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(rootX - 8, rootY - height, 16, height));
-
-      final Path path = Path()
-        ..moveTo(rootX - 6, rootY)
-        ..quadraticBezierTo(rootX - 3 + sway * 0.4, rootY - height * 0.5, rootX + sway, rootY - height)
-        ..quadraticBezierTo(rootX + 3 + sway * 0.4, rootY - height * 0.5, rootX + 6, rootY)
-        ..close();
-      canvas.drawPath(path, paint);
-    }
-
-    // ==================== LAYER 2: MAIN MIDGROUND SEAWEED ====================
-    final List<double> startXPositions = [
-      size.width * 0.08,
-      size.width * 0.22,
-      size.width * 0.45,
-      size.width * 0.62,
-      size.width * 0.84,
-      size.width * 0.93,
-    ];
-
-    for (int i = 0; i < startXPositions.length; i++) {
-      final double rootX = startXPositions[i];
-      final double height = 130.0 + (i % 3) * 60.0 + (math.sin(i * 10.0).abs() * 30.0);
-      final double rootY = size.height - 20;
-
-      // Standard organic sway
-      final double sway = math.sin(timePhase * 1.5 + i * 2.0) * (20.0 + i * 4.0);
-
-      paint.shader = LinearGradient(
-        colors: [seaweedColorLight, seaweedColorDark],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(rootX - 10, rootY - height, 20, height));
-
-      final Path path = Path()
-        ..moveTo(rootX - 8, rootY)
-        ..quadraticBezierTo(rootX - 4 + sway * 0.4, rootY - height * 0.5, rootX + sway, rootY - height)
-        ..quadraticBezierTo(rootX + 4 + sway * 0.4, rootY - height * 0.5, rootX + 8, rootY)
-        ..close();
-      canvas.drawPath(path, paint);
-
-      // Light center rib line
-      paint.shader = null;
-      paint.color = Colors.white.withValues(alpha: 0.08);
-      paint.style = PaintingStyle.stroke;
-      paint.strokeWidth = 1.2;
-
-      final Path ribPath = Path()
-        ..moveTo(rootX, rootY)
-        ..quadraticBezierTo(rootX + sway * 0.4, rootY - height * 0.5, rootX + sway, rootY - height);
-      canvas.drawPath(ribPath, paint);
-      paint.style = PaintingStyle.fill;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant SeaweedPainter oldDelegate) {
-    return oldDelegate.timePhase != timePhase ||
-        oldDelegate.isNightMode != isNightMode ||
-        oldDelegate.statusMood != statusMood;
-  }
-}
-
-// 5. Plankton, Algae, Food Pellets, and Vibe Mode Bubbles Painter
-class EcosystemParticlesPainter extends CustomPainter {
-  final List<FoodPellet> foodPellets;
-  final List<AlgaeParticle> algaeParticles;
-  final List<PlanktonParticle> planktonList;
-  final List<VibeBubble> vibeBubbles;
-  final double timePhase;
-
-  EcosystemParticlesPainter({
-    required this.foodPellets,
-    required this.algaeParticles,
-    required this.planktonList,
-    required this.vibeBubbles,
-    required this.timePhase,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..isAntiAlias = true;
-
-    // 1. Draw Rising Translucent Plankton Specs
-    paint.color = Colors.white.withValues(alpha: 0.16);
-    paint.style = PaintingStyle.fill;
-    for (final plankton in planktonList) {
-      canvas.drawCircle(plankton.position, plankton.size, paint);
-    }
-
-    // 2. Draw Floaty Green Algae Particles (murky clues)
-    for (final algae in algaeParticles) {
-      canvas.save();
-      canvas.translate(algae.position.dx, algae.position.dy);
-      canvas.rotate(algae.angle);
-
-      // Draw a tiny oval leaf
-      paint.color = const Color(0xFF689F38).withValues(alpha: 0.42);
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset.zero, width: algae.size * 2, height: algae.size),
-        paint,
-      );
-      canvas.restore();
-    }
-
-    // 3. Draw Vibe Mode Bubble Streams
-    for (final bubble in vibeBubbles) {
-      final pos = bubble.position;
-      final radius = bubble.size;
-
-      // Draw bubble outline
-      paint.color = Colors.white.withValues(alpha: 0.22);
-      paint.style = PaintingStyle.stroke;
-      paint.strokeWidth = 1.0;
-      canvas.drawCircle(pos, radius, paint);
-
-      // Draw bubble glossy highlight shine dot
-      paint.color = Colors.white.withValues(alpha: 0.38);
-      paint.style = PaintingStyle.fill;
-      canvas.drawCircle(
-        pos - Offset(radius * 0.3, radius * 0.3),
-        radius * 0.2,
-        paint,
-      );
-    }
-
-    // 4. Draw Sinking & Settled Food Pellets
-    for (final pellet in foodPellets) {
-      final pos = pellet.position;
-      final radius = pellet.size;
-
-      // outer glowing halo
-      paint.color = const Color(0xFF8D6E63).withValues(alpha: 0.22 * pellet.opacity);
-      paint.style = PaintingStyle.fill;
-      canvas.drawCircle(pos, radius * 1.6, paint);
-
-      // main solid pellet core
-      paint.shader = LinearGradient(
-        colors: [const Color(0xFF8D6E63), const Color(0xFF5D4037)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(Rect.fromCircle(center: pos, radius: radius));
-      canvas.drawCircle(pos, radius, paint);
-      paint.shader = null;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant EcosystemParticlesPainter oldDelegate) {
-    return oldDelegate.timePhase != timePhase ||
-        oldDelegate.foodPellets.length != foodPellets.length ||
-        oldDelegate.algaeParticles.length != algaeParticles.length ||
-        oldDelegate.vibeBubbles.length != vibeBubbles.length;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.01),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: unlocked
+              ? badgeColor.withValues(alpha: 0.3)
+              : Colors.grey.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: unlocked
+                  ? badgeColor.withValues(alpha: 0.15)
+                  : Colors.grey.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: unlocked ? badgeColor : Colors.grey.shade500,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: unlocked ? null : Colors.grey.shade500,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: unlocked
+                            ? Colors.green.withValues(alpha: 0.15)
+                            : Colors.grey.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            unlocked ? Icons.lock_open_rounded : Icons.lock_rounded,
+                            size: 10,
+                            color: unlocked ? Colors.green : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            unlocked ? "Unlocked" : "Locked",
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: unlocked ? Colors.green : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

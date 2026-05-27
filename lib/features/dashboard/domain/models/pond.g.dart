@@ -23,6 +23,8 @@ _Pond _$PondFromJson(Map<String, dynamic> json) => _Pond(
       ) ??
       const {},
   createdAt: const TimestampConverter().fromJson(json['createdAt']),
+  latitude: (json['latitude'] as num?)?.toDouble(),
+  longitude: (json['longitude'] as num?)?.toDouble(),
 );
 
 Map<String, dynamic> _$PondToJson(_Pond instance) => <String, dynamic>{
@@ -35,4 +37,6 @@ Map<String, dynamic> _$PondToJson(_Pond instance) => <String, dynamic>{
   'memberIds': instance.memberIds,
   'roles': instance.roles,
   'createdAt': const TimestampConverter().toJson(instance.createdAt),
+  'latitude': instance.latitude,
+  'longitude': instance.longitude,
 };
