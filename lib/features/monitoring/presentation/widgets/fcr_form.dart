@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/calculated_result_box.dart';
+import 'package:pondstat/features/monitoring/utils/growth_calculators.dart';
 
 class FcrForm extends StatefulWidget {
   final void Function(double? calculatedValue) onChanged;
@@ -16,12 +17,10 @@ class _FcrFormState extends State<FcrForm> {
   final TextEditingController _weightGainedCtrl = TextEditingController();
 
   double? _calculateFCR() {
-    final feed = double.tryParse(_feedCtrl.text);
-    final gained = double.tryParse(_weightGainedCtrl.text);
-    if (feed != null && gained != null && feed > 0 && gained > 0) {
-      return feed / gained;
-    }
-    return null;
+    return GrowthCalculators.calculateFCR(
+      feedGiven: double.tryParse(_feedCtrl.text),
+      weightGained: double.tryParse(_weightGainedCtrl.text),
+    );
   }
 
   void _onChanged() {

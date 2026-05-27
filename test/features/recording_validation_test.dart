@@ -1,45 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-
-// Extracted calculator functions from RecordGrowthSheet for robust unit-testing
-double? calculateABW({required double? w, required double? c}) {
-  if (w != null && c != null && w > 0 && c > 0) return w / c;
-  return null;
-}
-
-double? calculateADG({required double? cur, required double? prev, required double? days}) {
-  if (cur != null && prev != null && days != null && cur > 0 && prev > 0 && days > 0) {
-    return (cur - prev) / days;
-  }
-  return null;
-}
-
-double? calculateDFR({
-  required double? stocked,
-  required double? surv,
-  required double? abw,
-  required double? feedRate,
-}) {
-  if (stocked != null &&
-      surv != null &&
-      abw != null &&
-      feedRate != null &&
-      stocked > 0 &&
-      surv >= 0 &&
-      surv <= 100 &&
-      abw > 0 &&
-      feedRate >= 0 &&
-      feedRate <= 100) {
-    return (stocked * (surv / 100.0) * abw * (feedRate / 100.0)) / 1000.0;
-  }
-  return null;
-}
-
-double? calculateFCR({required double? feed, required double? gained}) {
-  if (feed != null && gained != null && feed > 0 && gained > 0) {
-    return feed / gained;
-  }
-  return null;
-}
+import 'package:pondstat/features/monitoring/utils/growth_calculators.dart';
 
 // Extracted validation functions from EditGrowthSheet for robust unit-testing
 String? positiveNumberValidator(String? value) {
@@ -65,59 +25,52 @@ String? adgValidator(String? value) {
   return null;
 }
 
-double calculateBacterialAverage(List<double> values) {
-  if (values.isEmpty) return 0.0;
-  return values.reduce((a, b) => a + b) / values.length;
-}
 
-double calculateBacterialCfu(double average, double dilutionFactor) {
-  return average * dilutionFactor;
-}
 
 void main() {
   group('Bacterial Replicates Calculations', () {
     test('should compute correct average for list of replicates', () {
-      expect(calculateBacterialAverage([10.0, 20.0, 30.0]), 20.0);
-      expect(calculateBacterialAverage([5.5, 6.5]), 6.0);
+      expect(GrowthCalculators.calculateBacterialAverage([10.0, 20.0, 30.0]), 20.0);
+      expect(GrowthCalculators.calculateBacterialAverage([5.5, 6.5]), 6.0);
     });
 
     test('should compute correct CFU using dilution factors', () {
-      expect(calculateBacterialCfu(100.0, 100.0), 10000.0);
-      expect(calculateBacterialCfu(50.0, 1000.0), 50000.0);
+      expect(GrowthCalculators.calculateBacterialCfu(100.0, 100.0), 10000.0);
+      expect(GrowthCalculators.calculateBacterialCfu(50.0, 1000.0), 50000.0);
     });
   });
 
   group('RecordGrowthSheet Calculations', () {
     group('ABW Calculation', () {
       test('should calculate ABW correctly with positive parameters', () {
-        expect(calculateABW(w: 100.0, c: 10.0), 10.0);
+        expect(GrowthCalculators.calculateABW(weight: 100.0, count: 10.0), 10.0);
       });
 
       test('should return null if weight or count is <= 0', () {
-        expect(calculateABW(w: 0.0, c: 10.0), isNull);
-        expect(calculateABW(w: -5.0, c: 10.0), isNull);
-        expect(calculateABW(w: 100.0, c: 0.0), isNull);
-        expect(calculateABW(w: 100.0, c: -1.0), isNull);
+        expect(GrowthCalculators.calculateABW(weight: 0.0, count: 10.0), isNull);
+        expect(GrowthCalculators.calculateABW(weight: -5.0, count: 10.0), isNull);
+        expect(GrowthCalculators.calculateABW(weight: 100.0, count: 0.0), isNull);
+        expect(GrowthCalculators.calculateABW(weight: 100.0, count: -1.0), isNull);
       });
     });
 
     group('ADG Calculation', () {
       test('should calculate positive ADG when weight increases', () {
-        expect(calculateADG(cur: 15.0, prev: 10.0, days: 5.0), 1.0);
+        expect(GrowthCalculators.calculateADG(currentAbw: 15.0, previousAbw: 10.0, days: 5.0), 1.0);
       });
 
       test('should calculate negative ADG when weight decreases', () {
-        expect(calculateADG(cur: 8.0, prev: 10.0, days: 4.0), -0.5);
+        expect(GrowthCalculators.calculateADG(currentAbw: 8.0, previousAbw: 10.0, days: 4.0), -0.5);
       });
 
       test('should return null if cur or prev weights are non-positive', () {
-        expect(calculateADG(cur: 0.0, prev: 10.0, days: 5.0), isNull);
-        expect(calculateADG(cur: 15.0, prev: -2.0, days: 5.0), isNull);
+        expect(GrowthCalculators.calculateADG(currentAbw: 0.0, previousAbw: 10.0, days: 5.0), isNull);
+        expect(GrowthCalculators.calculateADG(currentAbw: 15.0, previousAbw: -2.0, days: 5.0), isNull);
       });
 
       test('should return null if days is non-positive', () {
-        expect(calculateADG(cur: 15.0, prev: 10.0, days: 0.0), isNull);
-        expect(calculateADG(cur: 15.0, prev: 10.0, days: -1.0), isNull);
+        expect(GrowthCalculators.calculateADG(currentAbw: 15.0, previousAbw: 10.0, days: 0.0), isNull);
+        expect(GrowthCalculators.calculateADG(currentAbw: 15.0, previousAbw: 10.0, days: -1.0), isNull);
       });
     });
 
@@ -125,37 +78,37 @@ void main() {
       test('should calculate DFR correctly under normal positive parameters', () {
         // 1000 fish * 90% survival * 10g abw * 5% feeding rate / 1000 = 0.45 kg/day
         expect(
-          calculateDFR(stocked: 1000.0, surv: 90.0, abw: 10.0, feedRate: 5.0),
+          GrowthCalculators.calculateDFR(stocked: 1000.0, survivalRate: 90.0, abw: 10.0, feedingRate: 5.0),
           closeTo(0.45, 0.001),
         );
       });
 
       test('should return null if survival rate is outside 0-100%', () {
-        expect(calculateDFR(stocked: 1000.0, surv: 101.0, abw: 10.0, feedRate: 5.0), isNull);
-        expect(calculateDFR(stocked: 1000.0, surv: -1.0, abw: 10.0, feedRate: 5.0), isNull);
+        expect(GrowthCalculators.calculateDFR(stocked: 1000.0, survivalRate: 101.0, abw: 10.0, feedingRate: 5.0), isNull);
+        expect(GrowthCalculators.calculateDFR(stocked: 1000.0, survivalRate: -1.0, abw: 10.0, feedingRate: 5.0), isNull);
       });
 
       test('should return null if stocked quantity or abw is <= 0', () {
-        expect(calculateDFR(stocked: 0.0, surv: 90.0, abw: 10.0, feedRate: 5.0), isNull);
-        expect(calculateDFR(stocked: 1000.0, surv: 90.0, abw: 0.0, feedRate: 5.0), isNull);
+        expect(GrowthCalculators.calculateDFR(stocked: 0.0, survivalRate: 90.0, abw: 10.0, feedingRate: 5.0), isNull);
+        expect(GrowthCalculators.calculateDFR(stocked: 1000.0, survivalRate: 90.0, abw: 0.0, feedingRate: 5.0), isNull);
       });
 
       test('should return null if feeding rate is outside 0-100%', () {
-        expect(calculateDFR(stocked: 1000.0, surv: 90.0, abw: 10.0, feedRate: 101.0), isNull);
-        expect(calculateDFR(stocked: 1000.0, surv: 90.0, abw: 10.0, feedRate: -0.5), isNull);
+        expect(GrowthCalculators.calculateDFR(stocked: 1000.0, survivalRate: 90.0, abw: 10.0, feedingRate: 101.0), isNull);
+        expect(GrowthCalculators.calculateDFR(stocked: 1000.0, survivalRate: 90.0, abw: 10.0, feedingRate: -0.5), isNull);
       });
     });
 
     group('FCR Calculation', () {
       test('should calculate FCR correctly under positive values', () {
-        expect(calculateFCR(feed: 120.0, gained: 100.0), 1.2);
+        expect(GrowthCalculators.calculateFCR(feedGiven: 120.0, weightGained: 100.0), 1.2);
       });
 
       test('should return null if feed or weight gained is <= 0', () {
-        expect(calculateFCR(feed: 0.0, gained: 100.0), isNull);
-        expect(calculateFCR(feed: 120.0, gained: 0.0), isNull);
-        expect(calculateFCR(feed: -10.0, gained: 100.0), isNull);
-        expect(calculateFCR(feed: 120.0, gained: -5.0), isNull);
+        expect(GrowthCalculators.calculateFCR(feedGiven: 0.0, weightGained: 100.0), isNull);
+        expect(GrowthCalculators.calculateFCR(feedGiven: 120.0, weightGained: 0.0), isNull);
+        expect(GrowthCalculators.calculateFCR(feedGiven: -10.0, weightGained: 100.0), isNull);
+        expect(GrowthCalculators.calculateFCR(feedGiven: 120.0, weightGained: -5.0), isNull);
       });
     });
   });

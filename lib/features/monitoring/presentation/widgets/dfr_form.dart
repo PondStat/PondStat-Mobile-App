@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/calculated_result_box.dart';
+import 'package:pondstat/features/monitoring/utils/growth_calculators.dart';
 
 class DfrForm extends StatefulWidget {
   final void Function(double? calculatedValue) onChanged;
@@ -18,23 +19,12 @@ class _DfrFormState extends State<DfrForm> {
   final TextEditingController _feedingRateCtrl = TextEditingController();
 
   double? _calculateDFR() {
-    final stocked = double.tryParse(_stockedCtrl.text);
-    final surv = double.tryParse(_survivalCtrl.text);
-    final abw = double.tryParse(_currentAbwCtrl.text);
-    final feedRate = double.tryParse(_feedingRateCtrl.text);
-    if (stocked != null &&
-        surv != null &&
-        abw != null &&
-        feedRate != null &&
-        stocked > 0 &&
-        surv >= 0 &&
-        surv <= 100 &&
-        abw > 0 &&
-        feedRate >= 0 &&
-        feedRate <= 100) {
-      return (stocked * (surv / 100.0) * abw * (feedRate / 100.0)) / 1000.0;
-    }
-    return null;
+    return GrowthCalculators.calculateDFR(
+      stocked: double.tryParse(_stockedCtrl.text),
+      survivalRate: double.tryParse(_survivalCtrl.text),
+      abw: double.tryParse(_currentAbwCtrl.text),
+      feedingRate: double.tryParse(_feedingRateCtrl.text),
+    );
   }
 
   void _onChanged() {

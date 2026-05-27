@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:pondstat/core/firebase/firebase_providers.dart';
 import 'package:pondstat/features/monitoring/presentation/monitoring_parameters.dart';
 import 'package:pondstat/core/services/connectivity_provider.dart';
+import 'package:pondstat/features/monitoring/utils/growth_calculators.dart';
 
 import 'package:pondstat/core/firebase/offline_repository_mixin.dart';
 
@@ -235,17 +236,23 @@ class GrowthRepository with OfflineRepositoryMixin {
 
       final double? currentAbw = explicitAbw > 0
           ? explicitAbw
-          : (sampleCount > 0 ? totalWeight / sampleCount : null);
+          : GrowthCalculators.calculateABW(weight: totalWeight, count: sampleCount);
 
       double? adg = explicitAdg > 0 ? explicitAdg : null;
       double? dfr = explicitDfr > 0
           ? explicitDfr
-          : (currentAbw != null && feedingRate > 0 && fishCount > 0
-              ? (currentAbw * fishCount * feedingRate / 100.0)
-              : null);
+          : GrowthCalculators.calculateDFR(
+              stocked: fishCount.toDouble(),
+              survivalRate: 100.0,
+              abw: currentAbw,
+              feedingRate: feedingRate,
+            );
       double? fcr = explicitFcr > 0
           ? explicitFcr
-          : (weightGained > 0 && feedConsumed > 0 ? feedConsumed / weightGained : null);
+          : GrowthCalculators.calculateFCR(
+              feedGiven: feedConsumed,
+              weightGained: weightGained,
+            );
 
       if (i > 0 && explicitAdg == 0.0) {
         final prevWeek = sortedWeeks[i - 1];
@@ -259,14 +266,18 @@ class GrowthRepository with OfflineRepositoryMixin {
 
         final double? prevAbw = prevExplicitAbw > 0
             ? prevExplicitAbw
-            : (prevSampleCount > 0 ? prevTotalWeight / prevSampleCount : null);
+            : GrowthCalculators.calculateABW(weight: prevTotalWeight, count: prevSampleCount);
 
         final DateTime currentDate = bucket['date'] as DateTime;
         final DateTime prevDate = prevBucket['date'] as DateTime;
         final int daysBetween = currentDate.difference(prevDate).inDays;
 
         if (daysBetween > 0 && currentAbw != null && prevAbw != null && currentAbw > 0 && prevAbw > 0) {
-          adg = (currentAbw - prevAbw) / daysBetween;
+          adg = GrowthCalculators.calculateADG(
+            currentAbw: currentAbw,
+            previousAbw: prevAbw,
+            days: daysBetween.toDouble(),
+          );
         }
       }
 

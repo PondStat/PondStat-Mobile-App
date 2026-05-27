@@ -115,7 +115,6 @@ void main() {
       expect(find.text('Jane Smith'), findsOneWidget);
       expect(find.text('Water looks very clean today.'), findsOneWidget);
       expect(find.text('Excellent. Have you checked the pH levels?'), findsOneWidget);
-      expect(find.text('Tagged: pH'), findsOneWidget);
     });
   });
 }

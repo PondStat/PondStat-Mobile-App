@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/calculated_result_box.dart';
+import 'package:pondstat/features/monitoring/utils/growth_calculators.dart';
 
 class AbwForm extends StatefulWidget {
   final void Function(double? calculatedValue) onChanged;
@@ -16,10 +17,10 @@ class _AbwFormState extends State<AbwForm> {
   final TextEditingController _countCtrl = TextEditingController();
 
   double? _calculateABW() {
-    final w = double.tryParse(_weightCtrl.text);
-    final c = double.tryParse(_countCtrl.text);
-    if (w != null && c != null && w > 0 && c > 0) return w / c;
-    return null;
+    return GrowthCalculators.calculateABW(
+      weight: double.tryParse(_weightCtrl.text),
+      count: double.tryParse(_countCtrl.text),
+    );
   }
 
   void _onChanged() {

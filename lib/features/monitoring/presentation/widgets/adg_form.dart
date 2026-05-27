@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pondstat/core/widgets/pondstat_text_field.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/calculated_result_box.dart';
+import 'package:pondstat/features/monitoring/utils/growth_calculators.dart';
 
 class AdgForm extends StatefulWidget {
   final void Function(double? calculatedValue) onChanged;
@@ -17,13 +18,11 @@ class _AdgFormState extends State<AdgForm> {
   final TextEditingController _daysCtrl = TextEditingController();
 
   double? _calculateADG() {
-    final cur = double.tryParse(_currentCtrl.text);
-    final prev = double.tryParse(_previousCtrl.text);
-    final days = double.tryParse(_daysCtrl.text);
-    if (cur != null && prev != null && days != null && cur > 0 && prev > 0 && days > 0) {
-      return (cur - prev) / days;
-    }
-    return null;
+    return GrowthCalculators.calculateADG(
+      currentAbw: double.tryParse(_currentCtrl.text),
+      previousAbw: double.tryParse(_previousCtrl.text),
+      days: double.tryParse(_daysCtrl.text),
+    );
   }
 
   void _onChanged() {

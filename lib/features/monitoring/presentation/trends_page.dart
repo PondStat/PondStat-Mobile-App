@@ -404,15 +404,13 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
                 showcaseKey: _trendsTabsKey,
                 scope: 'pond_monitoring',
                 title: 'Periodic Filters',
-                description: 'Switch between Daily, Weekly, Biweekly, Final, and Correlation analysis views of your pond parameters.',
+                description: 'Switch between Daily, Weekly, Biweekly, and Final views of your pond parameters.',
                 child: Padding(
                   padding: const EdgeInsets.only(top: 12.0, bottom: 4.0),
                   child: Row(
                     children: [
                       Expanded(
                         child: TabBar(
-                          isScrollable: true,
-                          tabAlignment: TabAlignment.start,
                           labelColor: const Color(0xFF0A74DA),
                           unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
                           indicatorColor: const Color(0xFF0A74DA),
