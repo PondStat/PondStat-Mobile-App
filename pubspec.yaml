@@ -57,7 +57,7 @@ dependencies:
   csv: ^8.0.0
   pdf: ^3.10.8
   path_provider: ^2.1.5
-  share_plus: ^13.1.0
+  share_plus: ^12.0.2
   firebase_messaging: ^16.2.0
   flutter_riverpod: ^3.3.1
   equatable: ^2.0.8
@@ -73,7 +73,7 @@ dependencies:
   audioplayers: ^6.6.0
   image_picker: ^1.2.2
   image_cropper: ^12.2.1
-  file_picker: any
+  file_picker: ^8.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -141,6 +141,4 @@ flutter:
   #       - asset: fonts/TrajanPro.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
-  #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+  #
