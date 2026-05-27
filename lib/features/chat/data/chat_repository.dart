@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -46,7 +46,10 @@ class ChatRepository with OfflineRepositoryMixin {
         .collection('chats')
         .withConverter<PondChatMessage>(
           fromFirestore: (snapshot, _) {
-            final data = snapshot.data()!;
+            final data = snapshot.data();
+            if (data == null) {
+              throw StateError('Chat document ${snapshot.id} has null data');
+            }
             data['id'] = snapshot.id;
             return PondChatMessage.fromJson(data);
           },
@@ -69,12 +72,13 @@ class ChatRepository with OfflineRepositoryMixin {
     required String message,
     String? imageUrl,
     String? taggedParameter,
+    String? messageId,
   }) async {
     await runWrite(() async {
       final chatsCol = getChatsCollection(pondId);
-      final newDocRef = chatsCol.doc();
+      final docId = messageId ?? chatsCol.doc().id;
       final chatMessage = PondChatMessage(
-        id: newDocRef.id,
+        id: docId,
         pondId: pondId,
         senderId: senderId,
         senderName: senderName,
@@ -89,19 +93,14 @@ class ChatRepository with OfflineRepositoryMixin {
           .collection('ponds')
           .doc(pondId)
           .collection('chats')
-          .doc(newDocRef.id);
+          .doc(docId);
       final json = chatMessage.toJson();
       json['createdAt'] = FieldValue.serverTimestamp();
       await rawRef.set(json);
     });
   }
 
-  Future<String> uploadChatImage(String pondId, String messageId, String localFilePath) async {
-    final file = File(localFilePath);
-    if (!await file.exists()) {
-      throw Exception('Local file does not exist at $localFilePath');
-    }
-
+  Future<String> uploadChatImage(String pondId, String messageId, Uint8List bytes) async {
     final storageRef = _storage
         .ref()
         .child('ponds')
@@ -109,7 +108,7 @@ class ChatRepository with OfflineRepositoryMixin {
         .child('chats')
         .child('$messageId.jpg');
 
-    final uploadTask = storageRef.putFile(file);
+    final uploadTask = storageRef.putData(bytes);
     final snapshot = await uploadTask;
     return await snapshot.ref.getDownloadURL();
   }

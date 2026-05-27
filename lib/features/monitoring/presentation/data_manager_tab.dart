@@ -1,8 +1,8 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:csv/csv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -103,15 +103,13 @@ class _DataManagerTabState extends ConsumerState<DataManagerTab> {
       }
 
       final csvData = csv.encode(rows);
-      final directory = await getTemporaryDirectory();
       final dateSuffix = DateFormat('yyyyMMdd').format(DateTime.now());
-      final path = '${directory.path}/${widget.pondName.replaceAll(' ', '_')}_Export_$dateSuffix.csv';
-      final file = File(path);
-      await file.writeAsString(csvData);
+      final filename = '${widget.pondName.replaceAll(' ', '_')}_Export_$dateSuffix.csv';
+      final bytes = Uint8List.fromList(utf8.encode(csvData));
 
       final result = await SharePlus.instance.share(
         ShareParams(
-          files: [XFile(path)],
+          files: [XFile.fromData(bytes, name: filename, mimeType: 'text/csv')],
           text: 'PondStat Data Export: ${widget.pondName}',
         ),
       );
@@ -142,16 +140,17 @@ class _DataManagerTabState extends ConsumerState<DataManagerTab> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv'],
+        withData: true,
       );
 
-      if (result == null || result.files.single.path == null) {
+      if (result == null || result.files.single.bytes == null) {
         return;
       }
 
       setState(() => _isImporting = true);
 
-      final file = File(result.files.single.path!);
-      final input = await file.readAsString();
+      final bytes = result.files.single.bytes!;
+      final input = utf8.decode(bytes);
       final rows = csv.decode(input);
 
       if (rows.isEmpty) {

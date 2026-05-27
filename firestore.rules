@@ -4,7 +4,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAuthenticated() {
-      return request.auth != null && request.auth.token.email.matches('.*@up\\.edu\\.ph$');
+      return request.auth != null && 
+             'email' in request.auth.token && 
+             request.auth.token.email.matches('.*@up\\.edu\\.ph$');
     }
 
     function uid() {
@@ -69,6 +71,11 @@ service cloud.firestore {
           )
         );
         allow delete: if isAuthenticated() && resource.data.ownerId == uid();
+
+        // ── CHATS (POND CHAT MESSAGE INBOX) ──
+        match /chats/{chatId} {
+          allow read, write: if isPondMember(pondId);
+        }
       }
 
       // ── MEASUREMENTS ──
@@ -84,14 +91,15 @@ service cloud.firestore {
       match /measurement_history/{historyId} {
         allow read: if isPondMember(resource.data.pondId);
         allow create: if isPondMember(request.resource.data.pondId);
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if canEditPond(resource.data.pondId);
       }
 
       // ── SCHEDULES ──
       match /schedules/{scheduleId} {
         allow read: if isPondMember(resource.data.pondId);
         allow create: if canEditPond(request.resource.data.pondId);
-        allow update: if canEditPond(resource.data.pondId);
+        allow update: if canEditPond(request.resource.data.pondId);
         allow delete: if canEditPond(resource.data.pondId);
       }
 

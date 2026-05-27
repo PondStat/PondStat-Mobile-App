@@ -153,8 +153,10 @@ class NotificationsRepository with OfflineRepositoryMixin {
     try {
       final collection = _notificationsCollection;
       if (collection == null) return;
-
-      final unread = await collection.where('isRead', isEqualTo: false).get();
+      final source = isOffline() ? Source.cache : Source.serverAndCache;
+      final unread = await collection
+          .where('isRead', isEqualTo: false)
+          .get(GetOptions(source: source));
 
       if (unread.docs.isEmpty) return;
 

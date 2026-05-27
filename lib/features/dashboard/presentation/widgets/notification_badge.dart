@@ -57,7 +57,7 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.read(notificationsRepositoryProvider);
+    final repository = ref.watch(notificationsRepositoryProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return StreamBuilder<int>(

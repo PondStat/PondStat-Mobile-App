@@ -119,7 +119,7 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
         },
         child: StreamBuilder<List<NotificationModel>>(
           key: _streamKey,
-          stream: ref.read(notificationsRepositoryProvider).getNotificationsStream(),
+          stream: ref.watch(notificationsRepositoryProvider).getNotificationsStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const NotificationsShimmer();

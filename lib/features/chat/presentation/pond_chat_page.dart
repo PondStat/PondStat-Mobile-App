@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,8 +36,10 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
   final FocusNode _focusNode = FocusNode();
 
   String? _attachedImagePath;
+  Uint8List? _attachedImageBytes;
   String? _selectedTag;
   bool _isSending = false;
+  int? _lastMessageCount;
 
   final List<String> _tagOptions = ['pH', 'Salinity', 'Temperature', 'DO', 'Growth'];
 
@@ -94,8 +95,10 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
         imageQuality: 80,
       );
       if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
         setState(() {
           _attachedImagePath = pickedFile.path;
+          _attachedImageBytes = bytes;
         });
       }
     } catch (e) {
@@ -268,17 +271,24 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
     try {
       final userAsync = ref.read(userChangesProvider);
       final currentUser = userAsync.value ?? ref.read(firebaseAuthProvider).currentUser;
-      final senderId = currentUser?.uid ?? '';
-      final senderName = currentUser?.displayName ?? 'PondStat User';
-      final senderPhotoUrl = currentUser?.photoURL;
+      if (currentUser == null) {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'You must be signed in to send messages.');
+        }
+        return;
+      }
+      final senderId = currentUser.uid;
+      final senderName = currentUser.displayName ?? 'PondStat User';
+      final senderPhotoUrl = currentUser.photoURL;
+
+      final messageId = ref.read(chatRepositoryProvider).getChatsCollection(widget.pondId).doc().id;
 
       String? uploadedImageUrl;
-      if (_attachedImagePath != null) {
-        final messageId = ref.read(chatRepositoryProvider).getChatsCollection(widget.pondId).doc().id;
+      if (_attachedImageBytes != null) {
         uploadedImageUrl = await ref.read(chatRepositoryProvider).uploadChatImage(
           widget.pondId,
           messageId,
-          _attachedImagePath!,
+          _attachedImageBytes!,
         );
       }
 
@@ -290,6 +300,7 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
             message: messageText,
             imageUrl: uploadedImageUrl,
             taggedParameter: _selectedTag,
+            messageId: messageId,
           );
 
       // Trigger notifications for other collaborators
@@ -309,6 +320,7 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
       _messageController.clear();
       setState(() {
         _attachedImagePath = null;
+        _attachedImageBytes = null;
         _selectedTag = null;
       });
 
@@ -354,6 +366,21 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
               child: Image.network(
                 imageUrl,
                 fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: Colors.black38,
+                  alignment: Alignment.center,
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.broken_image_rounded, color: Colors.white, size: 48),
+                      SizedBox(height: 8),
+                      Text(
+                        "Failed to load photo",
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -492,6 +519,25 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                               width: 200,
                               height: 150,
                               fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                width: 200,
+                                height: 150,
+                                color: theme.brightness == Brightness.dark
+                                    ? Colors.white10
+                                    : Colors.grey.shade200,
+                                alignment: Alignment.center,
+                                child: const Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.broken_image_rounded, color: Colors.grey, size: 32),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      "Image failed to load",
+                                      style: TextStyle(color: Colors.grey, fontSize: 10),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               loadingBuilder: (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
                                 return Container(
@@ -567,13 +613,6 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
 
     final messagesAsync = ref.watch(pondMessagesProvider(widget.pondId));
 
-    // Scroll to bottom on load
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      }
-    });
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -646,6 +685,15 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                 Expanded(
                   child: messagesAsync.when(
                     data: (messages) {
+                      if (_lastMessageCount == null || messages.length > _lastMessageCount!) {
+                        _lastMessageCount = messages.length;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (_scrollController.hasClients) {
+                            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+                          }
+                        });
+                      }
+
                       if (messages.isEmpty) {
                         return Center(
                           child: Column(
@@ -712,7 +760,7 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                 ),
 
                 // Attached image & selected tag review panel
-                if (_attachedImagePath != null || _selectedTag != null)
+                if (_attachedImageBytes != null || _selectedTag != null)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.all(12),
@@ -727,13 +775,13 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                     ),
                     child: Row(
                       children: [
-                        if (_attachedImagePath != null) ...[
+                        if (_attachedImageBytes != null) ...[
                           Stack(
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  File(_attachedImagePath!),
+                                child: Image.memory(
+                                  _attachedImageBytes!,
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,
@@ -743,7 +791,10 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                                 top: -2,
                                 right: -2,
                                 child: GestureDetector(
-                                  onTap: () => setState(() => _attachedImagePath = null),
+                                  onTap: () => setState(() {
+                                    _attachedImagePath = null;
+                                    _attachedImageBytes = null;
+                                  }),
                                   child: Container(
                                     decoration: const BoxDecoration(
                                       color: Colors.black54,

@@ -32,10 +32,13 @@ class PondRepository with OfflineRepositoryMixin {
         .collection('ponds')
         .withConverter<Pond>(
           fromFirestore: (snapshot, _) {
-              final data = snapshot.data()!;
-              data['id'] = snapshot.id;
-              return Pond.fromJson(data);
-            },
+            final data = snapshot.data();
+            if (data == null) {
+              throw StateError('Pond document ${snapshot.id} has null data');
+            }
+            data['id'] = snapshot.id;
+            return Pond.fromJson(data);
+          },
           toFirestore: (pond, _) => pond.toJson(),
         );
   }

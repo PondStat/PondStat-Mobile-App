@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -51,20 +51,12 @@ class WeatherService {
   WeatherService(this._ref);
 
   Future<Map<String, dynamic>> _httpGetJson(String urlString) async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 10);
-    try {
-      final uri = Uri.parse(urlString);
-      final request = await client.getUrl(uri);
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final responseBody = await response.transform(utf8.decoder).join();
-        return jsonDecode(responseBody) as Map<String, dynamic>;
-      } else {
-        throw Exception('HTTP error ${response.statusCode}');
-      }
-    } finally {
-      client.close();
+    final uri = Uri.parse(urlString);
+    final response = await http.get(uri).timeout(const Duration(seconds: 10));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('HTTP error ${response.statusCode}');
     }
   }
 
