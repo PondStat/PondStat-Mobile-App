@@ -39,12 +39,14 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
 
   final GlobalKey _dateRangeKey = GlobalKey();
   final GlobalKey _trendsTabsKey = GlobalKey();
+  final GlobalKey _weatherOverlayKey = GlobalKey();
   final GlobalKey _exportReportKey = GlobalKey();
 
   void _startTour() {
     ShowcaseView.getNamed('pond_monitoring').startShowCase([
       _trendsTabsKey,
       _dateRangeKey,
+      _weatherOverlayKey,
       _exportReportKey,
     ]);
   }
@@ -447,6 +449,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
                               type: 'daily',
                               startDate: _startDate,
                               endDate: _endDate,
+                              weatherOverlayKey: _weatherOverlayKey,
                             ),
                           ),
                         ),

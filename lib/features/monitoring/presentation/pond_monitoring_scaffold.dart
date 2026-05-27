@@ -53,6 +53,9 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
   bool get canEdit => widget.userRole == 'owner' || widget.userRole == 'editor';
 
   final GlobalKey _profileKey = GlobalKey();
+  final GlobalKey _historyKey = GlobalKey();
+  final GlobalKey _chatKey = GlobalKey();
+  final GlobalKey _helpKey = GlobalKey();
 
   @override
   void initState() {
@@ -214,6 +217,10 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
             species: widget.species,
             createdAt: widget.createdAt,
             targetCulturePeriodDays: widget.targetCulturePeriodDays,
+            profileKey: _profileKey,
+            historyKey: _historyKey,
+            chatKey: _chatKey,
+            helpKey: _helpKey,
             focusedDay: _focusedDay,
             selectedDay: _selectedDay,
             onDaySelected: (selectedDay, focusedDay) {
@@ -302,6 +309,9 @@ class _PondMonitoringScaffoldState extends ConsumerState<PondMonitoringScaffold>
                   onChatTap: _navigateToChat,
                   onProfileTap: _showProfileSheet,
                   profileKey: _profileKey,
+                  historyKey: _historyKey,
+                  chatKey: _chatKey,
+                  helpKey: _helpKey,
                   onHelpTap: () {
                     ref.read(tourTriggerProvider.notifier).state = null;
                     WidgetsBinding.instance.addPostFrameCallback((_) {

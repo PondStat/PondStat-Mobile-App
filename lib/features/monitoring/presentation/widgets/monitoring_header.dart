@@ -17,6 +17,9 @@ class MonitoringHeader extends ConsumerWidget {
   final VoidCallback onProfileTap;
   final VoidCallback? onHelpTap;
   final GlobalKey? profileKey;
+  final GlobalKey? historyKey;
+  final GlobalKey? chatKey;
+  final GlobalKey? helpKey;
 
   const MonitoringHeader({
     super.key,
@@ -29,6 +32,9 @@ class MonitoringHeader extends ConsumerWidget {
     required this.onProfileTap,
     this.onHelpTap,
     this.profileKey,
+    this.historyKey,
+    this.chatKey,
+    this.helpKey,
   });
 
   @override
@@ -118,38 +124,59 @@ class MonitoringHeader extends ConsumerWidget {
             ),
           ),
           if (onHelpTap != null) ...[
-            _buildCircleIconButton(
-              context: context,
-              icon: Icons.help_outline_rounded,
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                onHelpTap!();
-              },
-              tooltip: 'Help & Tour',
-              surfaceContainer: surfaceContainer,
+            CustomShowcase(
+              showcaseKey: helpKey ?? GlobalKey(),
+              scope: 'pond_monitoring',
+              title: "Tour Guide",
+              description: "Tap this at any time to re-run the tutorial tour for the active tab.",
+              targetShapeBorder: const CircleBorder(),
+              child: _buildCircleIconButton(
+                context: context,
+                icon: Icons.help_outline_rounded,
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  onHelpTap!();
+                },
+                tooltip: 'Help & Tour',
+                surfaceContainer: surfaceContainer,
+              ),
             ),
             const SizedBox(width: 8),
           ],
-          _buildCircleIconButton(
-            context: context,
-            icon: Icons.receipt_long_rounded,
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              onHistoryTap();
-            },
-            tooltip: 'Log History',
-            surfaceContainer: surfaceContainer,
+          CustomShowcase(
+            showcaseKey: historyKey ?? GlobalKey(),
+            scope: 'pond_monitoring',
+            title: "View Edit History & Log Audit Trails",
+            description: "Audit any parameter adjustments, see who modified what values, and track historical logs.",
+            targetShapeBorder: const CircleBorder(),
+            child: _buildCircleIconButton(
+              context: context,
+              icon: Icons.receipt_long_rounded,
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onHistoryTap();
+              },
+              tooltip: 'Log History',
+              surfaceContainer: surfaceContainer,
+            ),
           ),
           const SizedBox(width: 8),
-          _buildCircleIconButton(
-            context: context,
-            icon: Icons.chat_bubble_outline_rounded,
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              onChatTap();
-            },
-            tooltip: 'Chat & Notes',
-            surfaceContainer: surfaceContainer,
+          CustomShowcase(
+            showcaseKey: chatKey ?? GlobalKey(),
+            scope: 'pond_monitoring',
+            title: "Collaborative Chat & Notes",
+            description: "Use this chat interface to leave remarks, upload photos, and chat in real-time with other collaborators.",
+            targetShapeBorder: const CircleBorder(),
+            child: _buildCircleIconButton(
+              context: context,
+              icon: Icons.chat_bubble_outline_rounded,
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onChatTap();
+              },
+              tooltip: 'Chat & Notes',
+              surfaceContainer: surfaceContainer,
+            ),
           ),
           const SizedBox(width: 8),
           CustomShowcase(
@@ -157,6 +184,7 @@ class MonitoringHeader extends ConsumerWidget {
             scope: 'pond_monitoring',
             title: "Manage Pond Collaborators",
             description: "Invite and manage farm hands, editors, or other viewers to help you monitor this pond's parameters! Tap your profile icon to configure.",
+            targetShapeBorder: const CircleBorder(),
             child: Material(
               type: MaterialType.transparency,
               child: InkWell(

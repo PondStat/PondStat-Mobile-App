@@ -36,6 +36,7 @@ class _PondyAquariumPageState extends ConsumerState<PondyAquariumPage>
   late final AudioPlayer _audioPlayer;
   int _audioTransitionToken = 0;
   bool _isDisposed = false;
+  final ValueNotifier<Offset?> _targetFoodNotifier = ValueNotifier<Offset?>(null);
 
   // Ecosystem Particles and Organisms
   final List<NeonFish> _fishList = [];
@@ -56,10 +57,9 @@ class _PondyAquariumPageState extends ConsumerState<PondyAquariumPage>
       duration: const Duration(seconds: 1),
     )..addListener(() {
         if (!mounted) return;
-        setState(() {
-          _timePhase += 0.016; // approx 60 FPS
-          _updateEcosystemPhysics();
-        });
+        _timePhase += 0.016; // approx 60 FPS
+        _updateEcosystemPhysics();
+        _targetFoodNotifier.value = _getClosestFood();
       })..repeat();
 
     // 1. Spawn 12 background neon tetras
@@ -115,6 +115,7 @@ class _PondyAquariumPageState extends ConsumerState<PondyAquariumPage>
       _audioPlayer.dispose();
     } catch (_) {}
     _ticker.dispose();
+    _targetFoodNotifier.dispose();
     super.dispose();
   }
 
@@ -279,59 +280,71 @@ class _PondyAquariumPageState extends ConsumerState<PondyAquariumPage>
               child: const SizedBox.expand(),
             ),
 
-            // 2. Wave Refracting God Rays
+            // 2-6. Ecosystem Aquarium CustomPaint Layers (Animated for High Performance)
             Positioned.fill(
-              child: CustomPaint(
-                painter: GodRaysPainter(
-                  timePhase: _timePhase,
-                  isNightMode: _isNightMode,
-                  statusMood: mood,
-                ),
-              ),
-            ),
+              child: AnimatedBuilder(
+                animation: _ticker,
+                builder: (context, child) {
+                  return Stack(
+                    children: [
+                      // 2. Wave Refracting God Rays
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: GodRaysPainter(
+                            timePhase: _timePhase,
+                            isNightMode: _isNightMode,
+                            statusMood: mood,
+                          ),
+                        ),
+                      ),
 
-            // 3. Schooling Neon Tetras
-            Positioned.fill(
-              child: CustomPaint(
-                painter: SchoolFishPainter(
-                  fishList: _fishList,
-                  timePhase: _timePhase,
-                ),
-              ),
-            ),
+                      // 3. Schooling Neon Tetras
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: SchoolFishPainter(
+                            fishList: _fishList,
+                            timePhase: _timePhase,
+                          ),
+                        ),
+                      ),
 
-            // 4. Bioluminescent Glowing Jellyfish forest in Night Mode
-            if (_isNightMode)
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: JellyfishPainter(
-                    jellyfishList: _jellyfishList,
-                    timePhase: _timePhase,
-                  ),
-                ),
-              ),
+                      // 4. Bioluminescent Glowing Jellyfish forest in Night Mode
+                      if (_isNightMode)
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: JellyfishPainter(
+                              jellyfishList: _jellyfishList,
+                              timePhase: _timePhase,
+                            ),
+                          ),
+                        ),
 
-            // 5. Swaying Seaweed Stalks (Multilayer depth parallax kelp)
-            Positioned.fill(
-              child: CustomPaint(
-                painter: SeaweedPainter(
-                  timePhase: _timePhase,
-                  isNightMode: _isNightMode,
-                  statusMood: mood,
-                ),
-              ),
-            ),
+                      // 5. Swaying Seaweed Stalks (Multilayer depth parallax kelp)
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: SeaweedPainter(
+                            timePhase: _timePhase,
+                            isNightMode: _isNightMode,
+                            statusMood: mood,
+                          ),
+                        ),
+                      ),
 
-            // 6. Plankton, Algae, Feed Pellets, and Vibe Mode Bubbles Layer
-            Positioned.fill(
-              child: CustomPaint(
-                painter: EcosystemParticlesPainter(
-                  foodPellets: _foodPellets,
-                  algaeParticles: _algaeParticles,
-                  planktonList: _planktonList,
-                  vibeBubbles: _vibeBubbles,
-                  timePhase: _timePhase,
-                ),
+                      // 6. Plankton, Algae, Feed Pellets, and Vibe Mode Bubbles Layer
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: EcosystemParticlesPainter(
+                            foodPellets: _foodPellets,
+                            algaeParticles: _algaeParticles,
+                            planktonList: _planktonList,
+                            vibeBubbles: _vibeBubbles,
+                            timePhase: _timePhase,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -342,7 +355,7 @@ class _PondyAquariumPageState extends ConsumerState<PondyAquariumPage>
                 isFullScreen: true,
                 isNightMode: _isNightMode,
                 cleanTrigger: _cleanTrigger,
-                targetFoodPosition: _getClosestFood(),
+                targetFoodNotifier: _targetFoodNotifier,
                 onEat: (msg) {
                   // Pellet eaten hit! Remove pellet from list
                   if (_foodPellets.isNotEmpty) {

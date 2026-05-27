@@ -9,6 +9,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/telemetry_stat
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/services/weather_service.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 
 class _DailyRecord {
   final DateTime timestamp;
@@ -27,6 +28,7 @@ class PeriodicParametersChart extends ConsumerStatefulWidget {
   final String type;
   final DateTime startDate;
   final DateTime endDate;
+  final GlobalKey? weatherOverlayKey;
 
   const PeriodicParametersChart({
     super.key,
@@ -35,6 +37,7 @@ class PeriodicParametersChart extends ConsumerStatefulWidget {
     required this.type,
     required this.startDate,
     required this.endDate,
+    this.weatherOverlayKey,
   });
 
   @override
@@ -321,7 +324,7 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
   Widget _buildWeatherOverlaySelector(ThemeData theme, bool isDark) {
     final colorScheme = theme.colorScheme;
     final options = ['None', 'Rainfall', 'Air Temp', 'UV Index'];
-    return Padding(
+    final selectorWidget = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
@@ -378,6 +381,17 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
         ],
       ),
     );
+
+    if (widget.weatherOverlayKey != null) {
+      return CustomShowcase(
+        showcaseKey: widget.weatherOverlayKey!,
+        scope: 'pond_monitoring',
+        title: 'Weather Overlay Selector',
+        description: 'Correlate daily parameter fluctuations (like Temperature and DO) with weather overlays such as Rainfall, Air Temperature, and UV index.',
+        child: selectorWidget,
+      );
+    }
+    return selectorWidget;
   }
 
   DailyWeatherData? _getWeatherForDate(DateTime timestamp, List<DailyWeatherData> weatherList) {

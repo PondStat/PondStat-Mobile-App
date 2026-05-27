@@ -315,7 +315,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     if (croppedFile == null) return;
 
     // 4. Upload
-    setState(() => _isLoading = true);
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       final authRepo = ref.read(authRepositoryProvider);

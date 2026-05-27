@@ -7,6 +7,7 @@ import 'package:pondstat/features/profile/presentation/widgets/settings_list_til
 
 import 'package:pondstat/core/services/notification_service.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -136,6 +137,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 onChanged: (val) {
                   HapticFeedback.lightImpact();
                   ref.read(settingsProvider.notifier).setAbnormalAlerts(val);
+                },
+              ),
+              const SizedBox(height: 24),
+              _buildSectionHeader('HELP & TUTORIAL'),
+              SettingsListTile(
+                icon: Icons.restart_alt_rounded,
+                title: 'Reset Onboarding Tour',
+                subtitle: 'Replay the step-by-step navigation guides',
+                onTap: () async {
+                  HapticFeedback.mediumImpact();
+                  await ref.read(onboardingTourProvider.notifier).resetAll();
+                  if (context.mounted) {
+                    SnackbarHelper.showInfo(
+                      context,
+                      'Onboarding tour reset. Start a tour from the dashboard or monitoring screen!',
+                    );
+                  }
                 },
               ),
               const SizedBox(height: 24),

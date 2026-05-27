@@ -96,10 +96,12 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
       );
       if (pickedFile != null) {
         final bytes = await pickedFile.readAsBytes();
-        setState(() {
-          _attachedImagePath = pickedFile.path;
-          _attachedImageBytes = bytes;
-        });
+        if (mounted) {
+          setState(() {
+            _attachedImagePath = pickedFile.path;
+            _attachedImageBytes = bytes;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -318,11 +320,13 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
       );
 
       _messageController.clear();
-      setState(() {
-        _attachedImagePath = null;
-        _attachedImageBytes = null;
-        _selectedTag = null;
-      });
+      if (mounted) {
+        setState(() {
+          _attachedImagePath = null;
+          _attachedImageBytes = null;
+          _selectedTag = null;
+        });
+      }
 
       // Scroll to bottom
       _scrollToBottom();

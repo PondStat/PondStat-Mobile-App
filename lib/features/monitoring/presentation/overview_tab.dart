@@ -22,6 +22,10 @@ class OverviewTab extends ConsumerStatefulWidget {
   final Function(DateTime, DateTime) onDaySelected;
   final Function(DateTime) onPageChanged;
   final VoidCallback onRecordParameters;
+  final GlobalKey? profileKey;
+  final GlobalKey? historyKey;
+  final GlobalKey? chatKey;
+  final GlobalKey? helpKey;
 
   const OverviewTab({
     super.key,
@@ -36,6 +40,10 @@ class OverviewTab extends ConsumerStatefulWidget {
     required this.onDaySelected,
     required this.onPageChanged,
     required this.onRecordParameters,
+    this.profileKey,
+    this.historyKey,
+    this.chatKey,
+    this.helpKey,
   });
 
   @override
@@ -49,11 +57,16 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
   final GlobalKey _recordButtonKey = GlobalKey();
 
   void _startTour() {
-    final keys = [
+    final keys = <GlobalKey>[];
+    if (widget.historyKey != null) keys.add(widget.historyKey!);
+    if (widget.chatKey != null) keys.add(widget.chatKey!);
+    if (widget.helpKey != null) keys.add(widget.helpKey!);
+    if (widget.profileKey != null) keys.add(widget.profileKey!);
+    keys.addAll([
       _overviewHeaderKey,
       _progressCardKey,
       _calendarKey,
-    ];
+    ]);
     if (widget.userRole == 'owner' || widget.userRole == 'editor') {
       keys.add(_recordButtonKey);
     }

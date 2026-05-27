@@ -54,7 +54,12 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
   late Stream<List<Pond>> _userPondsStream;
 
   // Showcase global keys
+  final GlobalKey _profileKey = GlobalKey();
+  final GlobalKey _notificationKey = GlobalKey();
   final GlobalKey _aquariumKey = GlobalKey();
+  final GlobalKey _searchKey = GlobalKey();
+  final GlobalKey _filterKey = GlobalKey();
+  final GlobalKey _pondCardKey = GlobalKey();
   final GlobalKey _fabKey = GlobalKey();
 
   @override
@@ -87,7 +92,15 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
       if (!tourNotifier.hasSeenDashboard) {
         _userPondsStream.first.then((ponds) {
           if (ponds.isNotEmpty && mounted) {
-            ShowcaseView.getNamed('dashboard').startShowCase([_aquariumKey, _fabKey]);
+            ShowcaseView.getNamed('dashboard').startShowCase([
+              _profileKey,
+              _notificationKey,
+              _aquariumKey,
+              _searchKey,
+              _filterKey,
+              _pondCardKey,
+              _fabKey,
+            ]);
             ref.read(onboardingTourProvider.notifier).markDashboardAsSeen();
           }
         }).catchError((_) {});
@@ -307,9 +320,15 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
               ),
             ),
             actions: [
-              NotificationBadge(
-                onTap: () => context.push(AppRoutes.notifications),
-                isDark: isDark,
+              CustomShowcase(
+                showcaseKey: _notificationKey,
+                scope: 'dashboard',
+                title: "Notifications Hub",
+                description: "Keep track of alerts, announcements, and system notifications regarding your ponds.",
+                child: NotificationBadge(
+                  onTap: () => context.push(AppRoutes.notifications),
+                  isDark: isDark,
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 20.0),
@@ -317,41 +336,47 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                   child: Semantics(
                     button: true,
                     label: 'Open profile',
-                    child: GestureDetector(
-                      onTap: () => _showProfileSheet(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white12
-                                : Colors.white.withValues(alpha: 0.5),
-                            width: 2,
+                    child: CustomShowcase(
+                      showcaseKey: _profileKey,
+                      scope: 'dashboard',
+                      title: "Profile & Settings",
+                      description: "Access your account options, edit your profile, toggle theme preferences, adjust notification settings, or reset this tutorial tour.",
+                      child: GestureDetector(
+                        onTap: () => _showProfileSheet(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white12
+                                  : Colors.white.withValues(alpha: 0.5),
+                              width: 2,
+                            ),
                           ),
-                        ),
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: isDark
-                              ? colorScheme.primaryContainer
-                              : Colors.white,
-                          backgroundImage: user.photoURL != null
-                              ? NetworkImage(user.photoURL!)
-                              : null,
-                          child: user.photoURL == null
-                              ? Text(
-                                  user.displayName?.isNotEmpty == true
-                                      ? user.displayName![0].toUpperCase()
-                                      : 'U',
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? colorScheme.onPrimaryContainer
-                                        : colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                )
-                              : null,
+                          child: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: isDark
+                                ? colorScheme.primaryContainer
+                                : Colors.white,
+                            backgroundImage: user.photoURL != null
+                                ? NetworkImage(user.photoURL!)
+                                : null,
+                            child: user.photoURL == null
+                                ? Text(
+                                    user.displayName?.isNotEmpty == true
+                                        ? user.displayName![0].toUpperCase()
+                                        : 'U',
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? colorScheme.onPrimaryContainer
+                                          : colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  )
+                                : null,
+                          ),
                         ),
                       ),
                     ),
@@ -575,47 +600,53 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                   Row(
                     children: [
                       Expanded(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: _searchFocusNode.hasFocus
-                                  ? colorScheme.primary
-                                  : Colors.transparent,
-                              width: 2,
-                            ),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            focusNode: _searchFocusNode,
-                            decoration: InputDecoration(
-                              hintText: 'Search ponds...',
-                              hintStyle: TextStyle(
-                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                fontWeight: FontWeight.w500,
-                              ),
-                              prefixIcon: Icon(
-                                Icons.search_rounded,
+                        child: CustomShowcase(
+                          showcaseKey: _searchKey,
+                          scope: 'dashboard',
+                          title: "Search Ponds",
+                          description: "Quickly locate specific ponds by typing their names or species in this search bar.",
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
                                 color: _searchFocusNode.hasFocus
                                     ? colorScheme.primary
-                                    : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                    : Colors.transparent,
+                                width: 2,
                               ),
-                              suffixIcon: _searchQuery.isNotEmpty
-                                  ? IconButton(
-                                      icon: Icon(
-                                        Icons.clear_rounded,
-                                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                      ),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                      },
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              focusNode: _searchFocusNode,
+                              decoration: InputDecoration(
+                                hintText: 'Search ponds...',
+                                hintStyle: TextStyle(
+                                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.search_rounded,
+                                  color: _searchFocusNode.hasFocus
+                                      ? colorScheme.primary
+                                      : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                ),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: Icon(
+                                          Icons.clear_rounded,
+                                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                        ),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                        },
+                                      )
+                                    : null,
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
                             ),
                           ),
                         ),
@@ -623,12 +654,18 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
                       const SizedBox(width: 12),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
-                        child: PondFilterDropdown(
-                          uniqueSpecies: uniqueSpecies,
-                          filterRole: _filterRole,
-                          filterSpecies: _filterSpecies,
-                          onRoleChanged: (role) => setState(() => _filterRole = role),
-                          onSpeciesChanged: (species) => setState(() => _filterSpecies = species),
+                        child: CustomShowcase(
+                          showcaseKey: _filterKey,
+                          scope: 'dashboard',
+                          title: "Filter Ponds",
+                          description: "Filter your list of ponds by species or by your assigned collaborator role (Owner, Editor, Viewer).",
+                          child: PondFilterDropdown(
+                            uniqueSpecies: uniqueSpecies,
+                            filterRole: _filterRole,
+                            filterSpecies: _filterSpecies,
+                            onRoleChanged: (role) => setState(() => _filterRole = role),
+                            onSpeciesChanged: (species) => setState(() => _filterSpecies = species),
+                          ),
                         ),
                       ),
                     ],
@@ -694,9 +731,20 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
               child: card,
             );
 
+            Widget finalItem = itemContent;
+            if (index == 2) {
+              finalItem = CustomShowcase(
+                showcaseKey: _pondCardKey,
+                scope: 'dashboard',
+                title: "Pond Workspaces",
+                description: "Tap any pond card to open its detailed monitoring dashboard. Swipe left on a card to quickly edit or delete it (if you are the owner).",
+                child: itemContent,
+              );
+            }
+
             return StaggeredListItem(
               index: index - 2,
-              child: itemContent,
+              child: finalItem,
             );
           },
         ),

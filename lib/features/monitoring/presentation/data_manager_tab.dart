@@ -147,7 +147,9 @@ class _DataManagerTabState extends ConsumerState<DataManagerTab> {
         return;
       }
 
-      setState(() => _isImporting = true);
+      if (mounted) {
+        setState(() => _isImporting = true);
+      }
 
       final bytes = result.files.single.bytes!;
       final input = utf8.decode(bytes);
@@ -287,8 +289,8 @@ class _DataManagerTabState extends ConsumerState<DataManagerTab> {
       if (recordsToImport.isEmpty) {
         if (mounted) {
           SnackbarHelper.showError(context, "No valid measurement records found to import.");
+          setState(() => _isImporting = false);
         }
-        setState(() => _isImporting = false);
         return;
       }
 
@@ -298,8 +300,8 @@ class _DataManagerTabState extends ConsumerState<DataManagerTab> {
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, "Failed to parse CSV file: $e");
+        setState(() => _isImporting = false);
       }
-      setState(() => _isImporting = false);
     }
   }
 

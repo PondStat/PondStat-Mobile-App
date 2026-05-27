@@ -13,6 +13,7 @@ class PondyCompanion extends ConsumerStatefulWidget {
   final bool isNightMode;
   final int cleanTrigger;
   final Offset? targetFoodPosition;
+  final ValueNotifier<Offset?>? targetFoodNotifier;
 
   const PondyCompanion({
     super.key,
@@ -22,6 +23,7 @@ class PondyCompanion extends ConsumerStatefulWidget {
     this.isNightMode = false,
     this.cleanTrigger = 0,
     this.targetFoodPosition,
+    this.targetFoodNotifier,
   });
 
   @override
@@ -107,9 +109,10 @@ class _PondyCompanionState extends ConsumerState<PondyCompanion>
     if (!mounted) return;
 
     final evolution = ref.read(pondyEvolutionProvider).value ?? const PondyEvolutionState.empty();
-
-    setState(() {
-      final double progress = _tickController.value;
+    final double progress = _tickController.value;
+    final targetFood = widget.targetFoodNotifier != null
+        ? widget.targetFoodNotifier!.value
+        : widget.targetFoodPosition;
 
       // 0. Update Swim Ripples (Fluid trail wakes)
       for (int i = _swimRipples.length - 1; i >= 0; i--) {
@@ -254,12 +257,12 @@ class _PondyCompanionState extends ConsumerState<PondyCompanion>
               _pondyPosition.dy + homeDy * driftFactor,
             );
             _lookTarget = const Offset(0.5, 0.6);
-          } else if (widget.isFullScreen && widget.targetFoodPosition != null) {
+          } else if (widget.isFullScreen && targetFood != null) {
             _activeState = 'swimming';
             _idleTicks = 0; // reset idle sleep ticks
 
-            final dx = widget.targetFoodPosition!.dx - _pondyPosition.dx;
-            final dy = widget.targetFoodPosition!.dy - _pondyPosition.dy;
+            final dx = targetFood.dx - _pondyPosition.dx;
+            final dy = targetFood.dy - _pondyPosition.dy;
             final distance = math.sqrt(dx * dx + dy * dy);
 
             // Hit test: did we arrive at the pellet?
@@ -420,7 +423,6 @@ class _PondyCompanionState extends ConsumerState<PondyCompanion>
           ));
         }
       }
-    });
   }
 
   void _handleTap(TapUpDetails details) {
@@ -538,24 +540,29 @@ class _PondyCompanionState extends ConsumerState<PondyCompanion>
 
         final Widget childWidget = Container(
           color: Colors.transparent, // Capture taps across full canvas
-          child: CustomPaint(
-            painter: PondyPainter(
-              pondyPosition: _pondyPosition,
-              facingLeft: _facingLeft,
-              activeState: _activeState,
-              statusMood: mood,
-              pellets: _pellets,
-              bubbles: _bubbles,
-              happyEmojis: _happyEmojis,
-              lookTarget: _smoothedLookTarget,
-              timePhase: DateTime.now().millisecondsSinceEpoch / 1000.0,
-              tiltAngle: _tiltAngle,
-              swimRipples: _swimRipples,
-              level: evolution.level,
-              isNeglected: evolution.isNeglected,
-              isVibrant: evolution.isVibrant,
-            ),
-            child: const SizedBox.expand(),
+          child: AnimatedBuilder(
+            animation: _tickController,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: PondyPainter(
+                  pondyPosition: _pondyPosition,
+                  facingLeft: _facingLeft,
+                  activeState: _activeState,
+                  statusMood: mood,
+                  pellets: _pellets,
+                  bubbles: _bubbles,
+                  happyEmojis: _happyEmojis,
+                  lookTarget: _smoothedLookTarget,
+                  timePhase: DateTime.now().millisecondsSinceEpoch / 1000.0,
+                  tiltAngle: _tiltAngle,
+                  swimRipples: _swimRipples,
+                  level: evolution.level,
+                  isNeglected: evolution.isNeglected,
+                  isVibrant: evolution.isVibrant,
+                ),
+                child: const SizedBox.expand(),
+              );
+            },
           ),
         );
 
