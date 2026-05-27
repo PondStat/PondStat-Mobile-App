@@ -508,6 +508,15 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
       },
     ];
 
+    final todayName = DateFormat('EEEE').format(DateTime.now());
+    final Map<String, dynamic> todaySmartDay = smartDays.firstWhere(
+      (sd) => sd['day'] == todayName,
+      orElse: () => smartDays.first,
+    );
+
+    final gradientColors = todaySmartDay['gradient'] as List<Color>;
+    final todayParams = todaySmartDay['params'] as List<String>;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -537,144 +546,123 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
           ),
         ),
         const SizedBox(height: 16),
-        ...smartDays.map((sd) {
-          final gradientColors = sd['gradient'] as List<Color>;
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: colorScheme.outlineVariant,
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
+            ],
+            border: Border.all(
+              color: colorScheme.outlineVariant,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(
-                      color: gradientColors.first,
-                      width: 6,
-                    ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: gradientColors.first,
+                    width: 6,
                   ),
                 ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: gradientColors.first.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            sd['icon'] as IconData,
-                            color: gradientColors.first,
-                            size: 18,
-                          ),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: gradientColors.first.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                sd['day'] as String,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 16,
-                                  color: colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                sd['type'] as String,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 11,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
+                        child: Icon(
+                          todaySmartDay['icon'] as IconData,
+                          color: gradientColors.first,
+                          size: 18,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: (sd['params'] as List<String>).map((paramName) {
-                        final paramColor = _getParameterColor(paramName);
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: paramColor.withValues(alpha: isDark ? 0.15 : 0.08),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: paramColor.withValues(alpha: 0.25),
-                              width: 1,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${todaySmartDay['day']} (Today)",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                                color: colorScheme.onSurface,
+                              ),
                             ),
+                            const SizedBox(height: 2),
+                            Text(
+                              todaySmartDay['type'] as String,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: todayParams.map((paramName) {
+                      final paramColor = colorScheme.primary;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: paramColor.withValues(alpha: isDark ? 0.15 : 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: paramColor.withValues(alpha: 0.25),
+                            width: 1,
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _getParameterIcon(paramName),
-                                size: 12,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _getParameterIcon(paramName),
+                              size: 12,
+                              color: paramColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              paramName,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
                                 color: paramColor,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                paramName,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: paramColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
             ),
-          );
-        }),
+          ),
+        ),
       ],
     );
-  }
-
-  Color _getParameterColor(String label) {
-    switch (label) {
-      case 'pH Level': return const Color(0xFFE91E63);
-      case 'Temperature': return const Color(0xFFFF5722);
-      case 'Salinity': return const Color(0xFF03A9F4);
-      case 'Transparency': return const Color(0xFFFFC107);
-      case 'Phytoplankton': return const Color(0xFF4CAF50);
-      case 'Test yellow 10-1 (CFU/ml)': return const Color(0xFFFF9800);
-      case 'Test green 10-1 (CFU/ml)': return const Color(0xFF8BC34A);
-      case 'Dissolved Oxygen': return const Color(0xFF00BCD4);
-      case 'Ammonia': return const Color(0xFFF44336);
-      case 'Nitrite': return const Color(0xFF673AB7);
-      case 'Nitrate': return const Color(0xFF9C27B0);
-      case 'Total Alkalinity': return const Color(0xFF009688);
-      default: return const Color(0xFF607D8B);
-    }
   }
 
   IconData _getParameterIcon(String label) {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pondstat/features/monitoring/presentation/schedules_tab.dart';
 import 'package:pondstat/features/monitoring/presentation/finances_tab.dart';
-import 'data_manager_tab.dart';
 
 class OperationsPage extends StatelessWidget {
   final String pondId;
@@ -24,7 +23,7 @@ class OperationsPage extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: PreferredSize(
@@ -76,12 +75,6 @@ class OperationsPage extends StatelessWidget {
                     child: Text("Finances"),
                   ),
                 ),
-                Tab(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text("Import/Export"),
-                  ),
-                ),
               ],
             ),
           ),
@@ -90,12 +83,6 @@ class OperationsPage extends StatelessWidget {
           children: [
             SchedulesTab(pondId: pondId, pondName: pondName, canEdit: canEdit),
             FinancesTab(pondId: pondId, canEdit: canEdit),
-            DataManagerTab(
-              pondId: pondId,
-              pondName: pondName,
-              userRole: userRole,
-              canEdit: canEdit,
-            ),
           ],
         ),
       ),

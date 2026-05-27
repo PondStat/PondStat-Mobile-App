@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/periodic_parameters_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/trends_tab.dart';
-import 'package:pondstat/features/monitoring/presentation/correlation_tab.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -394,7 +393,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
     });
 
     return DefaultTabController(
-      length: 5,
+      length: 4,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: RepaintBoundary(
@@ -418,12 +417,11 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
                           unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
                           indicatorColor: const Color(0xFF0A74DA),
                           labelPadding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 16.0),
-                          tabs: const [
+                           tabs: const [
                             Tab(text: "Daily"),
                             Tab(text: "Weekly"),
                             Tab(text: "Biweekly"),
                             Tab(text: "Final"),
-                            Tab(text: "Correlation"),
                           ],
                         ),
                       ),
@@ -491,15 +489,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
                             endDate: _endDate,
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 100),
-                          child: CorrelationTab(
-                            pondId: widget.pondId,
-                            species: widget.species,
-                            startDate: _startDate,
-                            endDate: _endDate,
-                          ),
-                        ),
+
                       ],
                     ),
                   ],

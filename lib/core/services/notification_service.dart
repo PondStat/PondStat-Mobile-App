@@ -154,6 +154,8 @@ class NotificationService implements AppNotifier {
       return;
     }
 
+
+
     if (actionId == NotificationAction.viewChart.id || actionId == null) {
       // Deep-link to the pond's page using the route payload
       if (payload != null && payload.isNotEmpty && _router != null) {
@@ -471,7 +473,7 @@ class NotificationService implements AppNotifier {
       }
     }
 
-    // 2. Schedule new ones based on the user's active shifts
+    // 2. Schedule new ones based on the user's active shifts (15 minutes prior)
     for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
       final dayName = daysOfWeek[dayIndex];
       if (!schedule.containsKey(dayName)) continue;
@@ -486,7 +488,7 @@ class NotificationService implements AppNotifier {
 
       if (morning) {
         final id = baseId * 100 + dayIndex * 10 + 0;
-        final scheduledDate = _nextInstanceOfDayOfWeekAndTime(targetDayOfWeek, 8, 0);
+        final scheduledDate = _nextInstanceOfDayOfWeekAndTime(targetDayOfWeek, 7, 45);
         final String dueParams = _getDueParametersMessage(dayName);
 
         await _localNotifications.zonedSchedule(
@@ -504,7 +506,7 @@ class NotificationService implements AppNotifier {
 
       if (afternoon) {
         final id = baseId * 100 + dayIndex * 10 + 1;
-        final scheduledDate = _nextInstanceOfDayOfWeekAndTime(targetDayOfWeek, 16, 0);
+        final scheduledDate = _nextInstanceOfDayOfWeekAndTime(targetDayOfWeek, 15, 45);
         final String dueParams = _getDueParametersMessage(dayName);
 
         await _localNotifications.zonedSchedule(

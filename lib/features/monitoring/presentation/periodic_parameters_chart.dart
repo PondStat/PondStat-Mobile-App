@@ -553,6 +553,22 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
     }
 
     List<HorizontalLine> extraLines = [];
+    if (param.optimalMin != null && param.optimalMax != null) {
+      final double diff = param.optimalMax! - param.optimalMin!;
+      const int linesCount = 15;
+      final double step = diff / (linesCount - 1);
+      for (int i = 0; i < linesCount; i++) {
+        final double yVal = param.optimalMin! + i * step;
+        extraLines.add(
+          HorizontalLine(
+            y: yVal,
+            color: Colors.green.withValues(alpha: 0.02),
+            strokeWidth: 6.0,
+          ),
+        );
+      }
+    }
+
     if (param.optimalMin != null) {
       extraLines.add(
         HorizontalLine(

@@ -244,6 +244,7 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
       valueListenable: controller,
       builder: (context, value, child) {
         String? errorMessage;
+        String? warningMessage;
         if (value.text.isNotEmpty) {
           final parsedValue = double.tryParse(value.text);
           if (parsedValue != null) {
@@ -255,11 +256,24 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                 parsedValue > widget.selectedParameter.absoluteMax!) {
               errorMessage = "Max: ${widget.selectedParameter.absoluteMax}";
             }
+            if (errorMessage == null) {
+              if (widget.selectedParameter.optimalMin != null &&
+                  parsedValue < widget.selectedParameter.optimalMin!) {
+                warningMessage = "Sub-optimal: <${widget.selectedParameter.optimalMin}";
+              }
+              if (widget.selectedParameter.optimalMax != null &&
+                  parsedValue > widget.selectedParameter.optimalMax!) {
+                warningMessage = "Sub-optimal: >${widget.selectedParameter.optimalMax}";
+              }
+            }
           }
         }
 
         final bool hasError = errorMessage != null;
-        final activeColor = hasError ? theme.colorScheme.error : themeColor;
+        final bool hasWarning = warningMessage != null;
+        final activeColor = hasError 
+            ? theme.colorScheme.error 
+            : (hasWarning ? Colors.amber.shade700 : themeColor);
 
         return Column(
           children: [
@@ -273,7 +287,7 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                           : const Color(0xFFF8FAFC)),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isFocused || hasError
+                  color: isFocused || hasError || hasWarning
                       ? activeColor
                       : Colors.transparent,
                   width: 2,
@@ -333,6 +347,16 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                         size: 14,
                         color: theme.colorScheme.error,
                       ),
+                    )
+                  else if (hasWarning)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Icon(
+                        Icons.warning_amber_rounded,
+                        size: 14,
+                        color: Colors.amber.shade700,
+                      ),
                     ),
                 ],
               ),
@@ -344,6 +368,18 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                   errorMessage,
                   style: TextStyle(
                     color: theme.colorScheme.error,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            else if (hasWarning && !isCompact)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  warningMessage,
+                  style: TextStyle(
+                    color: Colors.amber.shade700,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),

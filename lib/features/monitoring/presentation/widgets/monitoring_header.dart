@@ -185,8 +185,8 @@ class MonitoringHeader extends ConsumerWidget {
           CustomShowcase(
             showcaseKey: chatKey ?? GlobalKey(),
             scope: 'pond_monitoring',
-            title: "Collaborative Chat & Notes",
-            description: "Use this chat interface to leave remarks, upload photos, and chat in real-time with other collaborators.",
+            title: "Operational Notes & Handover Logs",
+            description: "Use this handover log to leave shift observations, upload status photos, and share logs with your team.",
             targetShapeBorder: const CircleBorder(),
             child: _buildCircleIconButton(
               context: context,
@@ -195,7 +195,7 @@ class MonitoringHeader extends ConsumerWidget {
                 HapticFeedback.selectionClick();
                 onChatTap();
               },
-              tooltip: 'Chat & Notes',
+              tooltip: 'Operational Notes',
               surfaceContainer: surfaceContainer,
               size: actionBtnSize,
               iconSize: actionIconSize,

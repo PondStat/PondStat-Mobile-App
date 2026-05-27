@@ -475,6 +475,24 @@ class MonitoringRepository with OfflineRepositoryMixin {
     return doc.exists ? doc.data() : null;
   }
 
+  /// Fetches the last recorded measurement for a specific parameter in a pond.
+  Future<Map<String, dynamic>?> getLastRecordedValues({
+    required String pondId,
+    required String label,
+  }) async {
+    final source = isOffline() ? Source.cache : Source.serverAndCache;
+    final querySnapshot = await measurementsCollection
+        .where('pondId', isEqualTo: pondId)
+        .where('parameter', isEqualTo: label)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .get(GetOptions(source: source));
+    if (querySnapshot.docs.isNotEmpty) {
+      return querySnapshot.docs.first.data();
+    }
+    return null;
+  }
+
   void _logHistory({
     required WriteBatch batch,
     required String pondId,

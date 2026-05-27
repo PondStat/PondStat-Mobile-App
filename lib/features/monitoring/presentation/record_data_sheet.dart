@@ -12,6 +12,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/delete_paramet
 import 'package:pondstat/features/monitoring/presentation/widgets/time_picker_card.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/parameter_selection_grid.dart';
 import 'package:pondstat/core/widgets/discard_changes_dialog.dart';
+import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
 
 class RecordDataSheet extends ConsumerStatefulWidget {
   final int tabIndex;
@@ -276,6 +277,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
               selectedParameter = _wizardSequence[_wizardStepIndex];
               selectedDocId = _wizardDocIds[_wizardStepIndex];
             });
+            _prefillWithLastValues();
             Future.delayed(const Duration(milliseconds: 300), () {
               if (mounted) focusNodes['A-1']?.requestFocus();
             });
@@ -299,6 +301,52 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
   }
 
 
+
+  Future<void> _prefillWithLastValues() async {
+    if (selectedParameter == null) return;
+    
+    _clearInputs();
+
+    try {
+      final repo = ref.read(monitoringRepositoryProvider);
+      final lastData = await repo.getLastRecordedValues(
+        pondId: widget.pondId,
+        label: selectedParameter!.label,
+      );
+
+      if (lastData != null && mounted) {
+        final replicateValues = lastData['replicateValues'] as Map<String, dynamic>?;
+        final pointValues = lastData['pointValues'] as Map<String, dynamic>?;
+        
+        if (replicateValues != null && replicateValues.isNotEmpty) {
+          replicateValues.forEach((point, reps) {
+            if (reps is List) {
+              for (int i = 0; i < reps.length && i < replicates.length; i++) {
+                final key = '$point-${replicates[i]}';
+                if (valueControllers.containsKey(key)) {
+                  valueControllers[key]!.text = reps[i].toString();
+                }
+              }
+            }
+          });
+        } else if (pointValues != null && pointValues.isNotEmpty) {
+          pointValues.forEach((point, val) {
+            final key = '$point-1';
+            if (valueControllers.containsKey(key)) {
+              valueControllers[key]!.text = val.toString();
+            }
+          });
+        }
+        
+        SnackbarHelper.showInfo(
+          context, 
+          "Prefilled with last recorded values for ${selectedParameter!.label}"
+        );
+      }
+    } catch (e) {
+      // fail silently
+    }
+  }
 
   void _showCreateParameterDialog() {
     showDialog(
@@ -465,6 +513,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
         selectedParameter = _wizardSequence[_wizardStepIndex];
         selectedDocId = _wizardDocIds[_wizardStepIndex];
       });
+      _prefillWithLastValues();
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) focusNodes['A-1']?.requestFocus();
       });
@@ -484,6 +533,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
         selectedParameter = _wizardSequence[_wizardStepIndex];
         selectedDocId = _wizardDocIds[_wizardStepIndex];
       });
+      _prefillWithLastValues();
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) focusNodes['A-1']?.requestFocus();
       });
@@ -616,6 +666,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
                     selectedParameter = _wizardSequence[_wizardStepIndex];
                     selectedDocId = _wizardDocIds[_wizardStepIndex];
                   });
+                  _prefillWithLastValues();
                   Future.delayed(const Duration(milliseconds: 300), () {
                     if (mounted) focusNodes['A-1']?.requestFocus();
                   });

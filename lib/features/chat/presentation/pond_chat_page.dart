@@ -13,6 +13,7 @@ import 'package:pondstat/features/chat/data/chat_repository.dart';
 import 'package:pondstat/features/chat/domain/models/pond_chat_message.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 import 'package:pondstat/features/dashboard/presentation/widgets/pond_background.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PondChatPage extends ConsumerStatefulWidget {
   final String pondId;
@@ -41,48 +42,12 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
   bool _isSending = false;
   int? _lastMessageCount;
 
-  final List<String> _tagOptions = ['pH', 'Salinity', 'Temperature', 'DO', 'Growth'];
-
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
-  }
-
-  Color _getTagColor(String tag) {
-    switch (tag) {
-      case 'pH':
-        return Colors.blue;
-      case 'Salinity':
-        return Colors.teal;
-      case 'Temperature':
-        return Colors.orange;
-      case 'DO':
-        return Colors.cyan;
-      case 'Growth':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getTagIcon(String tag) {
-    switch (tag) {
-      case 'pH':
-        return Icons.water_drop_rounded;
-      case 'Salinity':
-        return Icons.waves_rounded;
-      case 'Temperature':
-        return Icons.thermostat_rounded;
-      case 'DO':
-        return Icons.air_rounded;
-      case 'Growth':
-        return Icons.trending_up_rounded;
-      default:
-        return Icons.local_offer_rounded;
-    }
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -186,73 +151,7 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
     );
   }
 
-  void _showTagSelector() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                "Tag a Parameter",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ..._tagOptions.map((tag) {
-                final color = _getTagColor(tag);
-                final icon = _getTagIcon(tag);
-                return ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(icon, color: color),
-                  ),
-                  title: Text(
-                    tag == 'DO' ? 'Dissolved Oxygen (DO)' : tag,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  onTap: () {
-                    setState(() {
-                      _selectedTag = tag;
-                    });
-                    Navigator.pop(context);
-                  },
-                );
-              }),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  "Cancel",
-                  style: TextStyle(
-                    color: theme.colorScheme.error,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+
 
   Future<void> _sendMessage() async {
     final messageText = _messageController.text.trim();
@@ -480,39 +379,7 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (message.taggedParameter != null) ...[
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _getTagColor(message.taggedParameter!).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _getTagColor(message.taggedParameter!).withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _getTagIcon(message.taggedParameter!),
-                                color: _getTagColor(message.taggedParameter!),
-                                size: 12,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                "Tagged: ${message.taggedParameter}",
-                                style: TextStyle(
-                                  color: _getTagColor(message.taggedParameter!),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+
                       if (message.imageUrl != null) ...[
                         GestureDetector(
                           onTap: () => _viewFullScreenImage(message.imageUrl!),
@@ -572,12 +439,33 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
-                  child: Text(
-                    timestampText,
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: nameColor.withValues(alpha: 0.6),
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        timestampText,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: nameColor.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          SharePlus.instance.share(
+                            ShareParams(
+                              text: "PondStat Note [${widget.pondName}]:\n${message.message}\n- Logged by ${message.senderName}",
+                            ),
+                          );
+                        },
+                        child: Icon(
+                          Icons.share_rounded,
+                          size: 11,
+                          color: nameColor.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -660,7 +548,7 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "POND CHAT & NOTES",
+                              "OPERATIONAL NOTES & HANDOVER LOGS",
                               style: TextStyle(
                                 color: colorScheme.primary,
                                 fontSize: 10,
@@ -763,8 +651,8 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                   ),
                 ),
 
-                // Attached image & selected tag review panel
-                if (_attachedImageBytes != null || _selectedTag != null)
+                // Attached image review panel
+                if (_attachedImageBytes != null)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.all(12),
@@ -779,71 +667,41 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                     ),
                     child: Row(
                       children: [
-                        if (_attachedImageBytes != null) ...[
-                          Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.memory(
-                                  _attachedImageBytes!,
-                                  width: 50,
-                                  height: 50,
-                                  fit: BoxFit.cover,
-                                ),
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                _attachedImageBytes!,
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
                               ),
-                              Positioned(
-                                top: -2,
-                                right: -2,
-                                child: GestureDetector(
-                                  onTap: () => setState(() {
-                                    _attachedImagePath = null;
-                                    _attachedImageBytes = null;
-                                  }),
-                                  child: Container(
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black54,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    padding: const EdgeInsets.all(2),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 14,
-                                    ),
+                            ),
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: GestureDetector(
+                                onTap: () => setState(() {
+                                  _attachedImagePath = null;
+                                  _attachedImageBytes = null;
+                                }),
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  padding: const EdgeInsets.all(2),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 14,
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(width: 12),
-                        ],
-                        if (_selectedTag != null) ...[
-                          Chip(
-                            avatar: Icon(
-                              _getTagIcon(_selectedTag!),
-                              color: Colors.white,
-                              size: 14,
                             ),
-                            label: Text(
-                              _selectedTag!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                            backgroundColor: _getTagColor(_selectedTag!),
-                            deleteIcon: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 14,
-                            ),
-                            onDeleted: () => setState(() => _selectedTag = null),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                         const Spacer(),
                       ],
                     ),
@@ -862,12 +720,6 @@ class _PondChatPageState extends ConsumerState<PondChatPage> {
                         icon: Icon(Icons.add_photo_alternate_outlined, color: colorScheme.primary),
                         tooltip: 'Attach Image',
                         onPressed: _isSending ? null : _showImagePickerOptions,
-                      ),
-                      // Parameter tagging icon
-                      IconButton(
-                        icon: Icon(Icons.local_offer_outlined, color: colorScheme.primary),
-                        tooltip: 'Tag Parameter',
-                        onPressed: _isSending ? null : _showTagSelector,
                       ),
                       const SizedBox(width: 4),
                       Expanded(

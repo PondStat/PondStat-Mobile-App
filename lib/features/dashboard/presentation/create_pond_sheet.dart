@@ -60,8 +60,8 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
     final quantity = int.tryParse(_stockingQuantityController.text.trim()) ?? 0;
     final culturePeriod =
         int.tryParse(_culturePeriodController.text.trim()) ?? 0;
-    final lat = double.tryParse(_latitudeController.text.trim());
-    final lon = double.tryParse(_longitudeController.text.trim());
+    final lat = double.tryParse(_latitudeController.text.trim()) ?? 10.6389;
+    final lon = double.tryParse(_longitudeController.text.trim()) ?? 122.2353;
 
     try {
       final pond = Pond(
@@ -232,45 +232,7 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: PondStatTextField(
-                        controller: _latitudeController,
-                        label: 'Latitude',
-                        hint: '10.6389',
-                        prefixIcon: Icons.explore_outlined,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        textInputAction: TextInputAction.next,
-                        validator: (val) {
-                          if (val == null || val.isEmpty) return null;
-                          if (double.tryParse(val) == null) return 'Invalid';
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: PondStatTextField(
-                        controller: _longitudeController,
-                        label: 'Longitude',
-                        hint: '122.2353',
-                        prefixIcon: Icons.explore_outlined,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) =>
-                            _isLoading ? null : _createNewPond(),
-                        validator: (val) {
-                          if (val == null || val.isEmpty) return null;
-                          if (double.tryParse(val) == null) return 'Invalid';
-                          return null;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+
                 const SizedBox(height: 36),
 
                 PrimaryButton(

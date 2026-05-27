@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pondstat/features/dashboard/data/pond_repository.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:pondstat/core/services/weather_service.dart';
-import 'package:pondstat/core/utils/snackbar_helper.dart';
 
 class WeatherOverviewCard extends ConsumerStatefulWidget {
   final String pondId;
@@ -30,14 +29,13 @@ class _WeatherOverviewCardState extends ConsumerState<WeatherOverviewCard> {
   List<String> _alerts = [];
   String? _errorMessage;
 
-  late final double _activeLat;
-  late final double _activeLon;
-  late final bool _isDefaultLocation;
+  double _activeLat = WeatherService.defaultLat;
+  double _activeLon = WeatherService.defaultLon;
+  bool _isDefaultLocation = true;
 
   @override
   void initState() {
     super.initState();
-    _resolveLocation();
     _loadWeather();
   }
 
@@ -45,20 +43,33 @@ class _WeatherOverviewCardState extends ConsumerState<WeatherOverviewCard> {
   void didUpdateWidget(covariant WeatherOverviewCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.latitude != widget.latitude || oldWidget.longitude != widget.longitude) {
-      _resolveLocation();
       _loadWeather();
     }
   }
 
-  void _resolveLocation() {
-    if (widget.latitude != null && widget.longitude != null) {
-      _activeLat = widget.latitude!;
-      _activeLon = widget.longitude!;
-      _isDefaultLocation = false;
-    } else {
-      _activeLat = WeatherService.defaultLat;
-      _activeLon = WeatherService.defaultLon;
-      _isDefaultLocation = true;
+  Future<Position?> _getDeviceLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return null;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        return null;
+      }
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
+    } catch (_) {
+      return null;
     }
   }
 
@@ -72,6 +83,23 @@ class _WeatherOverviewCardState extends ConsumerState<WeatherOverviewCard> {
     }
 
     try {
+      final position = await _getDeviceLocation();
+      if (position != null) {
+        _activeLat = position.latitude;
+        _activeLon = position.longitude;
+        _isDefaultLocation = false;
+      } else {
+        if (widget.latitude != null && widget.longitude != null) {
+          _activeLat = widget.latitude!;
+          _activeLon = widget.longitude!;
+          _isDefaultLocation = false;
+        } else {
+          _activeLat = WeatherService.defaultLat;
+          _activeLon = WeatherService.defaultLon;
+          _isDefaultLocation = true;
+        }
+      }
+
       final service = ref.read(weatherServiceProvider);
       final forecast = await service.fetchForecast(_activeLat, _activeLon);
       final alertsList = await service.checkWeatherAlerts(
@@ -123,162 +151,6 @@ class _WeatherOverviewCardState extends ConsumerState<WeatherOverviewCard> {
     return 'Cloudy';
   }
 
-  void _showConfigureLocationDialog() {
-    final latController = TextEditingController(
-      text: widget.latitude?.toString() ?? '',
-    );
-    final lonController = TextEditingController(
-      text: widget.longitude?.toString() ?? '',
-    );
-
-    final List<Map<String, dynamic>> presets = [
-      {'name': 'Miagao, Iloilo (Default)', 'lat': WeatherService.defaultLat, 'lon': WeatherService.defaultLon},
-      {'name': 'Manila, Philippines', 'lat': 14.5995, 'lon': 120.9842},
-      {'name': 'Jakarta, Indonesia', 'lat': -6.2088, 'lon': 106.8456},
-      {'name': 'Bangkok, Thailand', 'lat': 13.7563, 'lon': 100.5018},
-    ];
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        final theme = Theme.of(dialogContext);
-        final colorScheme = theme.colorScheme;
-
-        return AlertDialog(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text(
-            'Configure Pond Location',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Select a preset zone or enter manual coordinates to receive customized local weather warnings and overlays.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<int>(
-                  decoration: InputDecoration(
-                    labelText: 'Location Preset',
-                    prefixIcon: const Icon(Icons.map_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  items: List.generate(presets.length, (index) {
-                    return DropdownMenuItem<int>(
-                      value: index,
-                      child: Text(
-                        presets[index]['name'],
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  }),
-                  onChanged: (idx) {
-                    if (idx != null) {
-                      latController.text = presets[idx]['lat'].toString();
-                      lonController.text = presets[idx]['lon'].toString();
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: latController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        decoration: InputDecoration(
-                          labelText: 'Latitude',
-                          prefixIcon: const Icon(Icons.explore_outlined),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        validator: (v) => v == null || double.tryParse(v) == null ? 'Invalid' : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: lonController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        decoration: InputDecoration(
-                          labelText: 'Longitude',
-                          prefixIcon: const Icon(Icons.explore_outlined),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        validator: (v) => v == null || double.tryParse(v) == null ? 'Invalid' : null,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () async {
-                final lat = double.tryParse(latController.text.trim());
-                final lon = double.tryParse(lonController.text.trim());
-
-                if (lat == null || lon == null) {
-                  SnackbarHelper.showError(context, 'Please input valid coordinate numbers.');
-                  return;
-                }
-
-                Navigator.pop(dialogContext);
-                _saveLocation(lat, lon);
-              },
-              child: const Text('Save Location', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _saveLocation(double lat, double lon) async {
-    try {
-      final repo = ref.read(pondRepositoryProvider);
-      final pondDoc = await repo.pondsCollection.doc(widget.pondId).get();
-      if (pondDoc.exists) {
-        final existingPond = pondDoc.data()!;
-        final updatedPond = existingPond.copyWith(
-          latitude: lat,
-          longitude: lon,
-        );
-        await repo.updatePond(updatedPond);
-        if (mounted) {
-          SnackbarHelper.showSuccess(context, 'Location coordinates saved successfully!');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Failed to save location coordinates: $e');
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -287,7 +159,7 @@ class _WeatherOverviewCardState extends ConsumerState<WeatherOverviewCard> {
 
     final locationText = _isDefaultLocation
         ? 'Miagao, Iloilo (Default)'
-        : '${_activeLat.toStringAsFixed(4)}, ${_activeLon.toStringAsFixed(4)}';
+        : 'Auto-located: ${_activeLat.toStringAsFixed(4)}, ${_activeLon.toStringAsFixed(4)}';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
@@ -352,24 +224,6 @@ class _WeatherOverviewCardState extends ConsumerState<WeatherOverviewCard> {
                     ],
                   ),
                 ),
-                if (widget.canEdit)
-                  TextButton.icon(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: _showConfigureLocationDialog,
-                    icon: const Icon(Icons.settings_rounded, size: 14, color: Color(0xFF0D9488)),
-                    label: const Text(
-                      'Configure',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0D9488),
-                      ),
-                    ),
-                  ),
               ],
             ),
             const SizedBox(height: 16),

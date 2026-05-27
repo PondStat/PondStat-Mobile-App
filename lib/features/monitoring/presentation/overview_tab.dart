@@ -52,7 +52,6 @@ class OverviewTab extends ConsumerStatefulWidget {
 }
 
 class _OverviewTabState extends ConsumerState<OverviewTab> {
-  final GlobalKey _overviewHeaderKey = GlobalKey();
   final GlobalKey _progressCardKey = GlobalKey();
   final GlobalKey _calendarKey = GlobalKey();
   final GlobalKey _recordButtonKey = GlobalKey();
@@ -64,7 +63,6 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
     if (widget.helpKey != null) keys.add(widget.helpKey!);
     if (widget.profileKey != null) keys.add(widget.profileKey!);
     keys.addAll([
-      _overviewHeaderKey,
       _progressCardKey,
       _calendarKey,
     ]);
@@ -121,36 +119,7 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        CustomShowcase(
-                          showcaseKey: _overviewHeaderKey,
-                          scope: 'pond_monitoring',
-                          title: 'Pond Details',
-                          description: 'View the active pond name and the target species currently being cultured.',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.pondName,
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.5,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Target Species: ${widget.species}",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+
                         CustomShowcase(
                           showcaseKey: _progressCardKey,
                           scope: 'pond_monitoring',
@@ -252,50 +221,7 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(
-                  left: 24.0,
-                  right: 24.0,
-                  top: 16.0,
-                  bottom: 8.0,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: CustomShowcase(
-                        showcaseKey: _overviewHeaderKey,
-                        scope: 'pond_monitoring',
-                        title: 'Pond Details',
-                        description: 'View the active pond name and the target species currently being cultured.',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.pondName,
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Target Species: ${widget.species}",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 12),
               CustomShowcase(
                 showcaseKey: _progressCardKey,
                 scope: 'pond_monitoring',
