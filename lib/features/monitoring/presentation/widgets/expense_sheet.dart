@@ -125,7 +125,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
           top: 12,
           left: 24,
           right: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          bottom: MediaQuery.of(context).padding.bottom + 32,
         ),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -290,6 +290,7 @@ class _ExpenseSheetState extends ConsumerState<ExpenseSheet> {
                       onPressed: _isSaving ? null : _saveExpense,
                     ),
                   ),
+                  SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
                 ],
               ),
             ),

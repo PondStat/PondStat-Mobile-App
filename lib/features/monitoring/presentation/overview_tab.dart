@@ -9,6 +9,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcas
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/weather_overview_card.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
+import 'package:pondstat/core/utils/responsive_helper.dart';
 
 class OverviewTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -105,6 +106,147 @@ class _OverviewTabState extends ConsumerState<OverviewTab> {
         final lat = pond?.latitude;
         final lon = pond?.longitude;
         final canEdit = widget.userRole == 'owner' || widget.userRole == 'editor';
+
+        final bool isWide = ResponsiveHelper.isWide(context);
+
+        if (isWide) {
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        CustomShowcase(
+                          showcaseKey: _overviewHeaderKey,
+                          scope: 'pond_monitoring',
+                          title: 'Pond Details',
+                          description: 'View the active pond name and the target species currently being cultured.',
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.pondName,
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Target Species: ${widget.species}",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        CustomShowcase(
+                          showcaseKey: _progressCardKey,
+                          scope: 'pond_monitoring',
+                          title: 'Culture Progress',
+                          description: 'Track the current day of culture, target period, and overall progress metrics of this culture cycle.',
+                          child: CultureProgressCard(
+                            createdAt: widget.createdAt,
+                            targetCulturePeriodDays: widget.targetCulturePeriodDays,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        WeatherOverviewCard(
+                          pondId: widget.pondId,
+                          pondName: widget.pondName,
+                          latitude: lat,
+                          longitude: lon,
+                          canEdit: canEdit,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        CustomShowcase(
+                          showcaseKey: _calendarKey,
+                          scope: 'pond_monitoring',
+                          title: 'Monitoring Calendar',
+                          description: 'Select a day to view historical records, trends, or log daily parameters.',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? theme.colorScheme.surfaceContainer
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: isDark
+                                  ? null
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.04),
+                                        blurRadius: 24,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                            ),
+                            padding: const EdgeInsets.all(8.0),
+                            child: MonitoringCalendar(
+                              pondId: widget.pondId,
+                              focusedDay: widget.focusedDay,
+                              selectedDay: widget.selectedDay,
+                              firstDay: widget.createdAt,
+                              lastDay: widget.createdAt.add(Duration(days: widget.targetCulturePeriodDays)),
+                              onDaySelected: widget.onDaySelected,
+                              onPageChanged: widget.onPageChanged,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        if (widget.userRole == 'owner' || widget.userRole == 'editor')
+                          CustomShowcase(
+                            showcaseKey: _recordButtonKey,
+                            scope: 'pond_monitoring',
+                            title: 'Record Parameters',
+                            description: 'Tap here to enter daily water quality data such as temperature, pH, and dissolved oxygen.',
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  if (widget.selectedDay == null) {
+                                    SnackbarHelper.showInfo(context, 'Please select a day first on the calendar.');
+                                    return;
+                                  }
+                                  widget.onRecordParameters();
+                                },
+                                icon: const Icon(Icons.water_drop_rounded),
+                                label: const Text('Record Parameters'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
         return SingleChildScrollView(
           child: Column(

@@ -113,10 +113,7 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
           top: 12,
           left: 24,
           right: 24,
-          bottom:
-              MediaQuery.viewInsetsOf(context).bottom +
-              MediaQuery.paddingOf(context).bottom +
-              24,
+          bottom: MediaQuery.paddingOf(context).bottom + 24,
         ),
         child: SingleChildScrollView(
           child: Form(
@@ -282,6 +279,7 @@ class _CreatePondSheetState extends ConsumerState<CreatePondSheet> {
                   isLoading: _isLoading,
                   onPressed: _isLoading ? () {} : _createNewPond,
                 ),
+                SizedBox(height: MediaQuery.viewInsetsOf(context).bottom),
               ],
             ),
           ),

@@ -154,7 +154,7 @@ class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
           top: 12,
           left: 24,
           right: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          bottom: MediaQuery.of(context).padding.bottom + 32,
         ),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -347,6 +347,7 @@ class _PondExpenseSheetState extends ConsumerState<PondExpenseSheet> {
                       onPressed: _isSaving ? null : _saveExpense,
                     ),
                   ),
+                  SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
                 ],
               ),
             ),

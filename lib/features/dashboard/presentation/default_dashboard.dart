@@ -28,6 +28,7 @@ import 'package:pondstat/features/dashboard/presentation/widgets/pond_filter_dro
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tour_provider.dart';
+import 'package:pondstat/core/utils/responsive_helper.dart';
 
 class DefaultDashboardScreen extends ConsumerStatefulWidget {
   const DefaultDashboardScreen({super.key});
@@ -542,6 +543,232 @@ class _DefaultDashboardScreenState extends ConsumerState<DefaultDashboardScreen>
 
       return true;
     }).toList();
+
+    final bool isWide = ResponsiveHelper.isWide(context);
+
+    if (isWide) {
+      return RefreshIndicator(
+        onRefresh: _refreshData,
+        color: colorScheme.primary,
+        backgroundColor: colorScheme.surface,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification notification) {
+            if (notification is ScrollStartNotification ||
+                notification is ScrollUpdateNotification) {
+              if (_isFabVisible) {
+                setState(() => _isFabVisible = false);
+              }
+            } else if (notification is ScrollEndNotification) {
+              if (!_isFabVisible) {
+                setState(() => _isFabVisible = true);
+              }
+            }
+            return false;
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.all(16.0),
+                sliver: SliverToBoxAdapter(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 6,
+                        child: CustomShowcase(
+                          showcaseKey: _aquariumKey,
+                          scope: 'dashboard',
+                          title: "Pondy's Ecosystem",
+                          description: "This is Pondy, your smart farm companion! Tap on the tank to interact, drop feed, or view an immersive full-screen aquarium ecosystem. Keep Pondy happy by interacting with the tank!",
+                          child: const PondyAquariumCard(),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: 12.0,
+                                left: 4.0,
+                              ),
+                              child: Text(
+                                "Pond List",
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 22,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ),
+                            CustomShowcase(
+                              showcaseKey: _searchKey,
+                              scope: 'dashboard',
+                              title: "Search Ponds",
+                              description: "Quickly locate specific ponds by typing their names or species in this search bar.",
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: _searchFocusNode.hasFocus
+                                        ? colorScheme.primary
+                                        : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: TextField(
+                                  controller: _searchController,
+                                  focusNode: _searchFocusNode,
+                                  decoration: InputDecoration(
+                                    hintText: 'Search ponds...',
+                                    hintStyle: TextStyle(
+                                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.search_rounded,
+                                      color: _searchFocusNode.hasFocus
+                                          ? colorScheme.primary
+                                          : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                    ),
+                                    suffixIcon: _searchQuery.isNotEmpty
+                                        ? IconButton(
+                                            icon: Icon(
+                                              Icons.clear_rounded,
+                                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                            ),
+                                            onPressed: () {
+                                              _searchController.clear();
+                                            },
+                                          )
+                                        : null,
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            CustomShowcase(
+                              showcaseKey: _filterKey,
+                              scope: 'dashboard',
+                              title: "Filter Ponds",
+                              description: "Filter your list of ponds by species or by your assigned collaborator role (Owner, Editor, Viewer).",
+                              child: PondFilterDropdown(
+                                uniqueSpecies: uniqueSpecies,
+                                filterRole: _filterRole,
+                                filterSpecies: _filterSpecies,
+                                onRoleChanged: (role) => setState(() => _filterRole = role),
+                                onSpeciesChanged: (species) => setState(() => _filterSpecies = species),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (filteredPonds.isEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                  sliver: SliverToBoxAdapter(
+                    child: EmptyStateCard(
+                      image: const Icon(Icons.search_off_rounded, size: 48),
+                      title: "No Ponds Found",
+                      description: "Try adjusting your search keywords or filters to find what you're looking for.",
+                      action: SecondaryButton(
+                        text: "Clear Search",
+                        onPressed: () {
+                          _searchFocusNode.unfocus();
+                          _searchController.clear();
+                          setState(() {
+                            _filterRole = null;
+                            _filterSpecies = null;
+                          });
+                        },
+                        width: 180,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.all(16.0).copyWith(bottom: 100),
+                  sliver: SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: ResponsiveHelper.isDesktop(context) ? 3 : 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 0,
+                      childAspectRatio: 2.1,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final pond = filteredPonds[index];
+                        final String pondName = pond.name.isNotEmpty ? pond.name : 'Unnamed Pond';
+                        final String userRole = pond.roles[user.uid] ?? 'viewer';
+                        final bool isOwner = userRole == 'owner';
+
+                        final card = ErrorBoundary(
+                          child: PondListCard(
+                            pondId: pond.id,
+                            pondName: pondName,
+                            species: pond.species.isNotEmpty ? pond.species : 'Unspecified',
+                            userRole: userRole,
+                            createdAt: pond.createdAt ?? DateTime.now(),
+                            targetCulturePeriodDays: pond.targetCulturePeriodDays > 0 ? pond.targetCulturePeriodDays : 90,
+                          ),
+                        );
+
+                        final Widget itemContent = PondSlidableActionWrapper(
+                          pondId: pond.id,
+                          pondName: pondName,
+                          isOwner: isOwner,
+                          onEdit: () {
+                            _showEditPondSheet(
+                              context,
+                              pond.id,
+                              pond.toJson(),
+                            );
+                          },
+                          onDelete: () {
+                            _deletePond(pond.id, pondName);
+                          },
+                          child: card,
+                        );
+
+                        Widget finalItem = itemContent;
+                        if (index == 0) {
+                          finalItem = CustomShowcase(
+                            showcaseKey: _pondCardKey,
+                            scope: 'dashboard',
+                            title: "Pond Workspaces",
+                            description: "Tap any pond card to open its detailed monitoring dashboard. Swipe left on a card to quickly edit or delete it (if you are the owner).",
+                            child: itemContent,
+                          );
+                        }
+
+                        return StaggeredListItem(
+                          index: index,
+                          child: finalItem,
+                        );
+                      },
+                      childCount: filteredPonds.length,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: _refreshData,

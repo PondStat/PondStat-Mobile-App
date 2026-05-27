@@ -422,7 +422,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
             top: 12,
             left: 20,
             right: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+            bottom: MediaQuery.of(context).padding.bottom + 32,
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -443,6 +443,7 @@ class _RecordDataSheetState extends ConsumerState<RecordDataSheet> {
                 _buildSheetHeader(),
                 const SizedBox(height: 16),
                 _buildContentSwitcher(),
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
               ],
             ),
           ),

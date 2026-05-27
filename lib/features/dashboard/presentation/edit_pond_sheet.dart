@@ -194,10 +194,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
             top: 12,
             left: 24,
             right: 24,
-            bottom:
-                MediaQuery.viewInsetsOf(context).bottom +
-                MediaQuery.paddingOf(context).bottom +
-                24,
+            bottom: MediaQuery.paddingOf(context).bottom + 24,
           ),
           child: SingleChildScrollView(
             child: Form(
@@ -361,6 +358,7 @@ class _EditPondSheetState extends ConsumerState<EditPondSheet> {
                     isLoading: _isLoading,
                     onPressed: (!_isDirty || _isLoading) ? null : _updatePond,
                   ),
+                  SizedBox(height: MediaQuery.viewInsetsOf(context).bottom),
                 ],
               ),
             ),

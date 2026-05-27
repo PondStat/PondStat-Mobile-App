@@ -173,7 +173,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
         top: 12,
         left: 24,
         right: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).padding.bottom + 24,
       ),
       child: PopScope(
         canPop: !_isDirty,
@@ -320,6 +320,7 @@ class _EditGrowthSheetState extends ConsumerState<EditGrowthSheet> {
                     onPressed: _isDirty ? _saveChanges : null,
                   ),
                 ),
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
               ],
             ),
           ),

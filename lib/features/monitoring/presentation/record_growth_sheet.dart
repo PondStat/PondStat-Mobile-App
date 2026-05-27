@@ -157,7 +157,7 @@ class _RecordGrowthSheetState extends ConsumerState<RecordGrowthSheet> {
             top: 12,
             left: 20,
             right: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+            bottom: MediaQuery.of(context).padding.bottom + 32,
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -365,6 +365,7 @@ class _RecordGrowthSheetState extends ConsumerState<RecordGrowthSheet> {
                       ),
                     ],
                   ),
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
               ],
             ),
           ),
