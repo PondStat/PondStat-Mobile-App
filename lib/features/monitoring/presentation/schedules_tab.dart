@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -45,6 +46,7 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
 
   final GlobalKey _shiftsListKey = GlobalKey();
   final GlobalKey _assignShiftsKey = GlobalKey();
+  bool _showFullWeek = false;
 
   void _startTour() {
     final keys = [_shiftsListKey];
@@ -252,35 +254,92 @@ class _SchedulesTabState extends ConsumerState<SchedulesTab>
                       ],
                     ),
                   )
-                else
-                  ...List.generate(_daysOfWeek.length, (index) {
-                    final day = _daysOfWeek[index];
-                    final morningUsers = groupedSchedules[day]!['morning']!;
-                    final afternoonUsers = groupedSchedules[day]!['afternoon']!;
+                else ...[
+                  Builder(
+                    builder: (context) {
+                      final todayName = DateFormat('EEEE').format(DateTime.now());
+                      final morningUsers = groupedSchedules[todayName]!['morning']!;
+                      final afternoonUsers = groupedSchedules[todayName]!['afternoon']!;
 
-                    if (morningUsers.isEmpty &&
-                        afternoonUsers.isEmpty &&
-                        !widget.canEdit) {
-                      return const SizedBox.shrink();
-                    }
+                      Widget dayCard = _buildDayCard("$todayName (Today)", morningUsers, afternoonUsers);
+                      if (!didShowcaseShiftCard) {
+                        didShowcaseShiftCard = true;
+                        dayCard = CustomShowcase(
+                          showcaseKey: _shiftsListKey,
+                          scope: 'pond_monitoring',
+                          title: 'Shift Schedules',
+                          description: 'View the assigned morning and afternoon shifts for today.',
+                          child: dayCard,
+                        );
+                      }
 
-                    Widget dayCard = _buildDayCard(day, morningUsers, afternoonUsers);
-                    if (!didShowcaseShiftCard) {
-                      didShowcaseShiftCard = true;
-                      dayCard = CustomShowcase(
-                        showcaseKey: _shiftsListKey,
-                        scope: 'pond_monitoring',
-                        title: 'Shift Schedules',
-                        description: 'View the assigned morning and afternoon shifts for each day of the week.',
+                      return StaggeredListItem(
+                        index: 0,
                         child: dayCard,
                       );
-                    }
+                    },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _showFullWeek = !_showFullWeek;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _showFullWeek ? "Hide Full Weekly Calendar" : "Show Full Weekly Calendar",
+                              style: TextStyle(
+                                color: primaryBlue,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              _showFullWeek ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                              size: 18,
+                              color: primaryBlue,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_showFullWeek)
+                    ...List.generate(_daysOfWeek.length, (index) {
+                      final day = _daysOfWeek[index];
+                      final todayName = DateFormat('EEEE').format(DateTime.now());
+                      if (day == todayName) {
+                        return const SizedBox.shrink();
+                      }
+                      final morningUsers = groupedSchedules[day]!['morning']!;
+                      final afternoonUsers = groupedSchedules[day]!['afternoon']!;
 
-                    return StaggeredListItem(
-                      index: index,
-                      child: dayCard,
-                    );
-                  }),
+                      if (morningUsers.isEmpty &&
+                          afternoonUsers.isEmpty &&
+                          !widget.canEdit) {
+                        return const SizedBox.shrink();
+                      }
+
+                      final dayCard = _buildDayCard(day, morningUsers, afternoonUsers);
+                      return StaggeredListItem(
+                        index: index + 1,
+                        child: dayCard,
+                      );
+                    }),
+                ],
                 _buildSmartTasksList(),
               ],
             ),

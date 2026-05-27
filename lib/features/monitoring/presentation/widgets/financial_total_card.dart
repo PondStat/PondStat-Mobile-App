@@ -30,23 +30,34 @@ class FinancialTotalCard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: textColor,
-              fontSize: 16,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: textColor,
+                fontSize: 16,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(
-            NumberFormat.currency(
-              symbol: '₱',
-              decimalDigits: 2,
-            ).format(amount),
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              color: textColor,
-              fontSize: 24,
+          const SizedBox(width: 12),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                NumberFormat.currency(
+                  symbol: '₱',
+                  decimalDigits: 2,
+                ).format(amount),
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: textColor,
+                  fontSize: 24,
+                ),
+              ),
             ),
           ),
         ],

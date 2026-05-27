@@ -28,6 +28,8 @@ class CardMetric extends StatelessWidget {
             fontWeight: FontWeight.w800,
             letterSpacing: 0.5,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
         Text(
@@ -37,6 +39,8 @@ class CardMetric extends StatelessWidget {
             fontWeight: isHighlighted ? FontWeight.w900 : FontWeight.w700,
             fontSize: 13,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

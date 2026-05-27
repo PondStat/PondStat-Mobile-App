@@ -213,29 +213,40 @@ class GrowthMetricCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildMiniMetric(
-                  "ABW",
-                  current.abw != null ? "${current.abw}g" : "NA",
-                  isDark ? Colors.green.shade300 : Colors.green.shade700,
-                  colorScheme,
+                Expanded(
+                  child: _buildMiniMetric(
+                    "ABW",
+                    current.abw != null ? "${current.abw}g" : "NA",
+                    isDark ? Colors.green.shade300 : Colors.green.shade700,
+                    colorScheme,
+                  ),
                 ),
-                _buildMiniMetric(
-                  "ADG",
-                  current.adg != null ? "${current.adg!.toStringAsFixed(2)}g" : "NA",
-                  isDark ? Colors.green.shade300 : Colors.green.shade700,
-                  colorScheme,
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _buildMiniMetric(
+                    "ADG",
+                    current.adg != null ? "${current.adg!.toStringAsFixed(2)}g" : "NA",
+                    isDark ? Colors.green.shade300 : Colors.green.shade700,
+                    colorScheme,
+                  ),
                 ),
-                _buildMiniMetric(
-                  "FCR",
-                  current.fcr != null ? current.fcr!.toStringAsFixed(2) : "NA",
-                  isDark ? Colors.orange.shade300 : Colors.orange.shade700,
-                  colorScheme,
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _buildMiniMetric(
+                    "FCR",
+                    current.fcr != null ? current.fcr!.toStringAsFixed(2) : "NA",
+                    isDark ? Colors.orange.shade300 : Colors.orange.shade700,
+                    colorScheme,
+                  ),
                 ),
-                _buildMiniMetric(
-                  "DFR",
-                  current.dfr != null ? current.dfr!.toStringAsFixed(2) : "NA",
-                  isDark ? Colors.purple.shade300 : Colors.purple.shade700,
-                  colorScheme,
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _buildMiniMetric(
+                    "DFR",
+                    current.dfr != null ? current.dfr!.toStringAsFixed(2) : "NA",
+                    isDark ? Colors.purple.shade300 : Colors.purple.shade700,
+                    colorScheme,
+                  ),
                 ),
               ],
             ),
@@ -291,15 +302,17 @@ class GrowthMetricCard extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    Text(
-                      "By ${current.recorderName ?? 'Unknown'}",
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                    Flexible(
+                      child: Text(
+                        "By ${current.recorderName ?? 'Unknown'}",
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     if (current.editorName != null) ...[
                       const SizedBox(width: 8),
@@ -357,6 +370,8 @@ class GrowthMetricCard extends StatelessWidget {
             fontWeight: FontWeight.w800,
             fontSize: 15,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
         Text(
@@ -366,6 +381,8 @@ class GrowthMetricCard extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 11,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

@@ -116,24 +116,35 @@ class ExpenseCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              CardMetric(
-                label: "Qty",
-                value: qty.toString(),
+              Expanded(
+                child: CardMetric(
+                  label: "Qty",
+                  value: qty.toString(),
+                ),
               ),
-              CardMetric(
-                label: "Unit Price",
-                value: compactCurrencyFormat.format(unitPrice),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CardMetric(
+                  label: "Unit Price",
+                  value: compactCurrencyFormat.format(unitPrice),
+                ),
               ),
-              CardMetric(
-                label: "Total",
-                value: compactCurrencyFormat.format(total),
-                isHighlighted: true,
+              const SizedBox(width: 8),
+              Expanded(
+                child: CardMetric(
+                  label: "Total",
+                  value: compactCurrencyFormat.format(total),
+                  isHighlighted: true,
+                ),
               ),
-              CardMetric(
-                label: "Share",
-                value: compactCurrencyFormat.format(share),
-                isHighlighted: true,
-                valueColor: Colors.teal,
+              const SizedBox(width: 8),
+              Expanded(
+                child: CardMetric(
+                  label: "Share",
+                  value: compactCurrencyFormat.format(share),
+                  isHighlighted: true,
+                  valueColor: Colors.teal,
+                ),
               ),
             ],
           ),

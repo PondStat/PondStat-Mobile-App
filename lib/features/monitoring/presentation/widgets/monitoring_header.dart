@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/core/utils/responsive_helper.dart';
 
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 
@@ -49,16 +50,26 @@ class MonitoringHeader extends ConsumerWidget {
         ? colorScheme.surfaceContainerHighest
         : Colors.white;
 
+    final bool isWide = ResponsiveHelper.isWide(context);
+
+    // Dynamic responsive sizing
+    final double iconSize = isWide ? 44 : 36;
+    final double actionBtnSize = isWide ? 40 : 34;
+    final double actionIconSize = isWide ? 22 : 18;
+    final double backBtnSize = isWide ? 40 : 32;
+    final double backIconSize = isWide ? 24 : 20;
+    final double spaceBetween = isWide ? 8 : 4;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: isWide ? 20.0 : 12.0, vertical: 12),
       child: Row(
         children: [
           // Hero species icon — matches pond-icon-{pondId} tag in PondListCard
           Hero(
             tag: 'pond-icon-$pondId',
             child: Container(
-              height: 44,
-              width: 44,
+              height: iconSize,
+              width: iconSize,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -80,7 +91,7 @@ class MonitoringHeader extends ConsumerWidget {
                 child: FaIcon(
                   _getSpeciesIcon(species),
                   color: Colors.white,
-                  size: 20,
+                  size: isWide ? 20 : 16,
                 ),
               ),
             ),
@@ -89,6 +100,9 @@ class MonitoringHeader extends ConsumerWidget {
             icon: Icon(Icons.arrow_back_rounded, color: onSurface),
             onPressed: onBackTap,
             tooltip: 'Back',
+            iconSize: backIconSize,
+            constraints: BoxConstraints(minWidth: backBtnSize, minHeight: backBtnSize),
+            padding: EdgeInsets.zero,
           ),
           Expanded(
             child: Column(
@@ -98,10 +112,13 @@ class MonitoringHeader extends ConsumerWidget {
                   "MONITORING",
                   style: TextStyle(
                     color: colorScheme.primary,
-                    fontSize: 10,
+                    fontSize: isWide ? 10 : 9,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
                   ),
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Row(
                   children: [
@@ -110,7 +127,7 @@ class MonitoringHeader extends ConsumerWidget {
                         pondName,
                         style: TextStyle(
                           color: onSurface,
-                          fontSize: 22,
+                          fontSize: isWide ? 22 : 18,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.5,
                         ),
@@ -139,9 +156,11 @@ class MonitoringHeader extends ConsumerWidget {
                 },
                 tooltip: 'Help & Tour',
                 surfaceContainer: surfaceContainer,
+                size: actionBtnSize,
+                iconSize: actionIconSize,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: spaceBetween),
           ],
           CustomShowcase(
             showcaseKey: historyKey ?? GlobalKey(),
@@ -158,9 +177,11 @@ class MonitoringHeader extends ConsumerWidget {
               },
               tooltip: 'Log History',
               surfaceContainer: surfaceContainer,
+              size: actionBtnSize,
+              iconSize: actionIconSize,
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: spaceBetween),
           CustomShowcase(
             showcaseKey: chatKey ?? GlobalKey(),
             scope: 'pond_monitoring',
@@ -176,9 +197,11 @@ class MonitoringHeader extends ConsumerWidget {
               },
               tooltip: 'Chat & Notes',
               surfaceContainer: surfaceContainer,
+              size: actionBtnSize,
+              iconSize: actionIconSize,
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: spaceBetween),
           CustomShowcase(
             showcaseKey: profileKey ?? GlobalKey(),
             scope: 'pond_monitoring',
@@ -199,7 +222,7 @@ class MonitoringHeader extends ConsumerWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(2.0),
                     child: CircleAvatar(
-                      radius: 18,
+                      radius: isWide ? 18 : 15,
                       backgroundColor: isDark
                           ? Colors.white12
                           : Colors.grey.shade100,
@@ -238,18 +261,26 @@ class MonitoringHeader extends ConsumerWidget {
     required VoidCallback onPressed,
     required String tooltip,
     required Color surfaceContainer,
+    required double size,
+    required double iconSize,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return _buildCircleContainer(
       context: context,
       surfaceContainer: surfaceContainer,
-      child: IconButton(
-        icon: Icon(
-          icon,
-          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: IconButton(
+          icon: Icon(
+            icon,
+            color: isDark ? Colors.white70 : const Color(0xFF64748B),
+          ),
+          iconSize: iconSize,
+          padding: EdgeInsets.zero,
+          tooltip: tooltip,
+          onPressed: onPressed,
         ),
-        tooltip: tooltip,
-        onPressed: onPressed,
       ),
     );
   }

@@ -35,6 +35,8 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
   double? _customTargetAbw;
   double? _customSurvivalRate;
   bool _showProjectionSettings = false;
+  bool _showAutoFeedDetails = false;
+  bool _showHarvestDetails = false;
 
   @override
   void initState() {
@@ -230,20 +232,27 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(Icons.restaurant_menu_rounded, color: colorScheme.primary, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Auto-Feed Recommendation",
-                            style: TextStyle(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.restaurant_menu_rounded, color: colorScheme.primary, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Auto-Feed Recommendation",
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
@@ -255,12 +264,16 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                           children: [
                             Icon(statusIcon, color: statusColor, size: 14),
                             const SizedBox(width: 4),
-                            Text(
-                              statusTitle,
-                              style: TextStyle(
-                                color: statusColor,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
+                            Flexible(
+                              child: Text(
+                                statusTitle,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -268,12 +281,10 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
-                        flex: 3,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -313,46 +324,51 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Container(
-                        height: 50,
-                        width: 1,
-                        color: colorScheme.outlineVariant,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 4,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildInfoRow(
-                              "Species", 
-                              species,
-                              colorScheme,
-                            ),
-                            const SizedBox(height: 4),
-                            _buildInfoRow(
-                              "Current ABW", 
-                              "${abw.toStringAsFixed(1)}g",
-                              colorScheme,
-                            ),
-                            const SizedBox(height: 4),
-                            _buildInfoRow(
-                              "Stocking Qty", 
-                              NumberFormat('#,###').format(stockingQuantity),
-                              colorScheme,
-                            ),
-                            const SizedBox(height: 4),
-                            _buildInfoRow(
-                              "Feeding Rate", 
-                              "${feedingRatePercent.toStringAsFixed(2)}%",
-                              colorScheme,
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _showAutoFeedDetails = !_showAutoFeedDetails;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _showAutoFeedDetails ? "Hide Parameter Metrics" : "Show Parameter Metrics",
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            _showAutoFeedDetails ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: colorScheme.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (_showAutoFeedDetails) ...[
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    _buildInfoRow("Species", species, colorScheme),
+                    const SizedBox(height: 6),
+                    _buildInfoRow("Current ABW", "${abw.toStringAsFixed(1)}g", colorScheme),
+                    const SizedBox(height: 6),
+                    _buildInfoRow("Stocking Qty", NumberFormat('#,###').format(stockingQuantity), colorScheme),
+                    const SizedBox(height: 6),
+                    _buildInfoRow("Feeding Rate", "${feedingRatePercent.toStringAsFixed(2)}%", colorScheme),
+                  ],
                   const SizedBox(height: 16),
                   Container(
                     width: double.infinity,
@@ -428,20 +444,30 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: colorScheme.onSurfaceVariant,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            color: colorScheme.onSurface,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
           ),
         ),
       ],
@@ -568,20 +594,27 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_month_rounded, color: colorScheme.primary, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Harvest & Yield Projection",
-                            style: TextStyle(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_month_rounded, color: colorScheme.primary, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Harvest & Yield Projection",
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
@@ -593,12 +626,16 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                           children: [
                             Icon(statusIcon, color: statusColor, size: 14),
                             const SizedBox(width: 4),
-                            Text(
-                              statusTitle,
-                              style: TextStyle(
-                                color: statusColor,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
+                            Flexible(
+                              child: Text(
+                                statusTitle,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -611,7 +648,6 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
-                        flex: 5,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -647,28 +683,49 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Container(
-                        height: 50,
-                        width: 1,
-                        color: colorScheme.outlineVariant,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 5,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildInfoRow("Target ABW", "${targetAbw.toStringAsFixed(0)} g", colorScheme),
-                            const SizedBox(height: 4),
-                            _buildInfoRow("Assumed Survival", "${(survivalRate * 100).toStringAsFixed(0)}%", colorScheme),
-                            const SizedBox(height: 4),
-                            _buildInfoRow("Estimated Yield", yieldDisplay, colorScheme),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _showHarvestDetails = !_showHarvestDetails;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _showHarvestDetails ? "Hide Projection Metrics" : "Show Projection Metrics",
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            _showHarvestDetails ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: colorScheme.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (_showHarvestDetails) ...[
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    _buildInfoRow("Target ABW", "${targetAbw.toStringAsFixed(0)} g", colorScheme),
+                    const SizedBox(height: 6),
+                    _buildInfoRow("Assumed Survival", "${(survivalRate * 100).toStringAsFixed(0)}%", colorScheme),
+                    const SizedBox(height: 6),
+                    _buildInfoRow("Estimated Yield", yieldDisplay, colorScheme),
+                  ],
                   const SizedBox(height: 16),
                   // Progress Bar
                   Column(
@@ -677,14 +734,19 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "Growth Progress to Target",
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                          Expanded(
+                            child: Text(
+                              "Growth Progress to Target",
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             "$progressPercentStr%",
                             style: TextStyle(
@@ -709,13 +771,23 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "Current: ${currentAbw.toStringAsFixed(1)}g",
-                            style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                          Expanded(
+                            child: Text(
+                              "Current: ${currentAbw.toStringAsFixed(1)}g",
+                              style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          Text(
-                            "Target: ${targetAbw.toStringAsFixed(0)}g",
-                            style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Target: ${targetAbw.toStringAsFixed(0)}g",
+                              style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                              textAlign: TextAlign.end,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -795,15 +867,20 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          "PROJECTION SETTINGS",
-                          style: TextStyle(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 11,
-                            letterSpacing: 0.5,
+                        Expanded(
+                          child: Text(
+                            "PROJECTION SETTINGS",
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11,
+                              letterSpacing: 0.5,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         TextButton(
                           onPressed: () {
                             setState(() {
@@ -831,14 +908,19 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              "Target Harvest Size",
-                              style: TextStyle(
-                                color: colorScheme.onSurfaceVariant,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: Text(
+                                "Target Harvest Size",
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               "${targetAbw.toStringAsFixed(0)} g",
                               style: TextStyle(
@@ -870,14 +952,19 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              "Assumed Survival Rate",
-                              style: TextStyle(
-                                color: colorScheme.onSurfaceVariant,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: Text(
+                                "Assumed Survival Rate",
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               "${(survivalRate * 100).toStringAsFixed(0)}%",
                               style: TextStyle(

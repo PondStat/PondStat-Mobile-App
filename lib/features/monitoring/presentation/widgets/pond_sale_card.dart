@@ -138,19 +138,27 @@ class PondSaleCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              CardMetric(
-                label: "Quantity",
-                value: "$quantity $unit",
+              Expanded(
+                child: CardMetric(
+                  label: "Quantity",
+                  value: "$quantity $unit",
+                ),
               ),
-              CardMetric(
-                label: "Price/Unit",
-                value: compactCurrencyFormat.format(pricePerUnit),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CardMetric(
+                  label: "Price/Unit",
+                  value: compactCurrencyFormat.format(pricePerUnit),
+                ),
               ),
-              CardMetric(
-                label: "Total Sale",
-                value: compactCurrencyFormat.format(totalAmount),
-                isHighlighted: true,
-                valueColor: const Color(0xFF10B981),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CardMetric(
+                  label: "Total Sale",
+                  value: compactCurrencyFormat.format(totalAmount),
+                  isHighlighted: true,
+                  valueColor: const Color(0xFF10B981),
+                ),
               ),
             ],
           ),

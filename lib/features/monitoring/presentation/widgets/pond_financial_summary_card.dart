@@ -91,12 +91,16 @@ class PondFinancialSummaryCard extends StatelessWidget {
                       size: 14,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      secondaryText,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
+                    Flexible(
+                      child: Text(
+                        secondaryText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

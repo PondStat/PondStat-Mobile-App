@@ -424,12 +424,16 @@ class _WeatherOverviewCardState extends ConsumerState<WeatherOverviewCard> {
                               children: [
                                 Icon(icon, color: iconColor, size: 14),
                                 const SizedBox(width: 6),
-                                Text(
-                                  title,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: colorScheme.onSurfaceVariant,
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
@@ -462,7 +466,7 @@ class _WeatherOverviewCardState extends ConsumerState<WeatherOverviewCard> {
                       ),
                     );
                   }
-
+ 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -475,27 +479,33 @@ class _WeatherOverviewCardState extends ConsumerState<WeatherOverviewCard> {
                             size: 26,
                           ),
                           const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _getWeatherDescription(weatherCode),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: colorScheme.onSurface,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _getWeatherDescription(weatherCode),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Daily Forecast for Today',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.onSurfaceVariant,
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Daily Forecast for Today',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),

@@ -60,14 +60,19 @@ class CultureProgressCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Culture Progress",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: theme.colorScheme.onSurface,
+                Expanded(
+                  child: Text(
+                    "Culture Progress",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -109,24 +114,34 @@ class CultureProgressCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Start: ${DateFormat('MMM d').format(createdAt)}",
-                  style: TextStyle(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Text(
+                    "Start: ${DateFormat('MMM d').format(createdAt)}",
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Text(
-                  isOverdue
-                      ? "Overdue by ${doc - targetCulturePeriodDays} Days"
-                      : "Target: $targetCulturePeriodDays Days",
-                  style: TextStyle(
-                    color: isOverdue
-                        ? errorColor
-                        : theme.colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isOverdue
+                        ? "Overdue by ${doc - targetCulturePeriodDays} Days"
+                        : "Target: $targetCulturePeriodDays Days",
+                    style: TextStyle(
+                      color: isOverdue
+                          ? errorColor
+                          : theme.colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
