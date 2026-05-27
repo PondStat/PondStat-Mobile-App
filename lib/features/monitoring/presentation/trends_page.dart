@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pondstat/features/monitoring/presentation/periodic_parameters_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/trends_tab.dart';
+import 'package:pondstat/features/monitoring/presentation/correlation_tab.dart';
 import 'package:pondstat/core/utils/snackbar_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pondstat/features/monitoring/data/monitoring_repository.dart';
@@ -391,7 +392,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
     });
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: PreferredSize(
@@ -400,20 +401,21 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
             showcaseKey: _trendsTabsKey,
             scope: 'pond_monitoring',
             title: 'Periodic Filters',
-            description: 'Switch between Daily, Weekly, Biweekly, and Final analysis views of your pond parameters.',
+            description: 'Switch between Daily, Weekly, Biweekly, Final, and Correlation analysis views of your pond parameters.',
             child: Padding(
               padding: const EdgeInsets.only(top: 12.0, bottom: 4.0),
               child: TabBar(
-                isScrollable: false,
+                isScrollable: true,
                 labelColor: const Color(0xFF0A74DA),
                 unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
                 indicatorColor: const Color(0xFF0A74DA),
-                labelPadding: const EdgeInsets.symmetric(vertical: 14.0),
+                labelPadding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 16.0),
                 tabs: const [
                   Tab(text: "Daily"),
                   Tab(text: "Weekly"),
                   Tab(text: "Biweekly"),
                   Tab(text: "Final"),
+                  Tab(text: "Correlation"),
                 ],
               ),
             ),
@@ -478,6 +480,15 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
                             pondId: widget.pondId,
                             species: widget.species,
                             userRole: widget.userRole,
+                            startDate: _startDate,
+                            endDate: _endDate,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 100),
+                          child: CorrelationTab(
+                            pondId: widget.pondId,
+                            species: widget.species,
                             startDate: _startDate,
                             endDate: _endDate,
                           ),
