@@ -74,14 +74,15 @@ class MonitoringCalendar extends ConsumerWidget {
     final double calendarDaysOfWeekHeight = (screenHeight * 0.025).clamp(16.0, 24.0);
 
     // Constrain the query to the visible month to prevent a Firestore read bomb
-    final startOfMonth = DateTime(focusedDay.year, focusedDay.month, 1);
-    final endOfMonth = DateTime(
+    final startOfMonth = DateTime.utc(focusedDay.year, focusedDay.month, 1, 0, 0, 0, 0);
+    final endOfMonth = DateTime.utc(
       focusedDay.year,
       focusedDay.month + 1,
       0,
       23,
       59,
       59,
+      999,
     );
 
     return StreamBuilder<QuerySnapshot>(

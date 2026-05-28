@@ -11,6 +11,16 @@ extension DateTimeX on DateTime {
   DateTime toStartOfDay() {
     return DateTime(year, month, day, 0, 0, 0, 0);
   }
+
+  /// Returns a new UTC DateTime set to midnight (00:00:00.000) of this day.
+  DateTime toUtcMidnight() {
+    return DateTime.utc(year, month, day, 0, 0, 0, 0);
+  }
+
+  /// Returns a new UTC DateTime set to the end of this day (23:59:59.999).
+  DateTime toUtcEndOfDay() {
+    return DateTime.utc(year, month, day, 23, 59, 59, 999);
+  }
 }
 
 /// A JsonConverter that maps Firestore's [Timestamp] to Dart's [DateTime].

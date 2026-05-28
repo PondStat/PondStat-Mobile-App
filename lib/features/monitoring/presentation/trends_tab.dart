@@ -7,6 +7,7 @@ import 'package:pondstat/features/monitoring/data/trends_repository.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/parameter_category_chart.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/fish_gains_chart.dart';
+import 'package:pondstat/core/utils/datetime_extensions.dart';
 
 class TrendsTab extends ConsumerStatefulWidget {
   final String pondId;
@@ -64,19 +65,13 @@ class _TrendsTabState extends ConsumerState<TrendsTab> {
 
     _growthMetricsFuture =
         ref.read(growthRepositoryProvider).calculateGrowthMetrics(widget.pondId).then((metrics) {
-          final endOfDay = DateTime(
-            widget.endDate.year,
-            widget.endDate.month,
-            widget.endDate.day,
-            23,
-            59,
-            59,
-          );
+          final startOfUtcDay = widget.startDate.toUtcMidnight();
+          final endOfUtcDay = widget.endDate.toUtcEndOfDay();
           return metrics
               .where(
                 (m) =>
-                    !m.date.isBefore(widget.startDate) &&
-                    !m.date.isAfter(endOfDay),
+                    !m.date.isBefore(startOfUtcDay) &&
+                    !m.date.isAfter(endOfUtcDay),
               )
               .toList();
         });

@@ -10,6 +10,7 @@ import 'package:pondstat/features/dashboard/domain/models/pond.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/core/services/weather_service.dart';
 import 'package:pondstat/features/monitoring/presentation/widgets/custom_showcase.dart';
+import 'package:pondstat/core/utils/datetime_extensions.dart';
 
 class _DailyRecord {
   final DateTime timestamp;
@@ -100,14 +101,9 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
     }
 
     _cachedStreamParamLabel = param.label;
-    final endOfDay = DateTime(
-      widget.endDate.year,
-      widget.endDate.month,
-      widget.endDate.day,
-      23,
-      59,
-      59,
-    );
+
+    final startOfUtcDay = widget.startDate.toUtcMidnight();
+    final endOfUtcDay = widget.endDate.toUtcEndOfDay();
 
     _cachedStream = ref.read(monitoringRepositoryProvider).measurementsCollection
         .where('pondId', isEqualTo: widget.pondId)
@@ -115,9 +111,9 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
         .where('parameter', isEqualTo: param.label)
         .where(
           'timestamp',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(widget.startDate),
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfUtcDay),
         )
-        .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endOfUtcDay))
         .snapshots()
         .map((snap) {
           final sortedDocs = snap.docs.toList()
@@ -136,7 +132,7 @@ class _PeriodicParametersChartState extends ConsumerState<PeriodicParametersChar
               .map((doc) {
             final data = doc.data();
             final ts =
-                (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+                (data['timestamp'] as Timestamp?)?.toDate().toUtc() ?? DateTime.now();
             final avg = (data['value'] as num).toDouble();
             final rawPoints =
                 (data['pointValues'] as Map<String, dynamic>?) ?? {};

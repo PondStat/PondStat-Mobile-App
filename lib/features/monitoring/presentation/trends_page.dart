@@ -11,6 +11,7 @@ import 'package:pondstat/features/monitoring/presentation/widgets/onboarding_tou
 import 'package:pondstat/features/monitoring/presentation/utils/trends_exporter.dart';
 import 'package:pondstat/features/monitoring/data/growth_repository.dart';
 import 'package:pondstat/features/monitoring/data/finances_repository.dart';
+import 'package:pondstat/core/utils/datetime_extensions.dart';
 
 class TrendsPage extends ConsumerStatefulWidget {
   final String pondId;
@@ -55,7 +56,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
     super.initState();
     final now = DateTime.now();
     _endDate = now;
-    _startDate = now.subtract(const Duration(days: 7));
+    _startDate = now.subtract(const Duration(days: 7)).toStartOfDay();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -68,10 +69,6 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
   }
 
   Future<void> _selectDateRange(BuildContext context) async {
-    if (widget.userRole != 'owner' && widget.userRole != 'editor') {
-      SnackbarHelper.showInfo(context, "Only owners and editors can set the date range.");
-      return;
-    }
 
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
@@ -325,7 +322,6 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
   }
 
   Widget _buildDateRangeSelector(BuildContext context) {
-    final bool hasAccess = widget.userRole == 'owner' || widget.userRole == 'editor';
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -340,9 +336,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
             color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: hasAccess
-                  ? const Color(0xFF0A74DA).withValues(alpha: 0.3)
-                  : Colors.grey.withValues(alpha: 0.2),
+              color: const Color(0xFF0A74DA).withValues(alpha: 0.3),
             ),
             boxShadow: isDark
                 ? []
@@ -359,7 +353,7 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
             children: [
               Icon(
                 Icons.date_range_rounded,
-                color: hasAccess ? const Color(0xFF0A74DA) : Colors.grey,
+                color: const Color(0xFF0A74DA),
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -368,15 +362,9 @@ class _TrendsPageState extends ConsumerState<TrendsPage> {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
-                  color: hasAccess
-                      ? (isDark ? Colors.white : Colors.black87)
-                      : Colors.grey,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
-              if (!hasAccess) ...[
-                const SizedBox(width: 8),
-                const Icon(Icons.lock_rounded, size: 16, color: Colors.grey),
-              ],
             ],
           ),
         ),

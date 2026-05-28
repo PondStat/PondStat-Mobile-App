@@ -57,94 +57,89 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.watch(notificationsRepositoryProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
-    return StreamBuilder<int>(
-      stream: repository.getUnreadCountStream(),
-      builder: (context, snapshot) {
-        final int unreadCount = snapshot.data ?? 0;
+    final unreadCountAsync = ref.watch(unreadNotificationsCountStreamProvider);
+    final int unreadCount = unreadCountAsync.value ?? 0;
 
-        if (unreadCount > _lastCount) {
-          _lastCount = unreadCount;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _triggerShake();
-          });
-        } else if (unreadCount < _lastCount) {
-          _lastCount = unreadCount;
-        }
+    if (unreadCount > _lastCount) {
+      _lastCount = unreadCount;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _triggerShake();
+      });
+    } else if (unreadCount < _lastCount) {
+      _lastCount = unreadCount;
+    }
 
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            Semantics(
-              button: true,
-              label: unreadCount > 0
-                  ? '$unreadCount unread notifications'
-                  : 'Notifications',
-              child: RotationTransition(
-                turns: _shakeAnimation,
-                child: IconButton(
-                  icon: Icon(
-                    unreadCount > 0
-                        ? Icons.notifications_active_rounded
-                        : Icons.notifications_none_rounded,
-                    color: widget.isDark ? null : Colors.white,
-                    size: 28,
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Semantics(
+          button: true,
+          label: unreadCount > 0
+              ? '$unreadCount unread notifications'
+              : 'Notifications',
+          child: RotationTransition(
+            turns: _shakeAnimation,
+            child: IconButton(
+              icon: Icon(
+                unreadCount > 0
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_none_rounded,
+                color: widget.isDark ? null : Colors.white,
+                size: 28,
+              ),
+              onPressed: widget.onTap,
+            ),
+          ),
+        ),
+        Positioned(
+          right: 8,
+          top: 12,
+          child: AnimatedScale(
+            scale: unreadCount > 0 ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutBack,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: widget.isDark ? Colors.black : colorScheme.primary,
+                  width: 1.5,
+                ),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return ScaleTransition(
+                    scale: animation,
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Text(
+                  unreadCount > 9 ? '9+' : '$unreadCount',
+                  key: ValueKey<int>(unreadCount),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
-                  onPressed: widget.onTap,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
-            Positioned(
-              right: 8,
-              top: 12,
-              child: AnimatedScale(
-                scale: unreadCount > 0 ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeOutBack,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: widget.isDark ? Colors.black : colorScheme.primary,
-                      width: 1.5,
-                    ),
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (Widget child, Animation<double> animation) {
-                      return ScaleTransition(
-                        scale: animation,
-                        child: FadeTransition(
-                          opacity: animation,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Text(
-                      unreadCount > 9 ? '9+' : '$unreadCount',
-                      key: ValueKey<int>(unreadCount),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 }

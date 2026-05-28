@@ -289,3 +289,13 @@ class NotificationsRepository with OfflineRepositoryMixin {
     }
   }
 }
+
+@riverpod
+Stream<List<NotificationModel>> notificationsStream(Ref ref) {
+  return ref.watch(notificationsRepositoryProvider).getNotificationsStream();
+}
+
+@riverpod
+Stream<int> unreadNotificationsCountStream(Ref ref) {
+  return ref.watch(notificationsRepositoryProvider).getUnreadCountStream();
+}

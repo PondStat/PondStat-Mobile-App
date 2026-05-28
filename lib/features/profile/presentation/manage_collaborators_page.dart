@@ -9,8 +9,6 @@ import 'package:pondstat/core/services/logging/logger_provider.dart';
 import 'package:pondstat/features/auth/data/auth_repository.dart';
 import 'package:pondstat/features/dashboard/data/pond_repository.dart';
 import 'package:pondstat/features/dashboard/domain/models/pond.dart';
-import 'package:pondstat/core/widgets/loading_placeholder.dart';
-import 'package:pondstat/core/widgets/error_state_card.dart';
 import 'package:pondstat/features/profile/presentation/widgets/collaborator_tile.dart';
 import 'package:pondstat/features/notifications/data/notifications_repository.dart';
 
@@ -497,49 +495,28 @@ class _ManageCollaboratorsPageState extends ConsumerState<ManageCollaboratorsPag
               ),
 
               Expanded(
-                child: StreamBuilder<DocumentSnapshot<Pond>>(
-                  stream: ref.read(pondRepositoryProvider).pondsCollection
-                      .doc(widget.pondId)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return ErrorStateCard(
-                        description: "Unable to load team members: ${snapshot.error}",
-                        onRetry: () => setState(() {}),
-                      );
-                    }
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 8,
+                    bottom: 40,
+                  ),
+                  itemCount: roles.keys.length,
+                  itemBuilder: (context, index) {
+                    final userId = roles.keys.elementAt(index);
+                    final role = roles[userId] as String;
+                    final isMe = userId == currentUserId;
 
-                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                      return const LoadingPlaceholder(message: "Loading team members...");
-                    }
-
-                    final pond = snapshot.data!.data();
-                    final roles = pond?.roles ?? {};
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.only(
-                        left: 20,
-                        right: 20,
-                        top: 8,
-                        bottom: 40,
-                      ),
-                      itemCount: roles.keys.length,
-                      itemBuilder: (context, index) {
-                        final userId = roles.keys.elementAt(index);
-                        final role = roles[userId] as String;
-                        final isMe = userId == currentUserId;
-
-                        return CollaboratorTile(
-                          key: ValueKey(userId),
-                          pondId: widget.pondId,
-                          userId: userId,
-                          role: role,
-                          isMe: isMe,
-                          index: index,
-                          onRoleChange: _handleRoleChange,
-                          fetchUser: _getUserData,
-                        );
-                      },
+                    return CollaboratorTile(
+                      key: ValueKey(userId),
+                      pondId: widget.pondId,
+                      userId: userId,
+                      role: role,
+                      isMe: isMe,
+                      index: index,
+                      onRoleChange: _handleRoleChange,
+                      fetchUser: _getUserData,
                     );
                   },
                 ),

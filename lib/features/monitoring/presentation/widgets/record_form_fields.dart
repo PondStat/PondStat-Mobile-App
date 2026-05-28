@@ -31,13 +31,9 @@ class RecordFormFields extends StatefulWidget {
 class _RecordFormFieldsState extends State<RecordFormFields> {
   @override
   Widget build(BuildContext context) {
-    final bool hasRange =
-        widget.selectedParameter.absoluteMin != null &&
-        widget.selectedParameter.absoluteMax != null;
-
     return Column(
       children: [
-        _buildDataPointsHeader(context, hasRange, widget.themeColor),
+        _buildDataPointsHeader(context, widget.themeColor),
         const SizedBox(height: 16),
         _buildDataPointInputs(context, widget.themeColor),
       ],
@@ -46,81 +42,86 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
 
   Widget _buildDataPointsHeader(
     BuildContext context,
-    bool hasRange,
     Color themeColor,
   ) {
     Color textDark = Theme.of(context).colorScheme.onSurface;
+    final parameter = widget.selectedParameter;
+
+    final hasAbsolute = parameter.absoluteMin != null || parameter.absoluteMax != null;
+    final hasOptimal = parameter.optimalMin != null || parameter.optimalMax != null;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Data Points",
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: textDark,
-                fontSize: 18,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Data Points",
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: textDark,
+                  fontSize: 18,
+                ),
               ),
-            ),
-            if (hasRange) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: themeColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
+              if (hasAbsolute || hasOptimal) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: themeColor,
-                        shape: BoxShape.circle,
+                    // 1. Absolute Range / Limits Tag
+                    if (parameter.absoluteMin != null && parameter.absoluteMax != null)
+                      _buildHeaderTag(
+                        dotColor: themeColor,
+                        backgroundColor: themeColor.withValues(alpha: 0.1),
+                        textColor: textDark.withValues(alpha: 0.7),
+                        label: "Valid Range: ${parameter.absoluteMin} - ${parameter.absoluteMax}",
+                      )
+                    else if (parameter.absoluteMin != null)
+                      _buildHeaderTag(
+                        dotColor: themeColor,
+                        backgroundColor: themeColor.withValues(alpha: 0.1),
+                        textColor: textDark.withValues(alpha: 0.7),
+                        label: "Minimum: ${parameter.absoluteMin}",
+                      )
+                    else if (parameter.absoluteMax != null)
+                      _buildHeaderTag(
+                        dotColor: themeColor,
+                        backgroundColor: themeColor.withValues(alpha: 0.1),
+                        textColor: textDark.withValues(alpha: 0.7),
+                        label: "Maximum: ${parameter.absoluteMax}",
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      "Safe Range: ${widget.selectedParameter.absoluteMin} - ${widget.selectedParameter.absoluteMax}",
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+
+                    // 2. Optimal Range / Limits Tag
+                    if (parameter.optimalMin != null && parameter.optimalMax != null)
+                      _buildHeaderTag(
+                        dotColor: Colors.amber.shade700,
+                        backgroundColor: Colors.amber.withValues(alpha: 0.1),
+                        textColor: Colors.amber.shade900,
+                        label: "Optimal: ${parameter.optimalMin} - ${parameter.optimalMax}",
+                      )
+                    else if (parameter.optimalMin != null)
+                      _buildHeaderTag(
+                        dotColor: Colors.amber.shade700,
+                        backgroundColor: Colors.amber.withValues(alpha: 0.1),
+                        textColor: Colors.amber.shade900,
+                        label: "Optimal Min: ${parameter.optimalMin}",
+                      )
+                    else if (parameter.optimalMax != null)
+                      _buildHeaderTag(
+                        dotColor: Colors.amber.shade700,
+                        backgroundColor: Colors.amber.withValues(alpha: 0.1),
+                        textColor: Colors.amber.shade900,
+                        label: "Optimal Max: ${parameter.optimalMax}",
                       ),
-                    ),
                   ],
                 ),
-              ),
-            ] else if (widget.selectedParameter.absoluteMin != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                "Minimum: ${widget.selectedParameter.absoluteMin}",
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ] else if (widget.selectedParameter.absoluteMax != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                "Maximum: ${widget.selectedParameter.absoluteMax}",
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
         if (widget.selectedParameter.unit.isNotEmpty)
           Container(
@@ -139,6 +140,46 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildHeaderTag({
+    required Color dotColor,
+    required Color backgroundColor,
+    required Color textColor,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -266,6 +307,8 @@ class _RecordFormFieldsState extends State<RecordFormFields> {
                 warningMessage = "Sub-optimal: >${widget.selectedParameter.optimalMax}";
               }
             }
+          } else {
+            errorMessage = "Invalid number";
           }
         }
 

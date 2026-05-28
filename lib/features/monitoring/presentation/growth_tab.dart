@@ -160,8 +160,17 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
       );
     }
 
+    final speciesLower = species.trim().toLowerCase();
+    double defaultSurvivalRate = 0.80;
+    if (speciesLower == 'tilapia') {
+      defaultSurvivalRate = 0.85;
+    } else if (speciesLower == 'shrimp') {
+      defaultSurvivalRate = 0.75;
+    }
+    final survivalRate = _customSurvivalRate ?? defaultSurvivalRate;
+
     final feedingRatePercent = _getFeedingRatePercentage(species, abw);
-    final recommendedFeedKg = (abw * stockingQuantity * feedingRatePercent) / 100000.0;
+    final recommendedFeedKg = (abw * stockingQuantity * survivalRate * feedingRatePercent) / 100000.0;
 
     final dfr = latestMetric.dfr;
     String statusTitle = "Optimal";
@@ -366,6 +375,8 @@ class _GrowthTabState extends ConsumerState<GrowthTab> {
                     _buildInfoRow("Current ABW", "${abw.toStringAsFixed(1)}g", colorScheme),
                     const SizedBox(height: 6),
                     _buildInfoRow("Stocking Qty", NumberFormat('#,###').format(stockingQuantity), colorScheme),
+                    const SizedBox(height: 6),
+                    _buildInfoRow("Assumed Survival", "${(survivalRate * 100).toStringAsFixed(0)}%", colorScheme),
                     const SizedBox(height: 6),
                     _buildInfoRow("Feeding Rate", "${feedingRatePercent.toStringAsFixed(2)}%", colorScheme),
                   ],

@@ -25,13 +25,10 @@ class NotificationsInboxPage extends ConsumerStatefulWidget {
 }
 
 class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage> {
-  Key _streamKey = UniqueKey();
   bool _showUnreadOnly = false;
 
   void _retry() {
-    setState(() {
-      _streamKey = UniqueKey();
-    });
+    ref.invalidate(notificationsStreamProvider);
   }
 
   List<dynamic> _groupNotifications(List<NotificationModel> raw) {
@@ -117,52 +114,43 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
           _retry();
           await Future.delayed(const Duration(milliseconds: 500));
         },
-        child: StreamBuilder<List<NotificationModel>>(
-          key: _streamKey,
-          stream: ref.watch(notificationsRepositoryProvider).getNotificationsStream(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const NotificationsShimmer();
-            }
-
-            if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        size: 64,
-                        color: colorScheme.error,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Failed to load notifications',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Please check your connection and try again.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      FilledButton.icon(
-                        onPressed: _retry,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Retry'),
-                      ),
-                    ],
+        child: ref.watch(notificationsStreamProvider).when(
+          loading: () => const NotificationsShimmer(),
+          error: (error, stack) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline_rounded,
+                    size: 64,
+                    color: colorScheme.error,
                   ),
-                ),
-              );
-            }
-
-            final rawNotifications = snapshot.data ?? [];
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load notifications',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please check your connection and try again.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: _retry,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          data: (rawNotifications) {
             final groupedItems = _groupNotifications(rawNotifications);
 
             if (groupedItems.isEmpty) {
@@ -223,9 +211,12 @@ class _NotificationsInboxPageState extends ConsumerState<NotificationsInboxPage>
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: NotificationTile(
                     notification: n,
-                    onTap: () async {
+                    onTap: () {
                       if (!n.isRead) {
-                        await ref.read(notificationsRepositoryProvider).markAsRead(n.id);
+                        ref.read(notificationsRepositoryProvider).markAsRead(n.id);
+                      }
+                      if (n.pondId != null) {
+                        // Open the specific pond details if linked
                       }
                     },
                     onToggleRead: () =>

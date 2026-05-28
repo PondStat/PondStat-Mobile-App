@@ -137,7 +137,7 @@ service cloud.firestore {
           && request.resource.data.createdBy == uid()
           && isPondMember(request.resource.data.pondId);
         allow delete: if isAuthenticated()
-          && resource.data.createdBy == uid();
+          && (resource.data.createdBy == uid() || isPondOwner(resource.data.pondId));
       }
     }
   }
