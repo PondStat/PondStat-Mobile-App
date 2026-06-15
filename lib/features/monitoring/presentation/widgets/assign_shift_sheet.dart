@@ -80,16 +80,32 @@ class _AssignShiftSheetState extends ConsumerState<AssignShiftSheet> {
 
       List<Map<String, dynamic>> users = [];
       for (var entry in roles.entries) {
-        if (entry.value == 'owner' || entry.value == 'editor') {
-          final userDoc = await authRepo.usersCollection
-              .doc(entry.key)
-              .get();
-          if (!mounted) return;
-          if (userDoc.exists) {
-            final userData = userDoc.data()!;
+        final roleVal = entry.value.trim().toLowerCase();
+        if (roleVal == 'owner' || roleVal == 'editor') {
+          try {
+            final userDoc = await authRepo.usersCollection
+                .doc(entry.key)
+                .get();
+            if (!mounted) return;
+            if (userDoc.exists) {
+              final userData = userDoc.data()!;
+              users.add({
+                'id': entry.key,
+                'name': userData['fullName'] ?? 'Unknown User',
+              });
+            } else {
+              final String shortId = entry.key.length > 4 ? entry.key.substring(0, 4) : entry.key;
+              users.add({
+                'id': entry.key,
+                'name': 'Member ($shortId)',
+              });
+            }
+          } catch (e, stackTrace) {
+            logger.error('Error fetching user ${entry.key}', error: e, stackTrace: stackTrace, tag: 'SCHEDULE');
+            final String shortId = entry.key.length > 4 ? entry.key.substring(0, 4) : entry.key;
             users.add({
               'id': entry.key,
-              'name': userData['fullName'] ?? 'Unknown User',
+              'name': 'Member ($shortId)',
             });
           }
         }
