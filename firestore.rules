@@ -80,7 +80,7 @@ service cloud.firestore {
 
       // ── MEASUREMENTS ──
       match /measurements/{measurementId} {
-        allow read: if isPondMember(resource.data.pondId);
+        allow read: if resource == null || isPondMember(resource.data.pondId);
         allow create: if isPondMember(request.resource.data.pondId)
           && request.resource.data.recordedBy == uid();
         allow update: if canEditPond(resource.data.pondId);
@@ -89,7 +89,7 @@ service cloud.firestore {
 
       // ── MEASUREMENT HISTORY ──
       match /measurement_history/{historyId} {
-        allow read: if isPondMember(resource.data.pondId);
+        allow read: if resource == null || isPondMember(resource.data.pondId);
         allow create: if isPondMember(request.resource.data.pondId);
         allow update: if false;
         allow delete: if canEditPond(resource.data.pondId);
@@ -97,7 +97,7 @@ service cloud.firestore {
 
       // ── SCHEDULES ──
       match /schedules/{scheduleId} {
-        allow read: if isPondMember(resource.data.pondId);
+        allow read: if resource == null || isPondMember(resource.data.pondId);
         allow create: if canEditPond(request.resource.data.pondId);
         allow update: if canEditPond(request.resource.data.pondId);
         allow delete: if canEditPond(resource.data.pondId);
@@ -105,7 +105,7 @@ service cloud.firestore {
 
       // ── EXPENSES ──
       match /expenses/{expenseId} {
-        allow read: if isPondMember(resource.data.pondId);
+        allow read: if resource == null || isPondMember(resource.data.pondId);
         allow create: if canEditPond(request.resource.data.pondId)
           && request.resource.data.buyerId == uid();
         allow update: if canEditPond(resource.data.pondId);
@@ -114,7 +114,7 @@ service cloud.firestore {
 
       // ── POND EXPENSES ──
       match /pond_expenses/{expenseId} {
-        allow read: if isPondMember(resource.data.pondId);
+        allow read: if resource == null || isPondMember(resource.data.pondId);
         allow create: if canEditPond(request.resource.data.pondId)
           && request.resource.data.recordedById == uid();
         allow update: if canEditPond(resource.data.pondId);
@@ -123,7 +123,7 @@ service cloud.firestore {
 
       // ── POND SALES ──
       match /pond_sales/{saleId} {
-        allow read: if isPondMember(resource.data.pondId);
+        allow read: if resource == null || isPondMember(resource.data.pondId);
         allow create: if canEditPond(request.resource.data.pondId)
           && request.resource.data.recordedById == uid();
         allow update: if canEditPond(resource.data.pondId);
@@ -132,12 +132,12 @@ service cloud.firestore {
 
       // ── CUSTOM PARAMETERS ──
       match /custom_parameters/{paramId} {
-        allow read: if isPondMember(resource.data.pondId);
+        allow read: if resource == null || isPondMember(resource.data.pondId);
         allow create: if isAuthenticated()
           && request.resource.data.createdBy == uid()
           && isPondMember(request.resource.data.pondId);
         allow delete: if isAuthenticated()
-          && resource.data.createdBy == uid();
+          && (resource.data.createdBy == uid() || isPondOwner(resource.data.pondId));
       }
     }
   }

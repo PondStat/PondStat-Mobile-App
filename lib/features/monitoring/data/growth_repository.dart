@@ -110,15 +110,18 @@ class GrowthRepository with OfflineRepositoryMixin {
 
     DateTime pondStartDate;
     if (pondData['createdAt'] != null) {
-      pondStartDate = (pondData['createdAt'] as Timestamp).toDate();
+      final localStart = (pondData['createdAt'] as Timestamp).toDate();
+      pondStartDate = DateTime.utc(localStart.year, localStart.month, localStart.day);
     } else {
       final fallbackTimestamp = allDocs.first.data()!['timestamp'] as Timestamp?;
-      pondStartDate = fallbackTimestamp?.toDate() ?? DateTime.now();
+      final localFallback = fallbackTimestamp?.toDate() ?? DateTime.now();
+      pondStartDate = DateTime.utc(localFallback.year, localFallback.month, localFallback.day);
     }
 
     final weeklyBuckets = _bucketizeByWeek(allDocs, pondStartDate);
+    final String species = pondData['species'] as String? ?? '';
 
-    return _calculateWeeklyMetrics(weeklyBuckets, fishCount);
+    return _calculateWeeklyMetrics(weeklyBuckets, fishCount, species);
   }
 
   Future<List<DocumentSnapshot<Map<String, dynamic>>>>
@@ -149,7 +152,7 @@ class GrowthRepository with OfflineRepositoryMixin {
       final data = doc.data()!;
       if (data['timestamp'] == null || data['value'] == null) continue;
 
-      final date = (data['timestamp'] as Timestamp).toDate();
+      final date = (data['timestamp'] as Timestamp).toDate().toUtc();
       final val = (data['value'] as num).toDouble();
       final param = data['parameter'] as String;
 
@@ -215,7 +218,16 @@ class GrowthRepository with OfflineRepositoryMixin {
   List<GrowthMetrics> _calculateWeeklyMetrics(
     Map<int, Map<String, dynamic>> weeklyBuckets,
     int fishCount,
+    String species,
   ) {
+    final speciesLower = species.trim().toLowerCase();
+    double defaultSurvivalRate = 80.0;
+    if (speciesLower == 'tilapia') {
+      defaultSurvivalRate = 85.0;
+    } else if (speciesLower == 'shrimp') {
+      defaultSurvivalRate = 75.0;
+    }
+
     final sortedWeeks = weeklyBuckets.keys.toList()..sort();
     final List<GrowthMetrics> metrics = [];
 
@@ -243,7 +255,7 @@ class GrowthRepository with OfflineRepositoryMixin {
           ? explicitDfr
           : GrowthCalculators.calculateDFR(
               stocked: fishCount.toDouble(),
-              survivalRate: 100.0,
+              survivalRate: defaultSurvivalRate,
               abw: currentAbw,
               feedingRate: feedingRate,
             );

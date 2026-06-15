@@ -93,11 +93,11 @@ class MonitoringRepository with OfflineRepositoryMixin {
         .where('pondId', isEqualTo: pondId)
         .where(
           'timestamp',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate.toUtcMidnight()),
         )
         .where(
           'timestamp',
-          isLessThanOrEqualTo: Timestamp.fromDate(endDate.toEndOfDay()),
+          isLessThanOrEqualTo: Timestamp.fromDate(endDate.toUtcEndOfDay()),
         )
         .orderBy('timestamp', descending: false)
         .limit(limit);
